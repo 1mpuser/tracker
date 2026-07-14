@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id       Int    @id @default(autoincrement())
+  key      String @unique
+  label    String
+  order    Int    @default(0)
+  archived Boolean @default(false)
+  statuses DayCategoryStatus[]
+}
+
+model Day {
+  id             Int      @id @default(autoincrement())
+  date           DateTime @unique @db.Date
+  youtubeMinutes Int      @default(0)
+  eveningClosed  Boolean  @default(false)
+  categories     DayCategoryStatus[]
+  dailies        DailyTask[]
+  createdAt      DateTime @default(now())
+}
+
+model DayCategoryStatus {
+  id         Int      @id @default(autoincrement())
+  day        Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  dayId      Int
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId Int
+  done       Boolean  @default(false)
+
+  @@unique([dayId, categoryId])
+}
+
+model DailyTask {
+  id        Int      @id @default(autoincrement())
+  day       Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  dayId     Int
+  text      String
+  done      Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model TaskTemplate {
+  id    Int    @id @default(autoincrement())
+  text  String
+  order Int    @default(0)
+}
+
+model Settings {
+  id                   Int     @id @default(1)
+  youtubeBudget        Int     @default(60)
+  notificationsEnabled Boolean @default(false)
+}
