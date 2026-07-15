@@ -6,6 +6,7 @@ import { SettingsModule } from './settings/settings.module';
 import { DaysModule } from './days/days.module';
 import { DailiesModule } from './dailies/dailies.module';
 import { TaskTemplatesModule } from './task-templates/task-templates.module';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { TaskTemplatesModule } from './task-templates/task-templates.module';
     DaysModule,
     DailiesModule,
     TaskTemplatesModule,
+    StatsModule,
   ],
   controllers: [AppController],
 })
