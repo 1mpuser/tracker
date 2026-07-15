@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { DayView, HistoryEntry, Settings } from '@/types/api';
-import { getDay, getHistory, getSettings } from '@/lib/api';
+import { getDay, getHistory, getSettings, setCategoryDone, setEveningClosed } from '@/lib/api';
 import { formatDisplayDate, todayUTC } from '@/lib/date';
 import { computeStreak } from '@/lib/streak';
 import Header from './Header';
+import SpheresPanel from './SpheresPanel';
 import styles from './Dashboard.module.css';
 
 const HISTORY_LIMIT = 84;
@@ -45,6 +46,19 @@ export default function Dashboard() {
     // Real Notification.requestPermission() + Settings persistence lands in Task 18.
   }
 
+  async function toggleCategory(key: string) {
+    if (!day) return;
+    const current = day.categories.find((c) => c.key === key);
+    if (!current) return;
+    setDay(await setCategoryDone(date, key, !current.done));
+    refreshHistory();
+  }
+
+  async function toggleEveningClosed() {
+    if (!day) return;
+    setDay(await setEveningClosed(date, !day.eveningClosed));
+  }
+
   if (loading) {
     return <div className={styles.loading}>загрузка…</div>;
   }
@@ -69,8 +83,13 @@ export default function Dashboard() {
         onEnableNotifications={enableNotifications}
         onOpenSettings={() => setSettingsOpen(true)}
       />
-      <div>
-        Сфер выполнено: {day.categories.filter((c) => c.done).length} / {day.categories.length}
+      <div className={styles.grid}>
+        <SpheresPanel
+          categories={day.categories}
+          eveningClosed={day.eveningClosed}
+          onToggle={toggleCategory}
+          onToggleEveningClosed={toggleEveningClosed}
+        />
       </div>
       <div>Задач на сегодня: {day.dailies.length}</div>
       <div>
