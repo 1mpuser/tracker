@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Панель дня</title>
+<style>
+  :root{
+    --bg:#14161b;
+    --panel:#1b1e25;
+    --panel-alt:#20242c;
+    --border:#2b2f38;
+    --text:#e8e6de
+    --text-muted:#888d98;
+    --text-dim:#5b5f6a;
+    --accent:#e0a458;
+    --accent-soft:rgba(224,164,88,0.14);
+    --accent-glow:rgba(224,164,88,0.35);
+    --accent2:#4fa8c9;
+    --accent2-soft:rgba(79,168,201,0.14);
+    --danger:#d9645a;
+    --danger-soft:rgba(217,100,90,0.16);
+    --radius:10px;
+    --mono:ui-monospace,'SF Mono','Cascadia Code','JetBrains Mono',Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    padding:28px 20px 60px;
+  }
+  .wrap{max-width:920px;margin:0 auto;}
+
+  .sysline{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-bottom:18px;
+  }
+
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    border-bottom:1px solid var(--border);
+    padding-bottom:18px;
+    margin-bottom:22px;
+  }
+  .topbar h1{
+    font-size:20px;
+    font-weight:600;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  .topbar .date{
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--text-muted);
+    text-transform:capitalize;
+  }
+  .streakbox{text-align:right;}
+  .streakbox .num{
+    font-family:var(--mono);
+    font-size:38px;
+    font-weight:700;
+    color:var(--accent);
+    line-height:1;
+  }
+  .streakbox .lbl{
+    font-size:11px;
+    color:var(--text-muted);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    margin-top:4px;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  @media (max-width:720px){
+    .grid{grid-template-columns:1fr;}
+    .streakbox{text-align:left;}
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:18px 18px 20px;
+  }
+  .panel h2{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--text-muted);
+    margin:0 0 14px;
+    font-weight:600;
+  }
+
+  /* toggle switches */
+  .cat-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:9px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .cat-row:last-child{border-bottom:none;}
+  .cat-label{
+    font-size:14px;
+    outline:none;
+    cursor:text;
+    border-bottom:1px dashed transparent;
+  }
+  .cat-label:hover{border-bottom:1px dashed var(--text-dim);}
+  .switch{
+    width:42px;height:24px;
+    border-radius:12px;
+    background:var(--panel-alt);
+    border:1px solid var(--border);
+    position:relative;
+    cursor:pointer;
+    flex-shrink:0;
+    transition:background .18s, box-shadow .18s;
+  }
+  .switch .thumb{
+    position:absolute;
+    top:2px;left:2px;
+    width:18px;height:18px;
+    border-radius:50%;
+    background:var(--text-dim);
+    transition:transform .18s, background .18s;
+  }
+  .switch.on{
+    background:var(--accent-soft);
+    box-shadow:0 0 0 1px var(--accent-glow) inset;
+    border-color:var(--accent-glow);
+  }
+  .switch.on .thumb{
+    transform:translateX(18px);
+    background:var(--accent);
+  }
+
+  /* dailies */
+  .daily-add{display:flex;gap:8px;margin-bottom:12px;}
+  .daily-add input{
+    flex:1;
+    background:var(--panel-alt);
+    border:1px solid var(--border);
+    border-radius:6px;
+    color:var(--text);
+    padding:8px 10px;
+    font-size:13px;
+    font-family:var(--sans);
+  }
+  .daily-add input:focus{outline:none;border-color:var(--accent2);}
+  .daily-add button{
+    background:var(--accent2-soft);
+    border:1px solid var(--accent2);
+    color:var(--accent2);
+    border-radius:6px;
+    padding:0 14px;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .daily-add button:hover{background:rgba(79,168,201,0.24);}
+  .daily-list{list-style:none;margin:0;padding:0;}
+  .daily-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:7px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .daily-item:last-child{border-bottom:none;}
+  .dled{
+    width:15px;height:15px;
+    border-radius:4px;
+    border:1px solid var(--text-dim);
+    flex-shrink:0;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .dled.done{background:var(--accent);border-color:var(--accent);}
+  .dled.done::after{content:'✓';font-size:10px;color:var(--bg);}
+  .daily-text{flex:1;font-size:13.5px;cursor:pointer;}
+  .daily-text.done{color:var(--text-dim);text-decoration:line-through;}
+  .daily-del{
+    color:var(--text-dim);
+    cursor:pointer;
+    font-size:14px;
+    padding:0 4px;
+    visibility:hidden;
+  }
+  .daily-item:hover .daily-del{visibility:visible;}
+  .daily-empty{color:var(--text-dim);font-size:12.5px;font-style:italic;}
+
+  /* youtube */
+  .yt-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .yt-count{font-family:var(--mono);font-size:22px;font-weight:700;}
+  .yt-count .of{color:var(--text-dim);font-weight:400;font-size:15px;}
+  .yt-budget-edit{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-muted);
+    background:none;
+    border:none;
+    border-bottom:1px dashed var(--text-dim);
+    width:38px;
+    text-align:right;
+    padding:0;
+  }
+  .yt-budget-edit:focus{outline:none;border-color:var(--accent2);}
+  .bar{
+    height:8px;
+    background:var(--panel-alt);
+    border-radius:4px;
+    overflow:hidden;
+    margin-bottom:12px;
+    border:1px solid var(--border);
+  }
+  .bar-fill{height:100%;border-radius:4px;transition:width .25s, background .25s;}
+  .yt-btns{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .yt-btns button{
+    background:var(--panel-alt);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:6px;
+    padding:6px 12px;
+    font-size:12.5px;
+    font-family:var(--mono);
+    cursor:pointer;
+  }
+  .yt-btns button:hover{border-color:var(--accent2);color:var(--accent2);}
+  .yt-note{font-size:11.5px;color:var(--text-dim);line-height:1.5;}
+  .yt-reset{font-size:11.5px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+
+  /* streak strip */
+  .strip{
+    display:flex;
+    gap:4px;
+    flex-wrap:wrap;
+    margin-bottom:6px;
+  }
+  .cell{
+    width:20px;height:20px;
+    border-radius:4px;
+    background:var(--panel-alt);
+    border:1px solid var(--border);
+    position:relative;
+    flex-shrink:0;
+  }
+  .cell.p20{background:var(--accent-soft);}
+  .cell.p40{background:rgba(224,164,88,0.30);}
+  .cell.p60{background:rgba(224,164,88,0.5);}
+  .cell.p80{background:rgba(224,164,88,0.72);}
+  .cell.p100{background:var(--accent);border-color:var(--accent);}
+  .cell.ytover::after{
+    content:'';
+    position:absolute;bottom:2px;left:2px;right:2px;
+    height:2px;border-radius:1px;
+    background:var(--danger);
+  }
+  .strip-lbl{font-size:11px;color:var(--text-dim);margin-top:4px;}
+
+  .setup{
+    grid-column:1 / -1;
+    border:1px dashed var(--border);
+    background:none;
+  }
+  .setup h2{color:var(--text-dim);}
+  .setup p{font-size:12.5px;color:var(--text-muted);line-height:1.6;margin:0 0 6px;}
+  .setup b{color:var(--text);}
+
+  .loading{color:var(--text-dim);font-family:var(--mono);font-size:13px;padding:40px 0;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="sysline">sys / daily-tracker</div>
+  <div class="topbar">
+    <div>
+      <h1>Панель дня</h1>
+      <div class="date" id="dateLabel">—</div>
+    </div>
+    <div class="streakbox">
+      <div class="num" id="streakNum">–</div>
+      <div class="lbl">дней подряд, все сферы</div>
+    </div>
+  </div>
+
+  <div id="app" class="loading">загрузка…</div>
+</div>
+
+<script>
+const CATS = [
+  {key:'sport', def:'Спорт'},
+  {key:'personal', def:'Общение / свидания'},
+  {key:'family', def:'Семья'},
+  {key:'learning', def:'Обучение'},
+  {key:'work', def:'Работа / финансы'}
+];
+
+let settings = {ytBudget:60, labels:{}};
+let day = null;
+let history = []; // [{date, completed, total, ytOver}]
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function emptyDay(date){
+  const cats = {};
+  CATS.forEach(c=>cats[c.key]=false);
+  return {date, categories:cats, dailies:[], yt:0};
+}
+function uid(){
+  return 'd'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+}
+
+async function safeGet(key){
+  try{
+    const r = await window.storage.get(key, false);
+    return r ? JSON.parse(r.value) : null;
+  }catch(e){ return null; }
+}
+async function safeSet(key, val){
+  try{ await window.storage.set(key, JSON.stringify(val), false); }
+  catch(e){ console.error('storage set failed', key, e); }
+}
+
+async function loadAll(){
+  const s = await safeGet('settings');
+  if(s) settings = s;
+  const t = todayStr();
+  const d = await safeGet('day:'+t);
+  day = d || emptyDay(t);
+  const h = await safeGet('history-summary');
+  history = h || [];
+}
+
+function dayCompletedCount(d){
+  return CATS.reduce((n,c)=> n + (d.categories[c.key] ? 1 : 0), 0);
+}
+
+async function persistDay(){
+  await safeSet('day:'+day.date, day);
+  const completed = dayCompletedCount(day);
+  const ytOver = day.yt > settings.ytBudget;
+  const idx = history.findIndex(h=>h.date===day.date);
+  const entry = {date:day.date, completed, total:CATS.length, ytOver};
+  if(idx>=0) history[idx] = entry; else history.push(entry);
+  history.sort((a,b)=> a.date.localeCompare(b.date));
+  if(history.length>60) history = history.slice(history.length-60);
+  await safeSet('history-summary', history);
+}
+async function persistSettings(){
+  await safeSet('settings', settings);
+}
+
+function fmtDate(t){
+  const d = new Date(t+'T00:00:00');
+  return d.toLocaleDateString('ru-RU', {weekday:'long', day:'numeric', month:'long'});
+}
+
+function computeStreak(){
+  // consecutive full days ending yesterday (today doesn't break streak while in progress)
+  const t = todayStr();
+  const map = {};
+  history.forEach(h=>map[h.date]=h);
+  let streak = 0;
+  let cursor = new Date(t+'T00:00:00');
+  cursor.setDate(cursor.getDate()-1);
+  while(true){
+    const ds = cursor.getFullYear()+'-'+String(cursor.getMonth()+1).padStart(2,'0')+'-'+String(cursor.getDate()).padStart(2,'0');
+    const rec = map[ds];
+    if(rec && rec.completed===rec.total){
+      streak++;
+      cursor.setDate(cursor.getDate()-1);
+    } else break;
+  }
+  // if today already fully complete, count it too
+  const todayCompleted = dayCompletedCount(day);
+  if(todayCompleted===CATS.length) streak++;
+  return streak;
+}
+
+function render(){
+  document.getElementById('dateLabel').textContent = fmtDate(day.date);
+  document.getElementById('streakNum').textContent = computeStreak();
+
+  const app = document.getElementById('app');
+  app.className = '';
+  app.innerHTML = `
+    <div class="grid">
+      <div class="panel">
+        <h2>Сферы дня</h2>
+        <div id="catRows"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Задачи на сегодня</h2>
+        <div class="daily-add">
+          <input id="dailyInput" type="text" placeholder="Добавить задачу…" />
+          <button id="dailyAddBtn">+</button>
+        </div>
+        <ul class="daily-list" id="dailyList"></ul>
+      </div>
+
+      <div class="panel">
+        <h2>YouTube</h2>
+        <div class="yt-top">
+          <div class="yt-count"><span id="ytVal">0</span><span class="of"> / </span><input id="ytBudgetInput" class="yt-budget-edit" value="${settings.ytBudget}"/> мин</div>
+          <span class="yt-reset" id="ytReset">сбросить</span>
+        </div>
+        <div class="bar"><div class="bar-fill" id="ytBar"></div></div>
+        <div class="yt-btns">
+          <button data-add="10">+10</button>
+          <button data-add="25">+25</button>
+          <button data-add="50">+50</button>
+        </div>
+        <div class="yt-note">Виджет только считает минуты. Сам лимит ставь в Screen Time (macOS) или расширением в браузере — иначе цифра просто фиксирует факт постфактум.</div>
+      </div>
+
+      <div class="panel">
+        <h2>Журнал (последние дни)</h2>
+        <div class="strip" id="strip"></div>
+        <div class="strip-lbl">закрашено = доля закрытых сфер · красная черта = перебор по YouTube</div>
+      </div>
+
+      <div class="panel setup">
+        <h2>Настройка напоминаний (один раз)</h2>
+        <p>Причина, по которой прошлая система заглохла — не было пуша, чтобы вспомнить про неё в течение дня. Этот виджет сам не шлёт уведомления (веб-страница не может, пока не открыта). Поставь два будильника/пуша вручную — в Habit или в системных напоминаниях:</p>
+        <p><b>09:00</b> — открыть панель, задать 2–3 задачи на день.</p>
+        <p><b>22:00</b> — закрыть сферы, отметить YouTube-минуты.</p>
+      </div>
+    </div>
+  `;
+
+  renderCats();
+  renderDailies();
+  renderYt();
+  renderStrip();
+
+  document.getElementById('dailyAddBtn').onclick = addDaily;
+  document.getElementById('dailyInput').onkeydown = (e)=>{ if(e.key==='Enter') addDaily(); };
+  document.getElementById('ytBudgetInput').onchange = async (e)=>{
+    const v = parseInt(e.target.value,10);
+    settings.ytBudget = isNaN(v) ? settings.ytBudget : Math.max(0,v);
+    await persistSettings();
+    await persistDay();
+    renderYt(); renderStrip();
+    document.getElementById('streakNum').textContent = computeStreak();
+  };
+  document.getElementById('ytReset').onclick = async ()=>{
+    day.yt = 0;
+    await persistDay();
+    renderYt(); renderStrip();
+  };
+  document.querySelectorAll('.yt-btns button').forEach(b=>{
+    b.onclick = async ()=>{
+      day.yt += parseInt(b.dataset.add,10);
+      await persistDay();
+      renderYt(); renderStrip();
+    };
+  });
+}
+
+function renderCats(){
+  const box = document.getElementById('catRows');
+  box.innerHTML = CATS.map(c=>{
+    const on = day.categories[c.key];
+    const label = settings.labels[c.key] || c.def;
+    return `<div class="cat-row">
+      <span class="cat-label" contenteditable="true" data-key="${c.key}">${label}</span>
+      <div class="switch ${on?'on':''}" data-key="${c.key}"><div class="thumb"></div></div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.switch').forEach(sw=>{
+    sw.onclick = async ()=>{
+      const k = sw.dataset.key;
+      day.categories[k] = !day.categories[k];
+      await persistDay();
+      sw.classList.toggle('on');
+      document.getElementById('streakNum').textContent = computeStreak();
+      renderStrip();
+    };
+  });
+  box.querySelectorAll('.cat-label').forEach(lbl=>{
+    lbl.onblur = async ()=>{
+      const k = lbl.dataset.key;
+      const v = lbl.textContent.trim();
+      if(v) settings.labels[k] = v;
+      await persistSettings();
+    };
+  });
+}
+
+function renderDailies(){
+  const list = document.getElementById('dailyList');
+  if(day.dailies.length===0){
+    list.innerHTML = '<li class="daily-empty">Пока пусто — добавь пару задач на день.</li>';
+    return;
+  }
+  list.innerHTML = day.dailies.map(t=>`
+    <li class="daily-item">
+      <div class="dled ${t.done?'done':''}" data-id="${t.id}"></div>
+      <span class="daily-text ${t.done?'done':''}" data-id="${t.id}">${t.text}</span>
+      <span class="daily-del" data-id="${t.id}">×</span>
+    </li>
+  `).join('');
+  list.querySelectorAll('.dled, .daily-text').forEach(el=>{
+    el.onclick = async ()=>{
+      const id = el.dataset.id;
+      const item = day.dailies.find(x=>x.id===id);
+      item.done = !item.done;
+      await persistDay();
+      renderDailies();
+    };
+  });
+  list.querySelectorAll('.daily-del').forEach(el=>{
+    el.onclick = async ()=>{
+      const id = el.dataset.id;
+      day.dailies = day.dailies.filter(x=>x.id!==id);
+      await persistDay();
+      renderDailies();
+    };
+  });
+}
+
+async function addDaily(){
+  const input = document.getElementById('dailyInput');
+  const v = input.value.trim();
+  if(!v) return;
+  day.dailies.push({id:uid(), text:v, done:false});
+  input.value = '';
+  await persistDay();
+  renderDailies();
+}
+
+function renderYt(){
+  document.getElementById('ytVal').textContent = day.yt;
+  const budget = settings.ytBudget || 1;
+  const pct = Math.min(100, (day.yt/budget)*100);
+  const fill = document.getElementById('ytBar').querySelector ? null : null;
+  const barFill = document.getElementById('ytBar');
+  barFill.style.width = pct+'%';
+  let color = 'var(--accent2)';
+  if(day.yt > budget) color = 'var(--danger)';
+  else if(pct > 70) color = 'var(--accent)';
+  barFill.style.background = color;
+}
+
+function renderStrip(){
+  const strip = document.getElementById('strip');
+  const t = todayStr();
+  const map = {};
+  history.forEach(h=>map[h.date]=h);
+  map[t] = {date:t, completed:dayCompletedCount(day), total:CATS.length, ytOver: day.yt>settings.ytBudget};
+
+  const days = [];
+  const cur = new Date(t+'T00:00:00');
+  for(let i=20;i>=0;i--){
+    const dd = new Date(cur);
+    dd.setDate(cur.getDate()-i);
+    const ds = dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');
+    days.push(ds);
+  }
+  strip.innerHTML = days.map(ds=>{
+    const rec = map[ds];
+    let cls = 'cell';
+    if(rec){
+      const ratio = rec.total ? rec.completed/rec.total : 0;
+      if(ratio>=1) cls+=' p100';
+      else if(ratio>=0.8) cls+=' p80';
+      else if(ratio>=0.6) cls+=' p60';
+      else if(ratio>=0.4) cls+=' p40';
+      else if(ratio>0) cls+=' p20';
+      if(rec.ytOver) cls+=' ytover';
+    }
+    const title = rec ? `${ds}: ${rec.completed}/${rec.total} сфер${rec.ytOver?', YouTube — перебор':''}` : ds+': нет данных';
+    return `<div class="${cls}" title="${title}"></div>`;
+  }).join('');
+}
+
+(async function init(){
+  await loadAll();
+  render();
+})();
+</script>
+</body>
+</html>
