@@ -2,11 +2,21 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { DayView, HistoryEntry, Settings } from '@/types/api';
-import { getDay, getHistory, getSettings, setCategoryDone, setEveningClosed } from '@/lib/api';
+import {
+  addDaily as apiAddDaily,
+  deleteDaily as apiDeleteDaily,
+  getDay,
+  getHistory,
+  getSettings,
+  setCategoryDone,
+  setEveningClosed,
+  updateDaily as apiUpdateDaily,
+} from '@/lib/api';
 import { formatDisplayDate, todayUTC } from '@/lib/date';
 import { computeStreak } from '@/lib/streak';
 import Header from './Header';
 import SpheresPanel from './SpheresPanel';
+import DailiesPanel from './DailiesPanel';
 import styles from './Dashboard.module.css';
 
 const HISTORY_LIMIT = 84;
@@ -59,6 +69,24 @@ export default function Dashboard() {
     setDay(await setEveningClosed(date, !day.eveningClosed));
   }
 
+  async function addDailyTask(text: string) {
+    await apiAddDaily(date, text);
+    await refreshDay();
+  }
+
+  async function toggleDaily(id: number) {
+    if (!day) return;
+    const current = day.dailies.find((t) => t.id === id);
+    if (!current) return;
+    await apiUpdateDaily(id, { done: !current.done });
+    await refreshDay();
+  }
+
+  async function deleteDailyTask(id: number) {
+    await apiDeleteDaily(id);
+    await refreshDay();
+  }
+
   if (loading) {
     return <div className={styles.loading}>загрузка…</div>;
   }
@@ -90,8 +118,13 @@ export default function Dashboard() {
           onToggle={toggleCategory}
           onToggleEveningClosed={toggleEveningClosed}
         />
+        <DailiesPanel
+          dailies={day.dailies}
+          onAdd={addDailyTask}
+          onToggle={toggleDaily}
+          onDelete={deleteDailyTask}
+        />
       </div>
-      <div>Задач на сегодня: {day.dailies.length}</div>
       <div>
         YouTube: {day.youtubeMinutes} / {settings.youtubeBudget} мин
       </div>
