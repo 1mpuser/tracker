@@ -8,8 +8,11 @@ export interface TodayCompletion {
 }
 
 export function computeStreak(history: HistoryEntry[], today: TodayCompletion): number {
-  const map = new Map(history.map((h) => [h.date, h]));
-  map.set(today.date, { date: today.date, completed: today.completed, total: today.total, ytOver: false });
+  // Deliberately excludes today.date: the backward loop below starts at yesterday
+  // and never revisits it, and the final check below reads `today` directly — so
+  // today's completion always comes from the live `today` param, never from a
+  // (possibly stale) matching entry inside `history`.
+  const map = new Map(history.filter((h) => h.date !== today.date).map((h) => [h.date, h]));
 
   let streak = 0;
   let cursor = addDaysUTC(parseUTC(today.date), -1);

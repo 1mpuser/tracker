@@ -35,4 +35,15 @@ describe('computeStreak', () => {
     const history = [entry('2026-07-14', 0, 0)];
     expect(computeStreak(history, { date: '2026-07-15', completed: 0, total: 0 })).toBe(0);
   });
+
+  it('uses the live today param over a stale history record for the same date', () => {
+    // /history was fetched before the user's most recent toggle today, so it still
+    // shows an incomplete day — the caller passes the fresher live state instead.
+    const history = [
+      entry('2026-07-13', 5, 5),
+      entry('2026-07-14', 5, 5),
+      entry('2026-07-15', 2, 5), // stale: history hasn't caught up with today's toggles yet
+    ];
+    expect(computeStreak(history, { date: '2026-07-15', completed: 5, total: 5 })).toBe(3);
+  });
 });
