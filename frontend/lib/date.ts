@@ -25,3 +25,16 @@ export function formatDisplayDate(dateStr: string): string {
     timeZone: 'UTC',
   }).format(parseUTC(dateStr));
 }
+
+function formatDayMonth(dateStr: string): string {
+  return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(
+    parseUTC(dateStr),
+  );
+}
+
+export function formatOriginDate(originDate: string, targetDate: string): string {
+  const diffDays = Math.round((parseUTC(targetDate).getTime() - parseUTC(originDate).getTime()) / 86_400_000);
+  if (diffDays === 1) return 'вчера';
+  if (diffDays === 2) return 'позавчера';
+  return `с ${formatDayMonth(originDate)}`;
+}

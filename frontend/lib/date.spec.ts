@@ -1,4 +1,4 @@
-import { addDaysUTC, formatDisplayDate, formatUTC, parseUTC, todayUTC } from './date';
+import { addDaysUTC, formatDisplayDate, formatOriginDate, formatUTC, parseUTC, todayUTC } from './date';
 
 describe('date utils', () => {
   it('parses a YYYY-MM-DD string as UTC midnight', () => {
@@ -21,5 +21,17 @@ describe('date utils', () => {
 
   it('formats a Russian display date (weekday, day, month)', () => {
     expect(formatDisplayDate('2026-07-15')).toBe('среда, 15 июля');
+  });
+
+  it('formatOriginDate says "вчера" for one day before the target date', () => {
+    expect(formatOriginDate('2026-07-15', '2026-07-16')).toBe('вчера');
+  });
+
+  it('formatOriginDate says "позавчера" for two days before the target date', () => {
+    expect(formatOriginDate('2026-07-14', '2026-07-16')).toBe('позавчера');
+  });
+
+  it('formatOriginDate falls back to "с <day month>" for anything older', () => {
+    expect(formatOriginDate('2026-07-10', '2026-07-16')).toBe('с 10 июля');
   });
 });
