@@ -1,6 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DaysService } from '../days/days.service';
+import { addDays, formatDate, parseDateParam } from '../common/date.util';
+
+export interface CarryCandidate {
+  id: number;
+  text: string;
+  originDate: string;
+}
 
 @Injectable()
 export class DailiesService {
@@ -18,6 +25,28 @@ export class DailiesService {
     return this.prisma.dailyTask.create({
       data: { dayId, text, order: (maxOrder._max.order ?? -1) + 1 },
     });
+  }
+
+  async getCarryCandidates(dateStr: string, days: number): Promise<CarryCandidate[]> {
+    const date = parseDateParam(dateStr);
+    const rangeStart = addDays(date, -days);
+    const rangeEnd = addDays(date, -1);
+
+    const tasks = await this.prisma.dailyTask.findMany({
+      where: {
+        done: false,
+        carriedForward: false,
+        day: { date: { gte: rangeStart, lte: rangeEnd } },
+      },
+      include: { day: true },
+      orderBy: { day: { date: 'desc' } },
+    });
+
+    return tasks.map((t) => ({
+      id: t.id,
+      text: t.text,
+      originDate: formatDate(t.carriedFromDate ?? t.day.date),
+    }));
   }
 
   async update(id: number, data: { done?: boolean; text?: string }) {

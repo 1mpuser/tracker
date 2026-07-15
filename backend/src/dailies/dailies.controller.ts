@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { DailiesService } from './dailies.service';
 import { CreateDailyDto } from './dto/create-daily.dto';
 import { UpdateDailyDto } from './dto/update-daily.dto';
@@ -6,6 +6,12 @@ import { UpdateDailyDto } from './dto/update-daily.dto';
 @Controller()
 export class DailiesController {
   constructor(private readonly dailiesService: DailiesService) {}
+
+  @Get('days/:date/carry-candidates')
+  getCarryCandidates(@Param('date') date: string, @Query('days') days?: string) {
+    const parsed = days ? parseInt(days, 10) : 3;
+    return this.dailiesService.getCarryCandidates(date, Number.isNaN(parsed) ? 3 : parsed);
+  }
 
   @Post('days/:date/dailies')
   create(@Param('date') date: string, @Body() dto: CreateDailyDto) {
