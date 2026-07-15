@@ -15,6 +15,7 @@ import {
   updateYoutube,
 } from '@/lib/api';
 import { formatDisplayDate, todayUTC } from '@/lib/date';
+import { isEveningWindow, isMorningWindow } from '@/lib/notifications';
 import { computeStreak } from '@/lib/streak';
 import Header from './Header';
 import SpheresPanel from './SpheresPanel';
@@ -49,6 +50,25 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, [loadCore]);
 
+  useEffect(() => {
+    if (!settings?.notificationsEnabled) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+
+    const check = () => {
+      const now = new Date();
+      if (isMorningWindow(now) && day && day.dailies.length === 0) {
+        new Notification('Ещё не занёс задачи на сегодня');
+      }
+      if (isEveningWindow(now) && day && !day.eveningClosed) {
+        new Notification('Отметь сферы за сегодня и закрой день');
+      }
+    };
+
+    check();
+    const interval = setInterval(check, 10 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [settings?.notificationsEnabled, day]);
+
   async function refreshDay() {
     setDay(await getDay(date));
   }
@@ -57,8 +77,12 @@ export default function Dashboard() {
     setHistory(await getHistory(HISTORY_LIMIT));
   }
 
-  function enableNotifications() {
-    // Real Notification.requestPermission() + Settings persistence lands in Task 18.
+  async function enableNotifications() {
+    if (typeof Notification === 'undefined') return;
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      setSettings(await updateSettings({ notificationsEnabled: true }));
+    }
   }
 
   async function toggleCategory(key: string) {
