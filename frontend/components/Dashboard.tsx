@@ -5,6 +5,7 @@ import type { DayView, HistoryEntry, Settings } from '@/types/api';
 import { getDay, getHistory, getSettings } from '@/lib/api';
 import { formatDisplayDate, todayUTC } from '@/lib/date';
 import { computeStreak } from '@/lib/streak';
+import Header from './Header';
 import styles from './Dashboard.module.css';
 
 const HISTORY_LIMIT = 84;
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const loadCore = useCallback(async () => {
     const [d, h, s] = await Promise.all([getDay(date), getHistory(HISTORY_LIMIT), getSettings()]);
@@ -39,6 +41,10 @@ export default function Dashboard() {
     setHistory(await getHistory(HISTORY_LIMIT));
   }
 
+  function enableNotifications() {
+    // Real Notification.requestPermission() + Settings persistence lands in Task 18.
+  }
+
   if (loading) {
     return <div className={styles.loading}>загрузка…</div>;
   }
@@ -56,8 +62,13 @@ export default function Dashboard() {
   return (
     <div className={styles.wrap}>
       <div className={styles.sysline}>sys / daily-tracker</div>
-      <div>Дата: {formatDisplayDate(date)}</div>
-      <div>Серия: {streak}</div>
+      <Header
+        dateLabel={formatDisplayDate(date)}
+        streak={streak}
+        notificationsEnabled={settings.notificationsEnabled}
+        onEnableNotifications={enableNotifications}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
       <div>
         Сфер выполнено: {day.categories.filter((c) => c.done).length} / {day.categories.length}
       </div>
@@ -65,6 +76,7 @@ export default function Dashboard() {
       <div>
         YouTube: {day.youtubeMinutes} / {settings.youtubeBudget} мин
       </div>
+      {settingsOpen && <div>Настройки скоро — модалка появится в Task 16.</div>}
     </div>
   );
 }
