@@ -20,6 +20,7 @@ import Header from './Header';
 import SpheresPanel from './SpheresPanel';
 import DailiesPanel from './DailiesPanel';
 import YoutubePanel from './YoutubePanel';
+import StatsPanel from './StatsPanel';
 import styles from './Dashboard.module.css';
 
 const HISTORY_LIMIT = 84;
@@ -144,6 +145,7 @@ export default function Dashboard() {
           onBudgetChange={changeYoutubeBudget}
         />
       </div>
+      <StatsPanel history={history} />
       {settingsOpen && <div>Настройки скоро — модалка появится в Task 16.</div>}
     </div>
   );
