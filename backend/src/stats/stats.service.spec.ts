@@ -29,7 +29,16 @@ describe('StatsService.youtubeDailyStats', () => {
 });
 
 describe('StatsService.youtubeWeeklyStats', () => {
-  it('averages minutes across all 7 days of each week, treating gaps as 0', async () => {
+  beforeEach(() => {
+    // Fixed system time (a Wednesday) so Monday-alignment is deterministic and assertable.
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('averages minutes across all 7 days of each week, treating gaps as 0, aligned to Monday', async () => {
     const prisma: any = {
       settings: { findUnique: jest.fn().mockResolvedValue({ youtubeBudget: 60 }) },
       day: { findMany: jest.fn().mockResolvedValue([]) },
@@ -39,12 +48,34 @@ describe('StatsService.youtubeWeeklyStats', () => {
     const result = await service.youtubeWeeklyStats(1);
 
     expect(result).toHaveLength(1);
+    expect(result[0].weekStart).toBe('2026-07-13'); // Monday of the week containing 2026-07-15
     expect(result[0].avgMinutes).toBe(0);
     expect(result[0].budget).toBe(60);
+  });
+
+  it('aligns to Monday even when "today" is itself a Sunday', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-19T12:00:00.000Z')); // Sunday
+    const prisma: any = {
+      settings: { findUnique: jest.fn().mockResolvedValue({ youtubeBudget: 60 }) },
+      day: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const service = new StatsService(prisma);
+
+    const result = await service.youtubeWeeklyStats(1);
+
+    expect(result[0].weekStart).toBe('2026-07-13'); // Monday of the *same* week, not the next one
   });
 });
 
 describe('StatsService.categoryStats', () => {
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('computes pct as doneCount / days, per non-archived category', async () => {
     const prisma: any = {
       category: {
