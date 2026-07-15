@@ -40,13 +40,15 @@ model DayCategoryStatus {
 }
 
 model DailyTask {
-  id        Int      @id @default(autoincrement())
-  day       Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  dayId     Int
-  text      String
-  done      Boolean  @default(false)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
+  id              Int       @id @default(autoincrement())
+  day             Day       @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  dayId           Int
+  text            String
+  done            Boolean   @default(false)
+  order           Int       @default(0)
+  carriedFromDate DateTime? @db.Date
+  carriedForward  Boolean   @default(false)
+  createdAt       DateTime  @default(now())
 }
 
 model TaskTemplate {
