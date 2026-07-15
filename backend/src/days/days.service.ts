@@ -13,6 +13,8 @@ export interface DayView {
   date: string;
   youtubeMinutes: number;
   eveningClosed: boolean;
+  rating: number | null;
+  comment: string | null;
   categories: DayCategoryView[];
   dailies: { id: number; text: string; done: boolean; order: number }[];
 }
@@ -22,6 +24,13 @@ export interface HistoryEntry {
   completed: number;
   total: number;
   ytOver: boolean;
+  rating: number | null;
+}
+
+export interface UpdateDayData {
+  eveningClosed?: boolean;
+  rating?: number;
+  comment?: string;
 }
 
 @Injectable()
@@ -59,6 +68,8 @@ export class DaysService {
       date: formatDate(day.date),
       youtubeMinutes: day.youtubeMinutes,
       eveningClosed: day.eveningClosed,
+      rating: day.rating,
+      comment: day.comment,
       categories: activeCategories.map((c) => ({
         key: c.key,
         label: c.label,
@@ -90,9 +101,9 @@ export class DaysService {
     return this.getDay(dateStr);
   }
 
-  async setEveningClosed(dateStr: string, eveningClosed: boolean): Promise<DayView> {
+  async updateDay(dateStr: string, data: UpdateDayData): Promise<DayView> {
     const dayId = await this.getOrCreateDayId(dateStr);
-    await this.prisma.day.update({ where: { id: dayId }, data: { eveningClosed } });
+    await this.prisma.day.update({ where: { id: dayId }, data });
     return this.getDay(dateStr);
   }
 
@@ -125,6 +136,7 @@ export class DaysService {
         completed,
         total: activeSet.length,
         ytOver: youtubeMinutes > budget,
+        rating: day?.rating ?? null,
       });
     }
     return result;

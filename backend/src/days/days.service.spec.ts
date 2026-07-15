@@ -80,4 +80,59 @@ describe('DaysService.getHistory', () => {
 
     expect(entry.ytOver).toBe(true);
   });
+
+  it('exposes the day row\'s rating', async () => {
+    const today = new Date(Date.UTC(2026, 6, 15));
+    prisma.day.findMany.mockResolvedValue([{ date: today, youtubeMinutes: 0, rating: 7, categories: [] }]);
+    prisma.category.findMany.mockResolvedValue([]);
+    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+
+    const [entry] = await service.getHistory(1);
+
+    expect(entry.rating).toBe(7);
+  });
+
+  it('defaults rating to null when there is no history record for the day', async () => {
+    prisma.day.findMany.mockResolvedValue([]);
+    prisma.category.findMany.mockResolvedValue([]);
+    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+
+    const [entry] = await service.getHistory(1);
+
+    expect(entry.rating).toBeNull();
+  });
+});
+
+describe('DaysService.updateDay', () => {
+  let service: DaysService;
+  let prisma: any;
+
+  beforeEach(() => {
+    prisma = {
+      day: {
+        findUnique: jest.fn().mockResolvedValue({ id: 7 }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    };
+    service = new DaysService(prisma, {} as any);
+  });
+
+  it('forwards only the provided fields to the Prisma update, not a merged full-day object', async () => {
+    jest.spyOn(service, 'getDay').mockResolvedValue({} as any);
+
+    await service.updateDay('2026-07-14', { rating: 8 });
+
+    expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 7 }, data: { rating: 8 } });
+  });
+
+  it('supports updating multiple fields in one call', async () => {
+    jest.spyOn(service, 'getDay').mockResolvedValue({} as any);
+
+    await service.updateDay('2026-07-14', { eveningClosed: true, comment: 'Хороший день' });
+
+    expect(prisma.day.update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { eveningClosed: true, comment: 'Хороший день' },
+    });
+  });
 });

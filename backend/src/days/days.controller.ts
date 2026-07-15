@@ -29,7 +29,7 @@ export class DaysController {
 
   @Patch('days/:date')
   updateDay(@Param('date') date: string, @Body() dto: UpdateDayDto) {
-    return this.daysService.setEveningClosed(date, dto.eveningClosed);
+    return this.daysService.updateDay(date, dto);
   }
 
   @Get('history')
