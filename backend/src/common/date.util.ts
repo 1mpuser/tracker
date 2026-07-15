@@ -8,6 +8,9 @@ export function parseDateParam(dateStr: string): Date {
   if (Number.isNaN(date.getTime())) {
     throw new BadRequestException(`Invalid date: ${dateStr}`);
   }
+  if (formatDate(date) !== dateStr) {
+    throw new BadRequestException(`Invalid date: ${dateStr}`);
+  }
   return date;
 }
 
