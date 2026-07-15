@@ -16,7 +16,7 @@ export interface DayView {
   rating: number | null;
   comment: string | null;
   categories: DayCategoryView[];
-  dailies: { id: number; text: string; done: boolean; order: number }[];
+  dailies: { id: number; text: string; done: boolean; order: number; carriedFromDate: string | null }[];
 }
 
 export interface HistoryEntry {
@@ -75,7 +75,13 @@ export class DaysService {
         label: c.label,
         done: statusByCategoryId.get(c.id)?.done ?? false,
       })),
-      dailies: day.dailies.map((t) => ({ id: t.id, text: t.text, done: t.done, order: t.order })),
+      dailies: day.dailies.map((t) => ({
+        id: t.id,
+        text: t.text,
+        done: t.done,
+        order: t.order,
+        carriedFromDate: t.carriedFromDate ? formatDate(t.carriedFromDate) : null,
+      })),
     };
   }
 

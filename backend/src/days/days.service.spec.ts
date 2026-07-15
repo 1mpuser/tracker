@@ -1,5 +1,57 @@
 import { DaysService } from './days.service';
 
+describe('DaysService.getDay', () => {
+  let service: DaysService;
+  let prisma: any;
+  let categoriesService: any;
+
+  beforeEach(() => {
+    prisma = { day: { findUnique: jest.fn(), create: jest.fn() } };
+    categoriesService = { findActive: jest.fn().mockResolvedValue([]) };
+    service = new DaysService(prisma, categoriesService);
+  });
+
+  it('exposes carriedFromDate as a formatted date string when the task was carried', async () => {
+    prisma.day.findUnique.mockResolvedValue({
+      date: new Date('2026-07-15T00:00:00.000Z'),
+      youtubeMinutes: 0,
+      eveningClosed: false,
+      rating: null,
+      comment: null,
+      categories: [],
+      dailies: [
+        {
+          id: 1,
+          text: 'Перенесённая задача',
+          done: false,
+          order: 0,
+          carriedFromDate: new Date('2026-07-10T00:00:00.000Z'),
+        },
+      ],
+    });
+
+    const result = await service.getDay('2026-07-15');
+
+    expect(result.dailies[0].carriedFromDate).toBe('2026-07-10');
+  });
+
+  it('exposes carriedFromDate as null when the task was never carried', async () => {
+    prisma.day.findUnique.mockResolvedValue({
+      date: new Date('2026-07-15T00:00:00.000Z'),
+      youtubeMinutes: 0,
+      eveningClosed: false,
+      rating: null,
+      comment: null,
+      categories: [],
+      dailies: [{ id: 2, text: 'Обычная задача', done: false, order: 0, carriedFromDate: null }],
+    });
+
+    const result = await service.getDay('2026-07-15');
+
+    expect(result.dailies[0].carriedFromDate).toBeNull();
+  });
+});
+
 describe('DaysService.getHistory', () => {
   let service: DaysService;
   let prisma: any;
