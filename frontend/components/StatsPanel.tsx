@@ -7,13 +7,14 @@ import YoutubeDailyHeatmap from './YoutubeDailyHeatmap';
 
 interface StatsPanelProps {
   history: HistoryEntry[];
+  onSelectDate: (date: string) => void;
 }
 
-export default function StatsPanel({ history }: StatsPanelProps) {
+export default function StatsPanel({ history, onSelectDate }: StatsPanelProps) {
   return (
     <div className={styles.panel}>
       <h2 className={styles.heading}>Статистика</h2>
-      <CategoryHeatmap history={history} />
+      <CategoryHeatmap history={history} onSelectDate={onSelectDate} />
       <CategoryBars />
       <YoutubeWeeklyChart />
       <YoutubeDailyHeatmap />

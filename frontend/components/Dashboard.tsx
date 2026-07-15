@@ -23,6 +23,7 @@ import DailiesPanel from './DailiesPanel';
 import YoutubePanel from './YoutubePanel';
 import StatsPanel from './StatsPanel';
 import SettingsModal from './SettingsModal';
+import DayDetailModal from './DayDetailModal';
 import styles from './Dashboard.module.css';
 
 const HISTORY_LIMIT = 84;
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const loadCore = useCallback(async () => {
     const [d, h, s] = await Promise.all([getDay(date), getHistory(HISTORY_LIMIT), getSettings()]);
@@ -170,9 +172,12 @@ export default function Dashboard() {
           onBudgetChange={changeYoutubeBudget}
         />
       </div>
-      <StatsPanel history={history} />
+      <StatsPanel history={history} onSelectDate={setSelectedDate} />
       {settingsOpen && (
         <SettingsModal onClose={() => setSettingsOpen(false)} onCategoriesChanged={refreshDay} />
+      )}
+      {selectedDate && (
+        <DayDetailModal date={selectedDate} onClose={() => setSelectedDate(null)} onDataChanged={refreshHistory} />
       )}
     </div>
   );

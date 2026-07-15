@@ -15,6 +15,15 @@
   position: relative;
 }
 
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  outline: 1px solid var(--accent2);
+  outline-offset: 1px;
+}
+
 .blank {
   width: 13px;
   height: 13px;
