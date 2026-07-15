@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { DaysService } from '../days/days.service';
+import { DaysService, DayView } from '../days/days.service';
 import { addDays, formatDate, parseDateParam } from '../common/date.util';
 
 export interface CarryCandidate {
@@ -47,6 +47,32 @@ export class DailiesService {
       text: t.text,
       originDate: formatDate(t.carriedFromDate ?? t.day.date),
     }));
+  }
+
+  async carryTasks(dateStr: string, ids: number[]): Promise<DayView> {
+    const dayId = await this.daysService.getOrCreateDayId(dateStr);
+
+    await this.prisma.$transaction(async (tx) => {
+      const maxOrder = await tx.dailyTask.aggregate({ where: { dayId }, _max: { order: true } });
+      let nextOrder = (maxOrder._max.order ?? -1) + 1;
+
+      for (const id of ids) {
+        const source = await tx.dailyTask.findUnique({ where: { id }, include: { day: true } });
+        if (!source || source.done || source.carriedForward) continue;
+
+        await tx.dailyTask.create({
+          data: {
+            dayId,
+            text: source.text,
+            order: nextOrder++,
+            carriedFromDate: source.carriedFromDate ?? source.day.date,
+          },
+        });
+        await tx.dailyTask.update({ where: { id: source.id }, data: { carriedForward: true } });
+      }
+    });
+
+    return this.daysService.getDay(dateStr);
   }
 
   async update(id: number, data: { done?: boolean; text?: string }) {

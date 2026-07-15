@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query 
 import { DailiesService } from './dailies.service';
 import { CreateDailyDto } from './dto/create-daily.dto';
 import { UpdateDailyDto } from './dto/update-daily.dto';
+import { CarryDailiesDto } from './dto/carry-dailies.dto';
 
 @Controller()
 export class DailiesController {
@@ -11,6 +12,11 @@ export class DailiesController {
   getCarryCandidates(@Param('date') date: string, @Query('days') days?: string) {
     const parsed = days ? parseInt(days, 10) : 3;
     return this.dailiesService.getCarryCandidates(date, Number.isNaN(parsed) ? 3 : parsed);
+  }
+
+  @Post('days/:date/dailies/carry')
+  carry(@Param('date') date: string, @Body() dto: CarryDailiesDto) {
+    return this.dailiesService.carryTasks(date, dto.ids);
   }
 
   @Post('days/:date/dailies')
