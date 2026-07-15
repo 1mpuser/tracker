@@ -10,7 +10,7 @@ docker compose up -d --build
 ```
 
 Backend: http://localhost:3001
-Frontend: http://localhost:4887 (added in a later phase)
+Frontend: http://localhost:4887
 
 ## Apply migrations manually (if needed)
 
@@ -35,4 +35,22 @@ bun run start:dev
 
 ```bash
 cd backend && bun run test
+```
+
+## Local frontend development (without full Docker rebuild each time)
+
+```bash
+docker compose up -d postgres backend
+cd frontend
+cp .env.example .env.local   # then edit: NEXT_PUBLIC_API_URL=http://localhost:3001
+bun install
+bun run dev
+```
+
+Opens on http://localhost:4887 (not the Next.js default 3000 — the backend's CORS is locked to 4887).
+
+## Frontend tests
+
+```bash
+cd frontend && bun run test
 ```

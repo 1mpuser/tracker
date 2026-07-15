@@ -29,5 +29,16 @@ services:
       postgres:
         condition: service_healthy
 
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001
+    restart: unless-stopped
+    ports:
+      - "4887:3000"
+    depends_on:
+      - backend
+
 volumes:
   pgdata:
