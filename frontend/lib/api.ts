@@ -82,8 +82,8 @@ export function updateDay(
   return request(`/days/${date}`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
-export function getHistory(limit: number): Promise<HistoryEntry[]> {
-  return request(`/history?limit=${limit}`);
+export function getHistory(limit: number, end?: string): Promise<HistoryEntry[]> {
+  return request(`/history?limit=${limit}${end ? `&end=${end}` : ''}`);
 }
 
 export function getCategories(): Promise<Category[]> {

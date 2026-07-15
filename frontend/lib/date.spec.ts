@@ -1,4 +1,4 @@
-import { addDaysUTC, formatDisplayDate, formatOriginDate, formatUTC, parseUTC, todayUTC } from './date';
+import { addDaysUTC, formatDisplayDate, formatOriginDate, formatUTC, parseUTC, todayLocal } from './date';
 
 describe('date utils', () => {
   it('parses a YYYY-MM-DD string as UTC midnight', () => {
@@ -13,9 +13,9 @@ describe('date utils', () => {
     expect(formatUTC(addDaysUTC(new Date('2026-07-31T00:00:00.000Z'), 1))).toBe('2026-08-01');
   });
 
-  it('todayUTC reads the UTC calendar date, not the local one', () => {
-    jest.useFakeTimers().setSystemTime(new Date('2026-07-15T22:00:00.000Z'));
-    expect(todayUTC()).toBe('2026-07-15');
+  it('todayLocal reads the local wall-clock calendar date', () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 6, 15, 23, 30));
+    expect(todayLocal()).toBe('2026-07-15');
     jest.useRealTimers();
   });
 

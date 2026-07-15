@@ -1,7 +1,7 @@
 import styles from './CategoryHeatmap.module.css';
 import type { HistoryEntry } from '@/types/api';
 import { categoryHeatmapColor, mondayOffset } from '@/lib/heatmap';
-import { todayUTC } from '@/lib/date';
+import { todayLocal } from '@/lib/date';
 
 interface CategoryHeatmapProps {
   history: HistoryEntry[];
@@ -12,7 +12,7 @@ export default function CategoryHeatmap({ history, onSelectDate }: CategoryHeatm
   if (history.length === 0) return null;
   const leadingBlanks = mondayOffset(history[0].date);
   const cells: (HistoryEntry | null)[] = [...Array(leadingBlanks).fill(null), ...history];
-  const today = todayUTC();
+  const today = todayLocal();
 
   return (
     <div>

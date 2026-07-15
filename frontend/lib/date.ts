@@ -12,9 +12,16 @@ export function addDaysUTC(date: Date, days: number): Date {
   return result;
 }
 
-export function todayUTC(): string {
+// Deliberately LOCAL wall-clock date, not UTC — "what day is it" should track
+// the user's own calendar, same reasoning as the local time windows in
+// notifications.ts. Every other function in this file stays UTC since they
+// only transform an already-known date string, not "now".
+export function todayLocal(): string {
   const now = new Date();
-  return formatUTC(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())));
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function formatDisplayDate(dateStr: string): string {

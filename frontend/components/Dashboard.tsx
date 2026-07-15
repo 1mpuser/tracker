@@ -15,7 +15,7 @@ import {
   updateSettings,
   updateYoutube,
 } from '@/lib/api';
-import { formatDisplayDate, todayUTC } from '@/lib/date';
+import { formatDisplayDate, todayLocal } from '@/lib/date';
 import { isEveningWindow, isMorningWindow } from '@/lib/notifications';
 import { computeStreak, STREAK_THRESHOLD } from '@/lib/streak';
 import Header from './Header';
@@ -30,7 +30,7 @@ import styles from './Dashboard.module.css';
 const HISTORY_LIMIT = 84;
 
 export default function Dashboard() {
-  const [date] = useState(() => todayUTC());
+  const [date, setDate] = useState(() => todayLocal());
   const [day, setDay] = useState<DayView | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -40,7 +40,7 @@ export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const loadCore = useCallback(async () => {
-    const [d, h, s] = await Promise.all([getDay(date), getHistory(HISTORY_LIMIT), getSettings()]);
+    const [d, h, s] = await Promise.all([getDay(date), getHistory(HISTORY_LIMIT, date), getSettings()]);
     setDay(d);
     setHistory(h);
     setSettings(s);
@@ -52,6 +52,19 @@ export default function Dashboard() {
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
   }, [loadCore]);
+
+  useEffect(() => {
+    function checkDateRollover() {
+      const current = todayLocal();
+      if (current !== date) setDate(current);
+    }
+    const interval = setInterval(checkDateRollover, 60 * 1000);
+    document.addEventListener('visibilitychange', checkDateRollover);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', checkDateRollover);
+    };
+  }, [date]);
 
   useEffect(() => {
     if (!settings?.notificationsEnabled) return;
@@ -77,7 +90,7 @@ export default function Dashboard() {
   }
 
   async function refreshHistory() {
-    setHistory(await getHistory(HISTORY_LIMIT));
+    setHistory(await getHistory(HISTORY_LIMIT, date));
   }
 
   async function enableNotifications() {

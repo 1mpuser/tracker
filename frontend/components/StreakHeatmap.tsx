@@ -1,7 +1,7 @@
 import styles from './StreakHeatmap.module.css';
 import type { HistoryEntry } from '@/types/api';
 import { mondayOffset, thresholdHeatmapColor } from '@/lib/heatmap';
-import { todayUTC } from '@/lib/date';
+import { todayLocal } from '@/lib/date';
 import { STREAK_THRESHOLD } from '@/lib/streak';
 
 interface StreakHeatmapProps {
@@ -13,7 +13,7 @@ export default function StreakHeatmap({ history, onSelectDate }: StreakHeatmapPr
   if (history.length === 0) return null;
   const leadingBlanks = mondayOffset(history[0].date);
   const cells: (HistoryEntry | null)[] = [...Array(leadingBlanks).fill(null), ...history];
-  const today = todayUTC();
+  const today = todayLocal();
   const metCount = history.filter((h) => h.completed >= STREAK_THRESHOLD).length;
   const pct = Math.round((metCount / history.length) * 100);
 
