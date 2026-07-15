@@ -3,6 +3,7 @@ import type { HistoryEntry } from '@/types/api';
 import CategoryHeatmap from './CategoryHeatmap';
 import CategoryBars from './CategoryBars';
 import YoutubeWeeklyChart from './YoutubeWeeklyChart';
+import YoutubeDailyHeatmap from './YoutubeDailyHeatmap';
 
 interface StatsPanelProps {
   history: HistoryEntry[];
@@ -15,6 +16,7 @@ export default function StatsPanel({ history }: StatsPanelProps) {
       <CategoryHeatmap history={history} />
       <CategoryBars />
       <YoutubeWeeklyChart />
+      <YoutubeDailyHeatmap />
     </div>
   );
 }
