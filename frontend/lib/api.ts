@@ -52,8 +52,11 @@ export function updateYoutube(date: string, data: { delta?: number; reset?: bool
   return request(`/days/${date}/youtube`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
-export function setEveningClosed(date: string, eveningClosed: boolean): Promise<DayView> {
-  return request(`/days/${date}`, { method: 'PATCH', body: JSON.stringify({ eveningClosed }) });
+export function updateDay(
+  date: string,
+  data: { eveningClosed?: boolean; rating?: number; comment?: string },
+): Promise<DayView> {
+  return request(`/days/${date}`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
 export function getHistory(limit: number): Promise<HistoryEntry[]> {

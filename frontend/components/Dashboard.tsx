@@ -9,8 +9,8 @@ import {
   getHistory,
   getSettings,
   setCategoryDone,
-  setEveningClosed,
   updateDaily as apiUpdateDaily,
+  updateDay,
   updateSettings,
   updateYoutube,
 } from '@/lib/api';
@@ -97,7 +97,16 @@ export default function Dashboard() {
 
   async function toggleEveningClosed() {
     if (!day) return;
-    setDay(await setEveningClosed(date, !day.eveningClosed));
+    setDay(await updateDay(date, { eveningClosed: !day.eveningClosed }));
+  }
+
+  async function changeRating(rating: number) {
+    setDay(await updateDay(date, { rating }));
+    refreshHistory();
+  }
+
+  async function changeComment(comment: string) {
+    setDay(await updateDay(date, { comment }));
   }
 
   async function addDailyTask(text: string) {
@@ -159,8 +168,12 @@ export default function Dashboard() {
         <SpheresPanel
           categories={day.categories}
           eveningClosed={day.eveningClosed}
+          rating={day.rating}
+          comment={day.comment}
           onToggle={toggleCategory}
           onToggleEveningClosed={toggleEveningClosed}
+          onRatingChange={changeRating}
+          onCommentChange={changeComment}
         />
         <DailiesPanel dailies={day.dailies} onAdd={addDailyTask} onToggle={toggleDaily} onDelete={deleteDailyTask} />
         <YoutubePanel

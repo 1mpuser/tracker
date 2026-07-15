@@ -3,15 +3,7 @@
 import { useEffect, useState } from 'react';
 import styles from './DayDetailModal.module.css';
 import type { DayView } from '@/types/api';
-import {
-  addDaily,
-  deleteDaily,
-  getDay,
-  setCategoryDone,
-  setEveningClosed,
-  updateDaily,
-  updateYoutube,
-} from '@/lib/api';
+import { addDaily, deleteDaily, getDay, setCategoryDone, updateDaily, updateDay, updateYoutube } from '@/lib/api';
 import { formatDisplayDate } from '@/lib/date';
 import SpheresPanel from './SpheresPanel';
 import DailiesPanel from './DailiesPanel';
@@ -58,7 +50,17 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
 
   async function toggleEveningClosed() {
     if (!day) return;
-    await setEveningClosed(date, !day.eveningClosed);
+    await updateDay(date, { eveningClosed: !day.eveningClosed });
+    await refresh();
+  }
+
+  async function changeRating(rating: number) {
+    await updateDay(date, { rating });
+    await refresh();
+  }
+
+  async function changeComment(comment: string) {
+    await updateDay(date, { comment });
     await refresh();
   }
 
@@ -129,6 +131,8 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
             <div className={styles.section}>
               <div className={styles.viewLine}>YouTube: {day.youtubeMinutes} мин</div>
               <div className={styles.viewLine}>День закрыт: {day.eveningClosed ? 'да' : 'нет'}</div>
+              <div className={styles.viewLine}>Оценка: {day.rating === null ? '—' : `${day.rating}/10`}</div>
+              {day.comment && <div className={styles.viewLine}>Комментарий: {day.comment}</div>}
             </div>
             <div className={styles.section}>
               {day.dailies.length === 0 && <div className={styles.viewEmpty}>Задач не было</div>}
@@ -162,8 +166,12 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
             <SpheresPanel
               categories={day.categories}
               eveningClosed={day.eveningClosed}
+              rating={day.rating}
+              comment={day.comment}
               onToggle={toggleCategory}
               onToggleEveningClosed={toggleEveningClosed}
+              onRatingChange={changeRating}
+              onCommentChange={changeComment}
             />
             <DailiesPanel
               dailies={day.dailies}

@@ -15,6 +15,8 @@ export interface DayView {
   date: string;
   youtubeMinutes: number;
   eveningClosed: boolean;
+  rating: number | null;
+  comment: string | null;
   categories: CategoryView[];
   dailies: DailyTaskView[];
 }
@@ -24,6 +26,7 @@ export interface HistoryEntry {
   completed: number;
   total: number;
   ytOver: boolean;
+  rating: number | null;
 }
 
 export interface Category {
