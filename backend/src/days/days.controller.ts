@@ -33,8 +33,8 @@ export class DaysController {
   }
 
   @Get('history')
-  getHistory(@Query('limit') limit?: string) {
+  getHistory(@Query('limit') limit?: string, @Query('end') end?: string) {
     const parsed = limit ? parseInt(limit, 10) : 21;
-    return this.daysService.getHistory(Number.isNaN(parsed) ? 21 : parsed);
+    return this.daysService.getHistory(Number.isNaN(parsed) ? 21 : parsed, end);
   }
 }

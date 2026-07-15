@@ -153,6 +153,26 @@ describe('DaysService.getHistory', () => {
 
     expect(entry.rating).toBeNull();
   });
+
+  it('anchors the range on the real clock when no end date is given', async () => {
+    prisma.day.findMany.mockResolvedValue([]);
+    prisma.category.findMany.mockResolvedValue([]);
+    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+
+    const [entry] = await service.getHistory(1);
+
+    expect(entry.date).toBe('2026-07-15');
+  });
+
+  it('anchors the range on the given end date instead of the real clock', async () => {
+    prisma.day.findMany.mockResolvedValue([]);
+    prisma.category.findMany.mockResolvedValue([]);
+    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+
+    const [entry] = await service.getHistory(1, '2026-07-20');
+
+    expect(entry.date).toBe('2026-07-20');
+  });
 });
 
 describe('DaysService.updateDay', () => {

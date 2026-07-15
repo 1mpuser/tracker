@@ -113,8 +113,8 @@ export class DaysService {
     return this.getDay(dateStr);
   }
 
-  async getHistory(limit: number): Promise<HistoryEntry[]> {
-    const end = todayDate();
+  async getHistory(limit: number, endDateStr?: string): Promise<HistoryEntry[]> {
+    const end = endDateStr ? parseDateParam(endDateStr) : todayDate();
     const start = addDays(end, -(limit - 1));
 
     const [days, categories, settings] = await Promise.all([
