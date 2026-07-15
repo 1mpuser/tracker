@@ -13,6 +13,9 @@ export function transliterate(label: string): string {
     .join('')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/-+/g, '-')
+    .slice(0, 40)
     .replace(/^-|-$/g, '');
-  return slug.slice(0, 40);
+  // Slicing before the final trim (not after) also means a hyphen exposed exactly
+  // at the 40-char cut boundary gets trimmed too, instead of leaving a trailing "-".
+  return slug || `category-${Date.now().toString(36)}`;
 }

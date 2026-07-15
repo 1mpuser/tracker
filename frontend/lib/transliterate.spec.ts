@@ -21,4 +21,12 @@ describe('transliterate', () => {
     const longLabel = 'а'.repeat(50);
     expect(transliterate(longLabel).length).toBeLessThanOrEqual(40);
   });
+
+  it('falls back to a timestamp-based key when the label has no transliterable characters', () => {
+    // CJK/emoji/pure punctuation collapse to nothing — an empty string would fail
+    // the backend's @Matches(/^[a-z0-9_-]+$/), which requires at least one character.
+    expect(transliterate('你好')).toMatch(/^category-[a-z0-9]+$/);
+    expect(transliterate('!!!')).toMatch(/^category-[a-z0-9]+$/);
+    expect(transliterate('')).toMatch(/^category-[a-z0-9]+$/);
+  });
 });
