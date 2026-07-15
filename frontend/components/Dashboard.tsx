@@ -11,12 +11,15 @@ import {
   setCategoryDone,
   setEveningClosed,
   updateDaily as apiUpdateDaily,
+  updateSettings,
+  updateYoutube,
 } from '@/lib/api';
 import { formatDisplayDate, todayUTC } from '@/lib/date';
 import { computeStreak } from '@/lib/streak';
 import Header from './Header';
 import SpheresPanel from './SpheresPanel';
 import DailiesPanel from './DailiesPanel';
+import YoutubePanel from './YoutubePanel';
 import styles from './Dashboard.module.css';
 
 const HISTORY_LIMIT = 84;
@@ -87,6 +90,20 @@ export default function Dashboard() {
     await refreshDay();
   }
 
+  async function addYoutubeMinutes(delta: number) {
+    setDay(await updateYoutube(date, { delta }));
+    refreshHistory();
+  }
+
+  async function resetYoutube() {
+    setDay(await updateYoutube(date, { reset: true }));
+    refreshHistory();
+  }
+
+  async function changeYoutubeBudget(value: number) {
+    setSettings(await updateSettings({ youtubeBudget: value }));
+  }
+
   if (loading) {
     return <div className={styles.loading}>загрузка…</div>;
   }
@@ -118,15 +135,14 @@ export default function Dashboard() {
           onToggle={toggleCategory}
           onToggleEveningClosed={toggleEveningClosed}
         />
-        <DailiesPanel
-          dailies={day.dailies}
-          onAdd={addDailyTask}
-          onToggle={toggleDaily}
-          onDelete={deleteDailyTask}
+        <DailiesPanel dailies={day.dailies} onAdd={addDailyTask} onToggle={toggleDaily} onDelete={deleteDailyTask} />
+        <YoutubePanel
+          minutes={day.youtubeMinutes}
+          budget={settings.youtubeBudget}
+          onAdd={addYoutubeMinutes}
+          onReset={resetYoutube}
+          onBudgetChange={changeYoutubeBudget}
         />
-      </div>
-      <div>
-        YouTube: {day.youtubeMinutes} / {settings.youtubeBudget} мин
       </div>
       {settingsOpen && <div>Настройки скоро — модалка появится в Task 16.</div>}
     </div>
