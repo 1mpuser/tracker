@@ -10,7 +10,18 @@ import type {
   YoutubeWeekStat,
 } from '@/types/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+// A page loaded over https://tracker.performance can't fetch() a plain
+// http://localhost:3001 target — that's mixed active content, which Safari
+// blocks outright (Chromium exempts localhost targets, Safari doesn't).
+// Route through Caddy's same-origin /api proxy instead on that hostname.
+function resolveApiUrl(): string {
+  if (typeof window !== 'undefined' && window.location.hostname === 'tracker.performance') {
+    return 'https://tracker.performance:4888/api';
+  }
+  return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+}
+
+const API_URL = resolveApiUrl();
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
