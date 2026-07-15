@@ -2,21 +2,28 @@
 
 import { useState } from 'react';
 import styles from './DailiesPanel.module.css';
-import type { DailyTaskView, TaskTemplate } from '@/types/api';
-import { getTaskTemplates } from '@/lib/api';
+import type { CarryCandidate, DailyTaskView, TaskTemplate } from '@/types/api';
+import { getCarryCandidates, getTaskTemplates } from '@/lib/api';
+import { formatOriginDate } from '@/lib/date';
 
 interface DailiesPanelProps {
+  date: string;
   dailies: DailyTaskView[];
   onAdd: (text: string) => void;
   onToggle: (id: number) => void;
   onDelete: (id: number) => void;
+  onCarry: (ids: number[]) => void;
 }
 
-export default function DailiesPanel({ dailies, onAdd, onToggle, onDelete }: DailiesPanelProps) {
+export default function DailiesPanel({ date, dailies, onAdd, onToggle, onDelete, onCarry }: DailiesPanelProps) {
   const [text, setText] = useState('');
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [carryOpen, setCarryOpen] = useState(false);
+  const [carryCandidates, setCarryCandidates] = useState<CarryCandidate[]>([]);
+  const [carryLoading, setCarryLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   function submit() {
     const trimmed = text.trim();
@@ -42,6 +49,30 @@ export default function DailiesPanel({ dailies, onAdd, onToggle, onDelete }: Dai
   function pickTemplate(t: TaskTemplate) {
     onAdd(t.text);
     setTemplatesOpen(false);
+  }
+
+  async function openCarry() {
+    if (carryOpen) {
+      setCarryOpen(false);
+      return;
+    }
+    setCarryOpen(true);
+    setCarryLoading(true);
+    try {
+      setCarryCandidates(await getCarryCandidates(date));
+    } finally {
+      setCarryLoading(false);
+    }
+  }
+
+  function toggleSelected(id: number) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function submitCarry() {
+    onCarry(selectedIds);
+    setCarryOpen(false);
+    setSelectedIds([]);
   }
 
   return (
@@ -80,6 +111,38 @@ export default function DailiesPanel({ dailies, onAdd, onToggle, onDelete }: Dai
             </div>
           )}
         </div>
+        <div className={styles.templatesWrap}>
+          <button type="button" className={styles.templatesBtn} onClick={openCarry}>
+            перенести с прошлых дней
+          </button>
+          {carryOpen && (
+            <div className={styles.dropdown}>
+              {carryLoading && <div className={styles.dropdownEmpty}>загрузка…</div>}
+              {!carryLoading && carryCandidates.length === 0 && (
+                <div className={styles.dropdownEmpty}>Нечего переносить</div>
+              )}
+              {!carryLoading && carryCandidates.length > 0 && (
+                <>
+                  {carryCandidates.map((c) => (
+                    <label key={c.id} className={styles.carryItem}>
+                      <input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelected(c.id)} />
+                      <span className={styles.carryItemText}>{c.text}</span>
+                      <span className={styles.carryItemDate}>{formatOriginDate(c.originDate, date)}</span>
+                    </label>
+                  ))}
+                  <button
+                    type="button"
+                    className={styles.carrySubmit}
+                    disabled={selectedIds.length === 0}
+                    onClick={submitCarry}
+                  >
+                    Перенести выбранное ({selectedIds.length})
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       <ul className={styles.list}>
         {dailies.length === 0 && <li className={styles.empty}>Пока пусто — добавь пару задач на день.</li>}
@@ -96,6 +159,9 @@ export default function DailiesPanel({ dailies, onAdd, onToggle, onDelete }: Dai
             <span className={`${styles.text} ${d.done ? styles.textDone : ''}`} onClick={() => onToggle(d.id)}>
               {d.text}
             </span>
+            {d.carriedFromDate && (
+              <span className={styles.carriedBadge}>↻ {formatOriginDate(d.carriedFromDate, date)}</span>
+            )}
             <span className={styles.del} onClick={() => onDelete(d.id)}>
               ×
             </span>

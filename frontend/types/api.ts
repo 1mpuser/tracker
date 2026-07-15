@@ -9,6 +9,7 @@ export interface DailyTaskView {
   text: string;
   done: boolean;
   order: number;
+  carriedFromDate: string | null;
 }
 
 export interface DayView {
@@ -41,6 +42,12 @@ export interface TaskTemplate {
   id: number;
   text: string;
   order: number;
+}
+
+export interface CarryCandidate {
+  id: number;
+  text: string;
+  originDate: string;
 }
 
 export interface Settings {

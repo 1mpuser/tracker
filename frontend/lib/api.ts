@@ -1,4 +1,5 @@
 import type {
+  CarryCandidate,
   Category,
   CategoryStat,
   DailyTaskView,
@@ -57,6 +58,17 @@ export function updateDaily(id: number, data: { done?: boolean; text?: string })
 
 export function deleteDaily(id: number): Promise<{ id: number }> {
   return request(`/dailies/${id}`, { method: 'DELETE' });
+}
+
+export function getCarryCandidates(date: string): Promise<CarryCandidate[]> {
+  return request(`/days/${date}/carry-candidates`);
+}
+
+export function carryDailies(date: string, ids: number[]): Promise<DayView> {
+  return request(`/days/${date}/dailies/carry`, {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  });
 }
 
 export function updateYoutube(date: string, data: { delta?: number; reset?: boolean }): Promise<DayView> {

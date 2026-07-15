@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import styles from './DayDetailModal.module.css';
 import type { DayView } from '@/types/api';
-import { addDaily, deleteDaily, getDay, setCategoryDone, updateDaily, updateDay, updateYoutube } from '@/lib/api';
+import { addDaily, carryDailies, deleteDaily, getDay, setCategoryDone, updateDaily, updateDay, updateYoutube } from '@/lib/api';
 import { formatDisplayDate } from '@/lib/date';
 import SpheresPanel from './SpheresPanel';
 import DailiesPanel from './DailiesPanel';
@@ -79,6 +79,11 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
 
   async function deleteDailyTask(id: number) {
     await deleteDaily(id);
+    await refresh();
+  }
+
+  async function carryDailyTasks(ids: number[]) {
+    await carryDailies(date, ids);
     await refresh();
   }
 
@@ -174,10 +179,12 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
               onCommentChange={changeComment}
             />
             <DailiesPanel
+              date={date}
               dailies={day.dailies}
               onAdd={addDailyTask}
               onToggle={toggleDaily}
               onDelete={deleteDailyTask}
+              onCarry={carryDailyTasks}
             />
             <div className={styles.ytEditor}>
               <div className={styles.ytEditorHeading}>YouTube</div>

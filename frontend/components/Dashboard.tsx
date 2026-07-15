@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { DayView, HistoryEntry, Settings } from '@/types/api';
 import {
   addDaily as apiAddDaily,
+  carryDailies,
   deleteDaily as apiDeleteDaily,
   getDay,
   getHistory,
@@ -127,6 +128,10 @@ export default function Dashboard() {
     await refreshDay();
   }
 
+  async function carryDailyTasks(ids: number[]) {
+    setDay(await carryDailies(date, ids));
+  }
+
   async function addYoutubeMinutes(delta: number) {
     setDay(await updateYoutube(date, { delta }));
     refreshHistory();
@@ -183,7 +188,14 @@ export default function Dashboard() {
           onRatingChange={changeRating}
           onCommentChange={changeComment}
         />
-        <DailiesPanel dailies={day.dailies} onAdd={addDailyTask} onToggle={toggleDaily} onDelete={deleteDailyTask} />
+        <DailiesPanel
+          date={date}
+          dailies={day.dailies}
+          onAdd={addDailyTask}
+          onToggle={toggleDaily}
+          onDelete={deleteDailyTask}
+          onCarry={carryDailyTasks}
+        />
         <YoutubePanel
           minutes={day.youtubeMinutes}
           budget={settings.youtubeBudget}
