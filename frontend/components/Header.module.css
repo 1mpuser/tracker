@@ -54,6 +54,11 @@
   font-weight: 700;
   color: var(--accent);
   line-height: 1;
+  transition: text-shadow 0.25s;
+}
+
+.streakBoosted {
+  text-shadow: 0 0 12px var(--accent-glow);
 }
 
 .streakLbl {

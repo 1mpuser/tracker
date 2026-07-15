@@ -1,10 +1,11 @@
 import type { HistoryEntry } from '@/types/api';
 import { addDaysUTC, formatUTC, parseUTC } from './date';
 
+export const STREAK_THRESHOLD = 2;
+
 export interface TodayCompletion {
   date: string;
   completed: number;
-  total: number;
 }
 
 export function computeStreak(history: HistoryEntry[], today: TodayCompletion): number {
@@ -18,7 +19,7 @@ export function computeStreak(history: HistoryEntry[], today: TodayCompletion): 
   let cursor = addDaysUTC(parseUTC(today.date), -1);
   while (true) {
     const rec = map.get(formatUTC(cursor));
-    if (rec && rec.total > 0 && rec.completed === rec.total) {
+    if (rec && rec.completed >= STREAK_THRESHOLD) {
       streak++;
       cursor = addDaysUTC(cursor, -1);
     } else {
@@ -26,7 +27,7 @@ export function computeStreak(history: HistoryEntry[], today: TodayCompletion): 
     }
   }
 
-  if (today.total > 0 && today.completed === today.total) {
+  if (today.completed >= STREAK_THRESHOLD) {
     streak++;
   }
 

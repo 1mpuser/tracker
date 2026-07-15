@@ -1,4 +1,4 @@
-import { categoryHeatmapColor, mondayOffset, youtubeHeatmapColor } from './heatmap';
+import { categoryHeatmapColor, mondayOffset, thresholdHeatmapColor, youtubeHeatmapColor } from './heatmap';
 
 describe('categoryHeatmapColor', () => {
   it('returns the empty panel color for a day with no active categories', () => {
@@ -30,6 +30,18 @@ describe('youtubeHeatmapColor', () => {
   });
   it('returns solid danger far over budget', () => {
     expect(youtubeHeatmapColor(100, 60)).toBe('var(--danger)');
+  });
+});
+
+describe('thresholdHeatmapColor', () => {
+  it('returns the empty panel color below the threshold', () => {
+    expect(thresholdHeatmapColor(1, 2)).toBe('var(--panel-alt)');
+  });
+  it('returns solid accent at the threshold', () => {
+    expect(thresholdHeatmapColor(2, 2)).toBe('var(--accent)');
+  });
+  it('returns solid accent above the threshold', () => {
+    expect(thresholdHeatmapColor(5, 2)).toBe('var(--accent)');
   });
 });
 

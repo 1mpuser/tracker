@@ -16,7 +16,7 @@ import {
 } from '@/lib/api';
 import { formatDisplayDate, todayUTC } from '@/lib/date';
 import { isEveningWindow, isMorningWindow } from '@/lib/notifications';
-import { computeStreak } from '@/lib/streak';
+import { computeStreak, STREAK_THRESHOLD } from '@/lib/streak';
 import Header from './Header';
 import SpheresPanel from './SpheresPanel';
 import DailiesPanel from './DailiesPanel';
@@ -140,11 +140,9 @@ export default function Dashboard() {
     return <div className={styles.loading}>Не удалось загрузить данные{error ? `: ${error}` : ''}</div>;
   }
 
-  const streak = computeStreak(history, {
-    date,
-    completed: day.categories.filter((c) => c.done).length,
-    total: day.categories.length,
-  });
+  const todayCompleted = day.categories.filter((c) => c.done).length;
+  const streak = computeStreak(history, { date, completed: todayCompleted });
+  const streakBoosted = todayCompleted >= STREAK_THRESHOLD;
 
   return (
     <div className={styles.wrap}>
@@ -152,6 +150,7 @@ export default function Dashboard() {
       <Header
         dateLabel={formatDisplayDate(date)}
         streak={streak}
+        streakBoosted={streakBoosted}
         notificationsEnabled={settings.notificationsEnabled}
         onEnableNotifications={enableNotifications}
         onOpenSettings={() => setSettingsOpen(true)}

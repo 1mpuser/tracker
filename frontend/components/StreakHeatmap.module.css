@@ -1,0 +1,48 @@
+.wrap {
+  margin-top: 20px;
+}
+
+.title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 13px);
+  gap: 3px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.cell {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  outline: 1px solid var(--accent2);
+  outline-offset: 1px;
+}
+
+.blank {
+  width: 13px;
+  height: 13px;
+}
+
+.legend {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 6px;
+}

@@ -3,6 +3,7 @@ import styles from './Header.module.css';
 interface HeaderProps {
   dateLabel: string;
   streak: number;
+  streakBoosted: boolean;
   notificationsEnabled: boolean;
   onEnableNotifications: () => void;
   onOpenSettings: () => void;
@@ -11,6 +12,7 @@ interface HeaderProps {
 export default function Header({
   dateLabel,
   streak,
+  streakBoosted,
   notificationsEnabled,
   onEnableNotifications,
   onOpenSettings,
@@ -28,8 +30,8 @@ export default function Header({
           </button>
         )}
         <div className={styles.streakbox}>
-          <div className={styles.streakNum}>{streak}</div>
-          <div className={styles.streakLbl}>дней подряд, все сферы</div>
+          <div className={`${styles.streakNum} ${streakBoosted ? styles.streakBoosted : ''}`}>{streak}</div>
+          <div className={styles.streakLbl}>дней подряд, 2+ сферы</div>
         </div>
         <button type="button" className={styles.gearBtn} onClick={onOpenSettings} aria-label="Настройки">
           ⚙

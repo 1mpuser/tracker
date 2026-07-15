@@ -25,3 +25,7 @@ export function mondayOffset(dateStr: string): number {
   const day = parseUTC(dateStr).getUTCDay();
   return day === 0 ? 6 : day - 1;
 }
+
+export function thresholdHeatmapColor(completed: number, threshold: number): string {
+  return completed >= threshold ? 'var(--accent)' : 'var(--panel-alt)';
+}
