@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A personal, single-user, self-hosted daily habit tracker. No auth. Three Docker Compose services: `postgres`, `backend` (NestJS + Prisma), `frontend` (Next.js App Router). Runs only on localhost.
+A personal, single-user, self-hosted daily habit tracker. No auth. Four Docker Compose services: `postgres`, `backend` (NestJS + Prisma), `frontend` (Next.js App Router), `caddy` (TLS-terminating reverse proxy). Runs only on localhost.
 
-- Frontend: http://localhost:4887 (also reachable at http://tracker.test:4887 — see "Safari favicon" below)
+- Frontend: http://localhost:4887 (direct, no TLS)
+- Frontend over HTTPS: https://tracker.performance:4888 (via Caddy — see "HTTPS / tracker.performance" below; this is the only origin where Safari favicons and the Notification API both work correctly)
 - Backend API: http://localhost:3001
 - Postgres: localhost:5434 (mapped from container's internal 5432 — 5432 was already taken by an unrelated container on the dev machine; this has no effect on container-to-container networking, which still uses 5432)
 
@@ -80,7 +81,13 @@ Design tokens are fixed CSS custom properties in `app/globals.css` (`--bg`, `--p
 
 ### CORS / origins
 
-`backend/src/main.ts` allows exactly two origins: `http://localhost:4887` and `http://tracker.test:4887`. The second exists because Safari does not reliably fetch favicons for the literal hostname `localhost` (a known WebKit quirk — confirmed by testing `localhost` vs `127.0.0.1` side by side, `127.0.0.1` worked). `tracker.test` is a `/etc/hosts` entry (`127.0.0.1 tracker.test`, added manually on the dev machine, not part of the repo) that works around it; `.test` was chosen over `.local` because `.local` can collide with macOS's Bonjour/mDNS resolution, while `.test` is IANA-reserved (RFC 2606) for exactly this kind of local use. If you add another way to reach the frontend, it needs an entry in this CORS origin list or every API call will silently fail client-side.
+`backend/src/main.ts` allows exactly two origins: `http://localhost:4887` and `https://tracker.performance:4888`. If you add another way to reach the frontend, it needs an entry in this CORS origin list or every API call will silently fail client-side.
+
+### HTTPS / tracker.performance
+
+Plain `http://localhost:4887` has two browser-level limitations that can't be fixed in application code: Safari doesn't reliably fetch favicons for the literal hostname `localhost` (confirmed by A/B testing `localhost` vs `127.0.0.1`, a known WebKit quirk), and the Notification API is silently inert on any HTTP origin other than `localhost`/loopback-IP — `window.isSecureContext` is `false` there per the W3C secure-contexts spec, even for a `/etc/hosts` entry that resolves to `127.0.0.1`.
+
+The fix is a real HTTPS origin on a dedicated hostname: `caddy/Caddyfile` terminates TLS for `tracker.performance:443` using a [mkcert](https://github.com/FiloSottile/mkcert)-issued, locally-trusted certificate (`caddy/certs/`, gitignored — private key must never be committed) and reverse-proxies to the `frontend` container. The `caddy` service in `docker-compose.yml` publishes this on host port **4888**. Requires a one-time `mkcert -install` and a `127.0.0.1 tracker.performance` entry in `/etc/hosts` on the dev machine (see README's "HTTPS via tracker.performance" section for exact commands) — neither is part of the repo.
 
 ### Docker
 

@@ -1,0 +1,4 @@
+tracker.performance:443 {
+	tls /certs/tracker.performance.pem /certs/tracker.performance-key.pem
+	reverse_proxy frontend:3000
+}

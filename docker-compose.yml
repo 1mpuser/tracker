@@ -40,5 +40,16 @@ services:
     depends_on:
       - backend
 
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/certs:/certs:ro
+    ports:
+      - "4888:443"
+    depends_on:
+      - frontend
+
 volumes:
   pgdata:

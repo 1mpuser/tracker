@@ -55,18 +55,30 @@ Opens on http://localhost:4887 (not the Next.js default 3000 — the backend's C
 cd frontend && bun run test
 ```
 
-## Known issues
+## HTTPS via tracker.performance
 
-### Safari doesn't show the favicon on `localhost`
+Two browser features silently degrade on plain `http://localhost:4887`:
 
-Safari/WebKit has a long-standing quirk where it does not reliably fetch `<link rel="icon">` for pages served from the literal hostname `localhost` — the tab shows a generic placeholder ("l") instead, regardless of what the server sends, how the favicon is cached, or whether you use SVG or PNG. Confirmed by testing `localhost:4887` vs `127.0.0.1:4887` side by side in the same Safari session: `127.0.0.1` showed the icon immediately, `localhost` never did. Chrome and Firefox are unaffected.
+- **Safari doesn't reliably show the favicon** for pages served from the literal hostname `localhost` (confirmed by A/B testing `localhost` vs `127.0.0.1` — only `127.0.0.1` showed the icon). Chrome/Firefox are unaffected.
+- **The Notification API silently no-ops** on any non-`localhost` HTTP origin. Browsers only grant the "potentially trustworthy" exception (`window.isSecureContext === true`) to `https:` or to the literal hostnames `localhost`/loopback-IP — never to an arbitrary `/etc/hosts` entry like `tracker.test`, even though it resolves to `127.0.0.1`. On an insecure context the click handler runs but `Notification.requestPermission()` never shows a real prompt.
 
-**Workaround:** add a `/etc/hosts` entry mapping a fake local domain to the loopback address, then use that instead of `localhost` in Safari:
+The fix is a real HTTPS origin: a locally-trusted certificate (via [mkcert](https://github.com/FiloSottile/mkcert)) served through a Caddy reverse proxy, on a custom hostname (`tracker.performance`) that never collides with `localhost`'s quirks.
+
+**One-time setup (per dev machine):**
 
 ```bash
-echo '127.0.0.1  tracker.test' | sudo tee -a /etc/hosts
+brew install mkcert
+mkcert -install                                  # installs a local CA into the system trust store (asks for sudo)
+echo '127.0.0.1  tracker.performance' | sudo tee -a /etc/hosts
+
+mkdir -p caddy/certs
+cd caddy/certs
+mkcert -cert-file tracker.performance.pem -key-file tracker.performance-key.pem tracker.performance
+cd ../..
 ```
 
-Then open `http://tracker.test:4887`. `.test` was used instead of `.local` because `.local` can collide with macOS's Bonjour/mDNS resolution, while `.test` is IANA-reserved (RFC 2606) specifically for local/testing use and will never be a real public domain.
+`caddy/certs/` is gitignored — the private key must never be committed. `docker compose up -d --build` also starts a `caddy` service (`caddy/Caddyfile`) that terminates TLS for `tracker.performance:443` and reverse-proxies to the `frontend` container, published on host port **4888**.
 
-This is why `backend/src/main.ts` allows **two** CORS origins (`http://localhost:4887` and `http://tracker.test:4887`) instead of one — without both, loading the app via `tracker.test` would fetch the page fine but every API call would fail CORS silently, leaving the app stuck on "загрузка…". If you add yet another way to reach the frontend (a different port, a different hostname), it needs to be added to that same origin list.
+Open **`https://tracker.performance:4888`**. This is now the primary way to use the app in Safari — it fixes both the favicon and the notifications issue at once, which the old `tracker.test` plain-HTTP workaround (favicon only) could not.
+
+`http://localhost:4887` still works directly (no proxy) for local dev — see the sections above. This is why `backend/src/main.ts` allows **two** CORS origins (`http://localhost:4887` and `https://tracker.performance:4888`) instead of one; if you add yet another way to reach the frontend, add it to that same origin list.
