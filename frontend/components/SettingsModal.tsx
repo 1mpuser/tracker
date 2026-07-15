@@ -5,6 +5,7 @@ import styles from './SettingsModal.module.css';
 import type { Category } from '@/types/api';
 import { createCategory, getCategories, updateCategory } from '@/lib/api';
 import { transliterate } from '@/lib/transliterate';
+import TaskTemplatesTab from './TaskTemplatesTab';
 
 type Tab = 'categories' | 'templates';
 
@@ -137,7 +138,7 @@ export default function SettingsModal({ onClose, onCategoriesChanged }: Settings
           </div>
         )}
 
-        {tab === 'templates' && <div className={styles.tabBody}>Шаблоны скоро — вкладка появится в Task 17.</div>}
+        {tab === 'templates' && <TaskTemplatesTab />}
       </div>
     </div>
   );
