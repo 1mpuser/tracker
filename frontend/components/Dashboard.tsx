@@ -152,6 +152,14 @@ export default function Dashboard() {
   const todayCompleted = day.categories.filter((c) => c.done).length;
   const streak = computeStreak(history, { date, completed: todayCompleted });
   const streakBoosted = todayCompleted >= STREAK_THRESHOLD;
+  // Notification.permission is scoped per browser origin (scheme+host+port), but
+  // settings.notificationsEnabled is one global flag on the backend — so granting
+  // permission on http://localhost:4887 doesn't carry over to http://tracker.test:4887.
+  // Re-check the actual per-origin permission here so the "Включить уведомления"
+  // button reappears on an origin that never got a real browser grant, even if the
+  // backend flag is already true from a different origin.
+  const notificationsActive =
+    settings.notificationsEnabled && typeof Notification !== 'undefined' && Notification.permission === 'granted';
 
   return (
     <div className={styles.wrap}>
@@ -160,7 +168,7 @@ export default function Dashboard() {
         dateLabel={formatDisplayDate(date)}
         streak={streak}
         streakBoosted={streakBoosted}
-        notificationsEnabled={settings.notificationsEnabled}
+        notificationsEnabled={notificationsActive}
         onEnableNotifications={enableNotifications}
         onOpenSettings={() => setSettingsOpen(true)}
       />
