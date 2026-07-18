@@ -1,4 +1,4 @@
-import { getDay } from './api';
+import { getDay, updatePomodoros } from './api';
 
 describe('api request helper', () => {
   const originalFetch = global.fetch;
@@ -31,5 +31,20 @@ describe('api request helper', () => {
     }) as unknown as typeof fetch;
 
     await expect(getDay('2026-02-30')).rejects.toThrow('404');
+  });
+
+  it('sends a PATCH to the pomodoros endpoint with the given body', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ date: '2026-07-18', pomodoros: 1 }),
+    }) as unknown as typeof fetch;
+
+    await updatePomodoros('2026-07-18', { delta: 1 });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/days/2026-07-18/pomodoros',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ delta: 1 }) }),
+    );
   });
 });

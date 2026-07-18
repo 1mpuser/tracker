@@ -15,6 +15,7 @@ export interface DailyTaskView {
 export interface DayView {
   date: string;
   youtubeMinutes: number;
+  pomodoros: number;
   eveningClosed: boolean;
   rating: number | null;
   comment: string | null;
@@ -26,6 +27,7 @@ export interface HistoryEntry {
   date: string;
   completed: number;
   total: number;
+  pomodoros: number;
   ytOver: boolean;
   rating: number | null;
 }

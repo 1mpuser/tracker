@@ -75,6 +75,10 @@ export function updateYoutube(date: string, data: { delta?: number; reset?: bool
   return request(`/days/${date}/youtube`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
+export function updatePomodoros(date: string, data: { delta?: number; reset?: boolean }): Promise<DayView> {
+  return request(`/days/${date}/pomodoros`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
 export function updateDay(
   date: string,
   data: { eveningClosed?: boolean; rating?: number; comment?: string },
