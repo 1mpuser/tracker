@@ -1,0 +1,142 @@
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 18px 20px;
+}
+
+.heading {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+  font-weight: 600;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.count {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.countOpt {
+  color: var(--accent);
+  text-shadow: 0 0 10px var(--accent-glow);
+}
+
+.countLow {
+  color: var(--text-muted);
+}
+
+.countMin {
+  color: var(--accent);
+}
+
+.of {
+  color: var(--text-dim);
+  font-weight: 400;
+  font-size: 15px;
+}
+
+.reset {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.bar {
+  position: relative;
+  height: 8px;
+  background: var(--panel-alt);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.25s, background 0.25s;
+}
+
+.barFillOpt {
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.minMarker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--text-dim);
+  opacity: 0.7;
+}
+
+.caption {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  margin-bottom: 12px;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.buttons button {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.buttons button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.streaks {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.streakMin {
+  color: var(--text-muted);
+}
+
+.streakMinOn {
+  color: var(--accent);
+}
+
+.streakOpt {
+  color: var(--text-muted);
+}
+
+.streakOptGlow {
+  color: var(--accent);
+  text-shadow: 0 0 8px var(--accent-glow);
+  font-weight: 700;
+}
