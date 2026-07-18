@@ -12,16 +12,19 @@ import {
   setCategoryDone,
   updateDaily as apiUpdateDaily,
   updateDay,
+  updatePomodoros,
   updateSettings,
   updateYoutube,
 } from '@/lib/api';
 import { formatDisplayDate, todayLocal } from '@/lib/date';
 import { isEveningWindow, isMorningWindow } from '@/lib/notifications';
 import { computeStreak, STREAK_THRESHOLD } from '@/lib/streak';
+import { computePomodoroStreak, POMODORO_MIN, POMODORO_OPT } from '@/lib/pomodoro';
 import Header from './Header';
 import SpheresPanel from './SpheresPanel';
 import DailiesPanel from './DailiesPanel';
 import YoutubePanel from './YoutubePanel';
+import PomodoroPanel from './PomodoroPanel';
 import StatsPanel from './StatsPanel';
 import SettingsModal from './SettingsModal';
 import DayDetailModal from './DayDetailModal';
@@ -77,6 +80,9 @@ export default function Dashboard() {
       }
       if (isEveningWindow(now) && day && !day.eveningClosed) {
         new Notification('Отметь сферы за сегодня и закрой день');
+      }
+      if (isEveningWindow(now) && day && day.pomodoros < POMODORO_MIN) {
+        new Notification(`Помидорки за день: ${day.pomodoros}/${POMODORO_MIN} — добей минимум`);
       }
     };
 
@@ -155,6 +161,16 @@ export default function Dashboard() {
     refreshHistory();
   }
 
+  async function addPomodoro(delta: number) {
+    setDay(await updatePomodoros(date, { delta }));
+    refreshHistory();
+  }
+
+  async function resetPomodoro() {
+    setDay(await updatePomodoros(date, { reset: true }));
+    refreshHistory();
+  }
+
   async function changeYoutubeBudget(value: number) {
     setSettings(await updateSettings({ youtubeBudget: value }));
   }
@@ -215,6 +231,13 @@ export default function Dashboard() {
           onAdd={addYoutubeMinutes}
           onReset={resetYoutube}
           onBudgetChange={changeYoutubeBudget}
+        />
+        <PomodoroPanel
+          count={day.pomodoros}
+          streakMin={computePomodoroStreak(history, { date, pomodoros: day.pomodoros }, POMODORO_MIN)}
+          streakOpt={computePomodoroStreak(history, { date, pomodoros: day.pomodoros }, POMODORO_OPT)}
+          onAdd={addPomodoro}
+          onReset={resetPomodoro}
         />
       </div>
       <StatsPanel history={history} onSelectDate={setSelectedDate} />
