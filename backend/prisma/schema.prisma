@@ -20,6 +20,7 @@ model Day {
   id             Int      @id @default(autoincrement())
   date           DateTime @unique @db.Date
   youtubeMinutes Int      @default(0)
+  pomodoros      Int      @default(0)
   eveningClosed  Boolean  @default(false)
   rating         Int?
   comment        String?
