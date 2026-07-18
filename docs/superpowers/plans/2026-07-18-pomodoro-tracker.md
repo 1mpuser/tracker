@@ -487,7 +487,9 @@ describe('computePomodoroStreak', () => {
   });
 
   it('adds today only when today meets the threshold', () => {
-    const history = [entry('2026-07-16', 4), entry('2026-07-17', 9)];
+    // Вчера (17) ниже порога 8 → backward-loop сразу обрывается, в серию идёт
+    // только сегодня. День-позавчера (16) с 8 недостижим из-за обрыва.
+    const history = [entry('2026-07-16', 8), entry('2026-07-17', 3)];
     expect(computePomodoroStreak(history, { date: '2026-07-18', pomodoros: 8 }, 8)).toBe(1);
   });
 
