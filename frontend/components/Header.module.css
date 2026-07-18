@@ -26,7 +26,7 @@
 .actions {
   display: flex;
   align-items: flex-end;
-  gap: 16px;
+  gap: 18px;
 }
 
 .iconBtn {
@@ -44,29 +44,187 @@
   color: var(--accent2);
 }
 
-.streakbox {
-  text-align: right;
+/* Streak rail — three "campfires": spheres, pomodoro ≥4, pomodoro ≥8 */
+.streakRail {
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+}
+
+.streakUnit {
+  text-align: center;
+}
+
+.flameWrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 1;
 }
 
 .streakNum {
   font-family: var(--font-mono);
-  font-size: 38px;
+  font-size: 30px;
   font-weight: 700;
   color: var(--accent);
   line-height: 1;
-  transition: text-shadow 0.25s;
 }
 
-.streakBoosted {
-  text-shadow: 0 0 12px var(--accent-glow);
+.flame {
+  font-size: 14px;
+  transform-origin: 50% 90%;
+  will-change: transform;
 }
 
 .streakLbl {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--text-muted);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  margin-top: 4px;
+  margin-top: 6px;
+  white-space: nowrap;
+}
+
+/* Tier 0 — cold ember: muted number, no flame glyph, no glow */
+.tier0 .streakNum {
+  color: var(--text-dim);
+}
+
+/* Optimum (≥8) reads hotter: near-white core */
+.hot .streakNum {
+  color: var(--text);
+}
+
+/* Flame size grows with tier */
+.tier1 .flame {
+  font-size: 13px;
+}
+.tier2 .flame {
+  font-size: 16px;
+}
+.tier3 .flame {
+  font-size: 20px;
+}
+.tier4 .flame {
+  font-size: 24px;
+}
+
+/* Glow flicker on the whole unit (halos both the number and the flame glyph) */
+.tier1 {
+  animation: flicker1 1.7s ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+.tier2 {
+  animation: flicker2 1.5s ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+.tier3 {
+  animation: flicker3 1.25s ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+.tier4 {
+  animation: flicker4 1s ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+
+/* Flame glyph dances (jitters) in sync with its unit's flicker */
+.tier1 .flame,
+.tier2 .flame,
+.tier3 .flame,
+.tier4 .flame {
+  animation: flameDance 1.4s ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+
+@keyframes flicker1 {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px var(--accent-glow));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px var(--accent-glow));
+  }
+}
+@keyframes flicker2 {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 5px var(--accent-glow));
+  }
+  40% {
+    filter: drop-shadow(0 0 9px var(--accent-glow));
+  }
+  70% {
+    filter: drop-shadow(0 0 7px var(--accent-glow));
+  }
+}
+@keyframes flicker3 {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 7px var(--accent-glow)) drop-shadow(0 0 12px var(--accent-glow));
+  }
+  35% {
+    filter: drop-shadow(0 0 11px var(--accent-glow)) drop-shadow(0 0 18px var(--accent-glow));
+  }
+  65% {
+    filter: drop-shadow(0 0 9px var(--accent-glow)) drop-shadow(0 0 14px var(--accent-glow));
+  }
+}
+@keyframes flicker4 {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px var(--accent-glow)) drop-shadow(0 0 18px var(--accent-glow));
+  }
+  30% {
+    filter: drop-shadow(0 0 16px var(--accent-glow)) drop-shadow(0 0 26px var(--accent-glow));
+  }
+  55% {
+    filter: drop-shadow(0 0 12px var(--accent-glow)) drop-shadow(0 0 20px var(--accent-glow));
+  }
+  80% {
+    filter: drop-shadow(0 0 15px var(--accent-glow)) drop-shadow(0 0 24px var(--accent-glow));
+  }
+}
+
+@keyframes flameDance {
+  0%,
+  100% {
+    transform: scale(1) translateY(0) rotate(-2deg);
+  }
+  25% {
+    transform: scale(1.12) translateY(-1px) rotate(2deg);
+  }
+  50% {
+    transform: scale(0.96) translateY(0) rotate(-1deg);
+  }
+  75% {
+    transform: scale(1.06) translateY(-0.5px) rotate(1deg);
+  }
+}
+
+/* Accessibility: no flicker/dance under reduced-motion — keep a steady glow sized by tier */
+@media (prefers-reduced-motion: reduce) {
+  .tier1,
+  .tier2,
+  .tier3,
+  .tier4,
+  .tier1 .flame,
+  .tier2 .flame,
+  .tier3 .flame,
+  .tier4 .flame {
+    animation: none;
+  }
+  .tier1 {
+    filter: drop-shadow(0 0 4px var(--accent-glow));
+  }
+  .tier2 {
+    filter: drop-shadow(0 0 7px var(--accent-glow));
+  }
+  .tier3 {
+    filter: drop-shadow(0 0 10px var(--accent-glow));
+  }
+  .tier4 {
+    filter: drop-shadow(0 0 14px var(--accent-glow));
+  }
 }
 
 .gearBtn {

@@ -1,18 +1,49 @@
+import type { CSSProperties } from 'react';
 import styles from './Header.module.css';
+import { flameTier } from '@/lib/flame';
 
 interface HeaderProps {
   dateLabel: string;
   streak: number;
-  streakBoosted: boolean;
+  pomodoroStreakMin: number;
+  pomodoroStreakOpt: number;
   notificationsEnabled: boolean;
   onEnableNotifications: () => void;
   onOpenSettings: () => void;
 }
 
+interface StreakFlameProps {
+  value: number;
+  label: string;
+  hot?: boolean;
+  delay: string;
+}
+
+function StreakFlame({ value, label, hot, delay }: StreakFlameProps) {
+  const tier = flameTier(value);
+  return (
+    <div className={styles.streakUnit}>
+      <div
+        className={`${styles.flameWrap} ${styles[`tier${tier}`]} ${hot ? styles.hot : ''}`}
+        style={{ '--delay': delay } as CSSProperties}
+      >
+        <span className={styles.streakNum}>{value}</span>
+        {tier > 0 && (
+          <span className={styles.flame} aria-hidden="true">
+            🔥
+          </span>
+        )}
+      </div>
+      <div className={styles.streakLbl}>{label}</div>
+    </div>
+  );
+}
+
 export default function Header({
   dateLabel,
   streak,
-  streakBoosted,
+  pomodoroStreakMin,
+  pomodoroStreakOpt,
   notificationsEnabled,
   onEnableNotifications,
   onOpenSettings,
@@ -29,9 +60,10 @@ export default function Header({
             Включить уведомления
           </button>
         )}
-        <div className={styles.streakbox}>
-          <div className={`${styles.streakNum} ${streakBoosted ? styles.streakBoosted : ''}`}>{streak}</div>
-          <div className={styles.streakLbl}>дней подряд, 2+ сферы</div>
+        <div className={styles.streakRail}>
+          <StreakFlame value={streak} label="дней 2+ сферы" delay="0s" />
+          <StreakFlame value={pomodoroStreakMin} label="🍅 минимум ≥4" delay="0.4s" />
+          <StreakFlame value={pomodoroStreakOpt} label="🍅 оптимум ≥8" hot delay="0.8s" />
         </div>
         <button type="button" className={styles.gearBtn} onClick={onOpenSettings} aria-label="Настройки">
           ⚙

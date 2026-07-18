@@ -3,13 +3,11 @@ import { POMODORO_MIN, POMODORO_OPT } from '@/lib/pomodoro';
 
 interface PomodoroPanelProps {
   count: number;
-  streakMin: number;
-  streakOpt: number;
   onAdd: (delta: number) => void;
   onReset: () => void;
 }
 
-export default function PomodoroPanel({ count, streakMin, streakOpt, onAdd, onReset }: PomodoroPanelProps) {
+export default function PomodoroPanel({ count, onAdd, onReset }: PomodoroPanelProps) {
   const pct = Math.min(100, (count / POMODORO_OPT) * 100);
   const minMarkerPct = (POMODORO_MIN / POMODORO_OPT) * 100;
   const reachedMin = count >= POMODORO_MIN;
@@ -48,14 +46,6 @@ export default function PomodoroPanel({ count, streakMin, streakOpt, onAdd, onRe
         <button type="button" onClick={() => onAdd(-1)}>
           −1
         </button>
-      </div>
-      <div className={styles.streaks}>
-        <span className={`${styles.streakMin} ${streakMin > 0 ? styles.streakMinOn : ''}`}>
-          серия ≥{POMODORO_MIN}: {streakMin}
-        </span>
-        <span className={`${styles.streakOpt} ${streakOpt > 0 ? styles.streakOptGlow : ''}`}>
-          ≥{POMODORO_OPT}: {streakOpt}
-        </span>
       </div>
     </div>
   );

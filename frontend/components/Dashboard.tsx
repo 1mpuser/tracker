@@ -18,7 +18,7 @@ import {
 } from '@/lib/api';
 import { formatDisplayDate, todayLocal } from '@/lib/date';
 import { isEveningWindow, isMorningWindow } from '@/lib/notifications';
-import { computeStreak, STREAK_THRESHOLD } from '@/lib/streak';
+import { computeStreak } from '@/lib/streak';
 import { computePomodoroStreak, POMODORO_MIN, POMODORO_OPT } from '@/lib/pomodoro';
 import Header from './Header';
 import SpheresPanel from './SpheresPanel';
@@ -185,7 +185,8 @@ export default function Dashboard() {
 
   const todayCompleted = day.categories.filter((c) => c.done).length;
   const streak = computeStreak(history, { date, completed: todayCompleted });
-  const streakBoosted = todayCompleted >= STREAK_THRESHOLD;
+  const pomodoroStreakMin = computePomodoroStreak(history, { date, pomodoros: day.pomodoros }, POMODORO_MIN);
+  const pomodoroStreakOpt = computePomodoroStreak(history, { date, pomodoros: day.pomodoros }, POMODORO_OPT);
   // Notification.permission is scoped per browser origin (scheme+host+port), but
   // settings.notificationsEnabled is one global flag on the backend — so granting
   // permission on http://localhost:4887 doesn't carry over to http://tracker.test:4887.
@@ -201,7 +202,8 @@ export default function Dashboard() {
       <Header
         dateLabel={formatDisplayDate(date)}
         streak={streak}
-        streakBoosted={streakBoosted}
+        pomodoroStreakMin={pomodoroStreakMin}
+        pomodoroStreakOpt={pomodoroStreakOpt}
         notificationsEnabled={notificationsActive}
         onEnableNotifications={enableNotifications}
         onOpenSettings={() => setSettingsOpen(true)}
@@ -234,8 +236,6 @@ export default function Dashboard() {
         />
         <PomodoroPanel
           count={day.pomodoros}
-          streakMin={computePomodoroStreak(history, { date, pomodoros: day.pomodoros }, POMODORO_MIN)}
-          streakOpt={computePomodoroStreak(history, { date, pomodoros: day.pomodoros }, POMODORO_OPT)}
           onAdd={addPomodoro}
           onReset={resetPomodoro}
         />

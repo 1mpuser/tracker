@@ -96,7 +96,6 @@
 .buttons {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
 }
 
 .buttons button {
@@ -113,30 +112,4 @@
 .buttons button:hover {
   border-color: var(--accent);
   color: var(--accent);
-}
-
-.streaks {
-  display: flex;
-  gap: 14px;
-  align-items: baseline;
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-
-.streakMin {
-  color: var(--text-muted);
-}
-
-.streakMinOn {
-  color: var(--accent);
-}
-
-.streakOpt {
-  color: var(--text-muted);
-}
-
-.streakOptGlow {
-  color: var(--accent);
-  text-shadow: 0 0 8px var(--accent-glow);
-  font-weight: 700;
 }
