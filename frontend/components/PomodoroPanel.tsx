@@ -34,11 +34,8 @@ export default function PomodoroPanel({ count, streakMin, streakOpt, onAdd, onRe
           сбросить
         </span>
       </div>
-      <div className={styles.bar}>
-        <div
-          className={`${styles.barFill} ${reachedOpt ? styles.barFillOpt : ''}`}
-          style={{ width: `${pct}%`, background: barColor }}
-        />
+      <div className={`${styles.bar} ${reachedOpt ? styles.barOpt : ''}`}>
+        <div className={styles.barFill} style={{ width: `${pct}%`, background: barColor }} />
         <div className={styles.minMarker} style={{ left: `${minMarkerPct}%` }} />
       </div>
       <div className={styles.caption}>

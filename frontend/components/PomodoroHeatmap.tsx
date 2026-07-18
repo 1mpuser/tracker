@@ -1,5 +1,3 @@
-'use client';
-
 import styles from './PomodoroHeatmap.module.css';
 import type { HistoryEntry } from '@/types/api';
 import { pomodoroHeatmapColor } from '@/lib/heatmap';
