@@ -29,3 +29,10 @@ export function mondayOffset(dateStr: string): number {
 export function thresholdHeatmapColor(completed: number, threshold: number): string {
   return completed >= threshold ? 'var(--accent)' : 'var(--panel-alt)';
 }
+
+export function pomodoroHeatmapColor(count: number, min: number, opt: number): string {
+  if (count <= 0) return 'var(--panel-alt)';
+  if (count >= opt) return 'var(--accent)';
+  if (count >= min) return 'rgba(224, 164, 88, 0.6)';
+  return 'var(--accent-soft)';
+}

@@ -1,4 +1,4 @@
-import { categoryHeatmapColor, mondayOffset, thresholdHeatmapColor, youtubeHeatmapColor } from './heatmap';
+import { categoryHeatmapColor, mondayOffset, pomodoroHeatmapColor, thresholdHeatmapColor, youtubeHeatmapColor } from './heatmap';
 
 describe('categoryHeatmapColor', () => {
   it('returns the empty panel color for a day with no active categories', () => {
@@ -54,5 +54,23 @@ describe('mondayOffset', () => {
   });
   it('returns 6 for a Sunday', () => {
     expect(mondayOffset('2026-07-19')).toBe(6);
+  });
+});
+
+describe('pomodoroHeatmapColor', () => {
+  it('returns the empty panel color for zero', () => {
+    expect(pomodoroHeatmapColor(0, 4, 8)).toBe('var(--panel-alt)');
+  });
+  it('returns the soft tint below the minimum', () => {
+    expect(pomodoroHeatmapColor(3, 4, 8)).toBe('var(--accent-soft)');
+  });
+  it('returns the dense accent at the minimum', () => {
+    expect(pomodoroHeatmapColor(4, 4, 8)).toBe('rgba(224, 164, 88, 0.6)');
+  });
+  it('stays dense accent just below the optimum', () => {
+    expect(pomodoroHeatmapColor(7, 4, 8)).toBe('rgba(224, 164, 88, 0.6)');
+  });
+  it('returns solid accent at the optimum', () => {
+    expect(pomodoroHeatmapColor(8, 4, 8)).toBe('var(--accent)');
   });
 });
