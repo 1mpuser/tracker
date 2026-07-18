@@ -5,6 +5,7 @@ import StreakHeatmap from './StreakHeatmap';
 import CategoryBars from './CategoryBars';
 import YoutubeWeeklyChart from './YoutubeWeeklyChart';
 import YoutubeDailyHeatmap from './YoutubeDailyHeatmap';
+import PomodoroHeatmap from './PomodoroHeatmap';
 import RatingChart from './RatingChart';
 
 interface StatsPanelProps {
@@ -21,6 +22,7 @@ export default function StatsPanel({ history, onSelectDate }: StatsPanelProps) {
       <CategoryBars />
       <YoutubeWeeklyChart />
       <YoutubeDailyHeatmap />
+      <PomodoroHeatmap history={history} />
       <RatingChart history={history} />
     </div>
   );
