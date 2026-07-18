@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { DaysService } from './days.service';
 import { UpdateCategoryStatusDto } from './dto/update-category-status.dto';
 import { UpdateYoutubeDto } from './dto/update-youtube.dto';
+import { UpdatePomodorosDto } from './dto/update-pomodoros.dto';
 import { UpdateDayDto } from './dto/update-day.dto';
 
 @Controller()
@@ -25,6 +26,11 @@ export class DaysController {
   @Patch('days/:date/youtube')
   updateYoutube(@Param('date') date: string, @Body() dto: UpdateYoutubeDto) {
     return this.daysService.updateYoutube(date, dto.delta, dto.reset);
+  }
+
+  @Patch('days/:date/pomodoros')
+  updatePomodoros(@Param('date') date: string, @Body() dto: UpdatePomodorosDto) {
+    return this.daysService.updatePomodoros(date, dto.delta, dto.reset);
   }
 
   @Patch('days/:date')

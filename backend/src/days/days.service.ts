@@ -12,6 +12,7 @@ export interface DayCategoryView {
 export interface DayView {
   date: string;
   youtubeMinutes: number;
+  pomodoros: number;
   eveningClosed: boolean;
   rating: number | null;
   comment: string | null;
@@ -23,6 +24,7 @@ export interface HistoryEntry {
   date: string;
   completed: number;
   total: number;
+  pomodoros: number;
   ytOver: boolean;
   rating: number | null;
 }
@@ -67,6 +69,7 @@ export class DaysService {
     return {
       date: formatDate(day.date),
       youtubeMinutes: day.youtubeMinutes,
+      pomodoros: day.pomodoros,
       eveningClosed: day.eveningClosed,
       rating: day.rating,
       comment: day.comment,
@@ -107,6 +110,14 @@ export class DaysService {
     return this.getDay(dateStr);
   }
 
+  async updatePomodoros(dateStr: string, delta?: number, reset?: boolean): Promise<DayView> {
+    const dayId = await this.getOrCreateDayId(dateStr);
+    const day = await this.prisma.day.findUniqueOrThrow({ where: { id: dayId } });
+    const nextCount = reset ? 0 : Math.max(0, day.pomodoros + (delta ?? 0));
+    await this.prisma.day.update({ where: { id: dayId }, data: { pomodoros: nextCount } });
+    return this.getDay(dateStr);
+  }
+
   async updateDay(dateStr: string, data: UpdateDayData): Promise<DayView> {
     const dayId = await this.getOrCreateDayId(dateStr);
     await this.prisma.day.update({ where: { id: dayId }, data });
@@ -141,6 +152,7 @@ export class DaysService {
         date,
         completed,
         total: activeSet.length,
+        pomodoros: day?.pomodoros ?? 0,
         ytOver: youtubeMinutes > budget,
         rating: day?.rating ?? null,
       });

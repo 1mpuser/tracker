@@ -50,6 +50,23 @@ describe('DaysService.getDay', () => {
 
     expect(result.dailies[0].carriedFromDate).toBeNull();
   });
+
+  it('exposes the pomodoro count from the day row', async () => {
+    prisma.day.findUnique.mockResolvedValue({
+      date: new Date('2026-07-15T00:00:00.000Z'),
+      youtubeMinutes: 0,
+      pomodoros: 2,
+      eveningClosed: false,
+      rating: null,
+      comment: null,
+      categories: [],
+      dailies: [],
+    });
+
+    const result = await service.getDay('2026-07-15');
+
+    expect(result.pomodoros).toBe(2);
+  });
 });
 
 describe('DaysService.getHistory', () => {
@@ -173,6 +190,17 @@ describe('DaysService.getHistory', () => {
 
     expect(entry.date).toBe('2026-07-20');
   });
+
+  it('exposes the day row\'s pomodoro count, defaulting to 0', async () => {
+    const today = new Date(Date.UTC(2026, 6, 15));
+    prisma.day.findMany.mockResolvedValue([{ date: today, youtubeMinutes: 0, pomodoros: 6, categories: [] }]);
+    prisma.category.findMany.mockResolvedValue([]);
+    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+
+    const [entry] = await service.getHistory(1);
+
+    expect(entry.pomodoros).toBe(6);
+  });
 });
 
 describe('DaysService.updateDay', () => {
@@ -206,5 +234,39 @@ describe('DaysService.updateDay', () => {
       where: { id: 7 },
       data: { eveningClosed: true, comment: 'Хороший день' },
     });
+  });
+});
+
+describe('DaysService.updatePomodoros', () => {
+  let service: DaysService;
+  let prisma: any;
+
+  beforeEach(() => {
+    prisma = {
+      day: {
+        findUnique: jest.fn().mockResolvedValue({ id: 5 }),
+        create: jest.fn(),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 5, pomodoros: 3 }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    };
+    service = new DaysService(prisma, {} as any);
+    jest.spyOn(service, 'getDay').mockResolvedValue({} as any);
+  });
+
+  it('increments the count by the given delta', async () => {
+    await service.updatePomodoros('2026-07-18', 1);
+    expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 5 }, data: { pomodoros: 4 } });
+  });
+
+  it('clamps the count at zero on a negative delta', async () => {
+    prisma.day.findUniqueOrThrow.mockResolvedValue({ id: 5, pomodoros: 0 });
+    await service.updatePomodoros('2026-07-18', -1);
+    expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 5 }, data: { pomodoros: 0 } });
+  });
+
+  it('resets the count to zero when reset is true', async () => {
+    await service.updatePomodoros('2026-07-18', undefined, true);
+    expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 5 }, data: { pomodoros: 0 } });
   });
 });
