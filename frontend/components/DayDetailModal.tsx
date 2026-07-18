@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import styles from './DayDetailModal.module.css';
 import type { DayView } from '@/types/api';
-import { addDaily, carryDailies, deleteDaily, getDay, setCategoryDone, updateDaily, updateDay, updateYoutube } from '@/lib/api';
+import { addDaily, carryDailies, deleteDaily, getDay, setCategoryDone, updateDaily, updateDay, updatePomodoros, updateYoutube } from '@/lib/api';
 import { formatDisplayDate } from '@/lib/date';
 import SpheresPanel from './SpheresPanel';
 import DailiesPanel from './DailiesPanel';
@@ -97,6 +97,16 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
     await refresh();
   }
 
+  async function addPomodoro(delta: number) {
+    await updatePomodoros(date, { delta });
+    await refresh();
+  }
+
+  async function resetPomodoro() {
+    await updatePomodoros(date, { reset: true });
+    await refresh();
+  }
+
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.panel} onClick={(e) => e.stopPropagation()}>
@@ -135,6 +145,7 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
             </div>
             <div className={styles.section}>
               <div className={styles.viewLine}>YouTube: {day.youtubeMinutes} мин</div>
+              <div className={styles.viewLine}>Помидорок: {day.pomodoros}</div>
               <div className={styles.viewLine}>День закрыт: {day.eveningClosed ? 'да' : 'нет'}</div>
               <div className={styles.viewLine}>Оценка: {day.rating === null ? '—' : `${day.rating}/10`}</div>
               {day.comment && <div className={styles.viewLine}>Комментарий: {day.comment}</div>}
@@ -203,6 +214,23 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
                 </button>
                 <button type="button" onClick={() => addYoutubeMinutes(50)}>
                   +50
+                </button>
+              </div>
+            </div>
+            <div className={styles.ytEditor}>
+              <div className={styles.ytEditorHeading}>Помидорки</div>
+              <div className={styles.ytEditorTop}>
+                <span className={styles.ytEditorMinutes}>{day.pomodoros}</span>
+                <span className={styles.ytEditorReset} onClick={resetPomodoro}>
+                  сбросить
+                </span>
+              </div>
+              <div className={styles.ytEditorButtons}>
+                <button type="button" onClick={() => addPomodoro(1)}>
+                  +1
+                </button>
+                <button type="button" onClick={() => addPomodoro(-1)}>
+                  −1
                 </button>
               </div>
             </div>
