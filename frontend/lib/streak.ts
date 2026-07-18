@@ -8,18 +8,24 @@ export interface TodayCompletion {
   completed: number;
 }
 
-export function computeStreak(history: HistoryEntry[], today: TodayCompletion): number {
-  // Deliberately excludes today.date: the backward loop below starts at yesterday
-  // and never revisits it, and the final check below reads `today` directly — so
-  // today's completion always comes from the live `today` param, never from a
-  // (possibly stale) matching entry inside `history`.
-  const map = new Map(history.filter((h) => h.date !== today.date).map((h) => [h.date, h]));
+// Общий backward-loop для серий по порогу. Сегодняшняя запись из history
+// исключается: цикл идёт с вчера и никогда не заходит на today.date, а
+// сегодняшнее значение берётся из todayValue (свежий live-параметр), не из
+// возможно устаревшей записи history за ту же дату.
+export function streakByThreshold<T extends { date: string }>(
+  history: T[],
+  todayDate: string,
+  todayValue: number,
+  getValue: (entry: T) => number,
+  threshold: number,
+): number {
+  const map = new Map(history.filter((h) => h.date !== todayDate).map((h) => [h.date, h]));
 
   let streak = 0;
-  let cursor = addDaysUTC(parseUTC(today.date), -1);
+  let cursor = addDaysUTC(parseUTC(todayDate), -1);
   while (true) {
     const rec = map.get(formatUTC(cursor));
-    if (rec && rec.completed >= STREAK_THRESHOLD) {
+    if (rec && getValue(rec) >= threshold) {
       streak++;
       cursor = addDaysUTC(cursor, -1);
     } else {
@@ -27,9 +33,13 @@ export function computeStreak(history: HistoryEntry[], today: TodayCompletion): 
     }
   }
 
-  if (today.completed >= STREAK_THRESHOLD) {
+  if (todayValue >= threshold) {
     streak++;
   }
 
   return streak;
+}
+
+export function computeStreak(history: HistoryEntry[], today: TodayCompletion): number {
+  return streakByThreshold(history, today.date, today.completed, (h) => h.completed, STREAK_THRESHOLD);
 }
