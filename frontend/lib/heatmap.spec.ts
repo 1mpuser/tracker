@@ -19,11 +19,11 @@ describe('youtubeHeatmapColor', () => {
   it('returns the empty panel color when no minutes were logged', () => {
     expect(youtubeHeatmapColor(0, 60)).toBe('var(--panel-alt)');
   });
-  it('returns the cool accent2 tone well under budget', () => {
-    expect(youtubeHeatmapColor(10, 60)).toBe('var(--accent2-soft)');
+  it('returns the muted steel tone well under budget', () => {
+    expect(youtubeHeatmapColor(10, 60)).toBe('var(--yt-soft)');
   });
-  it('returns solid accent between 70% and 100% of budget', () => {
-    expect(youtubeHeatmapColor(45, 60)).toBe('var(--accent)');
+  it('returns solid steel between 70% and 100% of budget', () => {
+    expect(youtubeHeatmapColor(45, 60)).toBe('var(--yt)');
   });
   it('returns a danger tone just over budget', () => {
     expect(youtubeHeatmapColor(70, 60)).toBe('rgba(217, 100, 90, 0.55)');
@@ -61,16 +61,19 @@ describe('pomodoroHeatmapColor', () => {
   it('returns the empty panel color for zero', () => {
     expect(pomodoroHeatmapColor(0, 4, 8)).toBe('var(--panel-alt)');
   });
-  it('returns the soft tint below the minimum', () => {
-    expect(pomodoroHeatmapColor(3, 4, 8)).toBe('var(--accent-soft)');
+  it('returns the soft red tint for a single pomodoro', () => {
+    expect(pomodoroHeatmapColor(1, 4, 8)).toBe('var(--pom-soft)');
   });
-  it('returns the dense accent at the minimum', () => {
-    expect(pomodoroHeatmapColor(4, 4, 8)).toBe('rgba(224, 164, 88, 0.6)');
+  it('returns the bordo tone below the minimum', () => {
+    expect(pomodoroHeatmapColor(3, 4, 8)).toBe('var(--pom-deep)');
   });
-  it('stays dense accent just below the optimum', () => {
-    expect(pomodoroHeatmapColor(7, 4, 8)).toBe('rgba(224, 164, 88, 0.6)');
+  it('returns tomato red at the minimum', () => {
+    expect(pomodoroHeatmapColor(4, 4, 8)).toBe('var(--pom)');
   });
-  it('returns solid accent at the optimum', () => {
-    expect(pomodoroHeatmapColor(8, 4, 8)).toBe('var(--accent)');
+  it('stays tomato red just below the optimum', () => {
+    expect(pomodoroHeatmapColor(7, 4, 8)).toBe('var(--pom)');
+  });
+  it('returns bright red at the optimum', () => {
+    expect(pomodoroHeatmapColor(8, 4, 8)).toBe('var(--pom-hot)');
   });
 });

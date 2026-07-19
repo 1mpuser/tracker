@@ -1,5 +1,6 @@
 import styles from './PomodoroPanel.module.css';
 import { POMODORO_MIN, POMODORO_OPT } from '@/lib/pomodoro';
+import { TomatoIcon } from './icons';
 
 interface PomodoroPanelProps {
   count: number;
@@ -14,15 +15,17 @@ export default function PomodoroPanel({ count, onAdd, onReset }: PomodoroPanelPr
   const reachedOpt = count >= POMODORO_OPT;
 
   let barColor = 'var(--panel-alt)';
-  if (reachedOpt) barColor = 'var(--accent)';
-  else if (reachedMin) barColor = 'rgba(224, 164, 88, 0.6)';
-  else if (count > 0) barColor = 'var(--accent-soft)';
+  if (reachedOpt) barColor = 'var(--fire-grad)';
+  else if (reachedMin) barColor = 'var(--pom)';
+  else if (count > 0) barColor = 'var(--pom-deep)';
 
   const countClass = reachedOpt ? styles.countOpt : reachedMin ? styles.countMin : styles.countLow;
 
   return (
     <div className={styles.panel}>
-      <h2 className={styles.heading}>Помидорки</h2>
+      <h2 className={styles.heading}>
+        <TomatoIcon className={styles.headingIcon} /> Помидорки
+      </h2>
       <div className={styles.top}>
         <div className={`${styles.count} ${countClass}`}>
           {count}

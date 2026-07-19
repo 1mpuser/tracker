@@ -10,9 +10,8 @@ interface YoutubePanelProps {
 
 export default function YoutubePanel({ minutes, budget, onAdd, onReset, onBudgetChange }: YoutubePanelProps) {
   const pct = budget > 0 ? Math.min(100, (minutes / budget) * 100) : 0;
-  let barColor = 'var(--accent2)';
+  let barColor = 'var(--yt)';
   if (minutes > budget) barColor = 'var(--danger)';
-  else if (pct > 70) barColor = 'var(--accent)';
 
   return (
     <div className={styles.panel}>

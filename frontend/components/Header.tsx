@@ -1,6 +1,7 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import styles from './Header.module.css';
 import { flameTier } from '@/lib/flame';
+import { FlameIcon, GearIcon, TomatoIcon } from './icons';
 
 interface HeaderProps {
   dateLabel: string;
@@ -14,25 +15,22 @@ interface HeaderProps {
 
 interface StreakFlameProps {
   value: number;
-  label: string;
+  label: ReactNode;
+  tone: 'gold' | 'red';
   hot?: boolean;
   delay: string;
 }
 
-function StreakFlame({ value, label, hot, delay }: StreakFlameProps) {
+function StreakFlame({ value, label, tone, hot, delay }: StreakFlameProps) {
   const tier = flameTier(value);
   return (
     <div className={styles.streakUnit}>
       <div
-        className={`${styles.flameWrap} ${styles[`tier${tier}`]} ${hot ? styles.hot : ''}`}
+        className={`${styles.flameWrap} ${styles[tone]} ${styles[`tier${tier}`]} ${hot ? styles.hot : ''}`}
         style={{ '--delay': delay } as CSSProperties}
       >
         <span className={styles.streakNum}>{value}</span>
-        {tier > 0 && (
-          <span className={styles.flame} aria-hidden="true">
-            🔥
-          </span>
-        )}
+        {tier > 0 && <FlameIcon className={styles.flame} />}
       </div>
       <div className={styles.streakLbl}>{label}</div>
     </div>
@@ -61,12 +59,31 @@ export default function Header({
           </button>
         )}
         <div className={styles.streakRail}>
-          <StreakFlame value={streak} label="дней 2+ сферы" delay="0s" />
-          <StreakFlame value={pomodoroStreakMin} label="🍅 минимум ≥4" delay="0.4s" />
-          <StreakFlame value={pomodoroStreakOpt} label="🍅 оптимум ≥8" hot delay="0.8s" />
+          <StreakFlame value={streak} label="дней 2+ сферы" tone="gold" delay="0s" />
+          <StreakFlame
+            value={pomodoroStreakMin}
+            tone="red"
+            delay="0.4s"
+            label={
+              <>
+                <TomatoIcon className={styles.tmark} /> минимум ≥4
+              </>
+            }
+          />
+          <StreakFlame
+            value={pomodoroStreakOpt}
+            tone="red"
+            hot
+            delay="0.8s"
+            label={
+              <>
+                <TomatoIcon className={styles.tmark} /> оптимум ≥8
+              </>
+            }
+          />
         </div>
         <button type="button" className={styles.gearBtn} onClick={onOpenSettings} aria-label="Настройки">
-          ⚙
+          <GearIcon className={styles.gearIcon} />
         </button>
       </div>
     </div>

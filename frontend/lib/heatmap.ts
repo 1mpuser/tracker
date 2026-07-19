@@ -16,9 +16,9 @@ export function youtubeHeatmapColor(minutes: number, budget: number): string {
   const pct = budget > 0 ? (minutes / budget) * 100 : 0;
   if (pct > 150) return 'var(--danger)';
   if (pct > 100) return 'rgba(217, 100, 90, 0.55)';
-  if (pct >= 70) return 'var(--accent)';
-  if (pct >= 40) return 'rgba(79, 168, 201, 0.55)';
-  return 'var(--accent2-soft)';
+  if (pct >= 70) return 'var(--yt)';
+  if (pct >= 40) return 'rgba(109, 122, 140, 0.55)';
+  return 'var(--yt-soft)';
 }
 
 export function mondayOffset(dateStr: string): number {
@@ -31,8 +31,10 @@ export function thresholdHeatmapColor(completed: number, threshold: number): str
 }
 
 export function pomodoroHeatmapColor(count: number, min: number, opt: number): string {
+  // Red ramp: 0 grey ember -> 1 soft -> 2..min-1 bordo -> min..opt-1 tomato -> >=opt bright.
   if (count <= 0) return 'var(--panel-alt)';
-  if (count >= opt) return 'var(--accent)';
-  if (count >= min) return 'rgba(224, 164, 88, 0.6)';
-  return 'var(--accent-soft)';
+  if (count >= opt) return 'var(--pom-hot)';
+  if (count >= min) return 'var(--pom)';
+  if (count >= 2) return 'var(--pom-deep)';
+  return 'var(--pom-soft)';
 }

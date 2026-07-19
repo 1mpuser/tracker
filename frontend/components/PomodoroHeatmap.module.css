@@ -26,8 +26,8 @@
 }
 
 .optimum {
-  border-color: var(--accent);
-  box-shadow: 0 0 6px var(--accent-glow);
+  border-color: var(--pom-hot);
+  box-shadow: 0 0 6px var(--pom-glow);
 }
 
 .legend {

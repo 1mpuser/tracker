@@ -1,18 +1,34 @@
 :root {
-  --bg: #14161b;
-  --panel: #1b1e25;
-  --panel-alt: #20242c;
+  --bg: #0f1116;
+  --panel: #1a1d24;
+  --panel-alt: #22262f;
   --border: #2b2f38;
   --text: #e8e6de;
   --text-muted: #888d98;
   --text-dim: #5b5f6a;
+  /* spheres / achievement — gold (unchanged) */
   --accent: #e0a458;
   --accent-soft: rgba(224, 164, 88, 0.14);
   --accent-glow: rgba(224, 164, 88, 0.35);
-  --accent2: #4fa8c9;
-  --accent2-soft: rgba(79, 168, 201, 0.14);
+  /* pomodoro — red ramp: grey start -> bordo -> tomato -> bright, optimum ignites */
+  --pom: #e0574e;
+  --pom-hot: #ff6f5c;
+  --pom-deep: #7f2c28;
+  --pom-soft: rgba(224, 87, 78, 0.14);
+  --pom-glow: rgba(224, 87, 78, 0.5);
+  --fire-grad: linear-gradient(175deg, #ffcf4d 0%, #ff8a3d 48%, #e5433b 100%);
+  --ember: rgba(255, 138, 60, 0.6);
+  /* youtube — muted steel (a limit, not an achievement) */
+  --yt: #6d7a8c;
+  --yt-soft: rgba(109, 122, 140, 0.16);
+  /* legacy aliases kept so any stray reference still resolves */
+  --accent2: #6d7a8c;
+  --accent2-soft: rgba(109, 122, 140, 0.16);
   --danger: #d9645a;
   --danger-soft: rgba(217, 100, 90, 0.16);
+  /* elevation */
+  --hair: rgba(255, 255, 255, 0.055);
+  --elev: 0 8px 26px -20px rgba(0, 0, 0, 0.72);
   --radius: 10px;
   --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Consolas, monospace;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
@@ -29,7 +45,10 @@ body {
 }
 
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(120% 55% at 50% -8%, rgba(224, 164, 88, 0.07), transparent 62%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-sans);
   min-height: 100vh;

@@ -20,9 +20,8 @@ export default function YoutubeDailyHeatmap() {
   const budget = stats[0].budget;
   const avg = stats.reduce((sum, s) => sum + s.minutes, 0) / stats.length;
   const barPct = budget > 0 ? Math.min(100, (avg / budget) * 100) : 0;
-  let barColor = 'var(--accent2)';
+  let barColor = 'var(--yt)';
   if (avg > budget) barColor = 'var(--danger)';
-  else if (barPct > 70) barColor = 'var(--accent)';
 
   return (
     <div className={styles.wrap}>

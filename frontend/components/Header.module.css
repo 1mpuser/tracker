@@ -10,17 +10,18 @@
 }
 
 .title {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0 0 4px;
-  letter-spacing: -0.01em;
+  font-size: 22px;
+  font-weight: 620;
+  margin: 0 0 5px;
+  letter-spacing: -0.02em;
 }
 
 .date {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--text-muted);
-  text-transform: capitalize;
 }
 
 .actions {
@@ -33,22 +34,25 @@
   background: var(--panel-alt);
   border: 1px solid var(--border);
   color: var(--text-muted);
-  border-radius: 6px;
-  padding: 6px 10px;
+  border-radius: 7px;
+  padding: 8px 11px;
   font-size: 11.5px;
   cursor: pointer;
+  transition: border-color 0.18s, color 0.18s;
 }
 
-.iconBtn:hover {
-  border-color: var(--accent2);
-  color: var(--accent2);
+.iconBtn:hover,
+.iconBtn:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
 }
 
-/* Streak rail — three "campfires": spheres, pomodoro ≥4, pomodoro ≥8 */
+/* ---- streak rail: three campfires (spheres gold, pomodoro red, optimum molten) ---- */
 .streakRail {
   display: flex;
   align-items: flex-end;
-  gap: 22px;
+  gap: 20px;
 }
 
 .streakUnit {
@@ -56,78 +60,120 @@
 }
 
 .flameWrap {
+  --fglow: var(--accent-glow);
   display: inline-flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 5px;
   line-height: 1;
+  padding: 2px 5px;
+  border-radius: 7px;
 }
 
 .streakNum {
   font-family: var(--font-mono);
   font-size: 30px;
   font-weight: 700;
-  color: var(--accent);
   line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
 }
 
 .flame {
-  font-size: 14px;
-  transform-origin: 50% 90%;
-  will-change: transform;
+  display: block;
+  width: 14px;
+  height: 17px;
+  color: var(--accent);
 }
 
 .streakLbl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-family: var(--font-mono);
   font-size: 10.5px;
-  color: var(--text-muted);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  color: var(--text-muted);
   margin-top: 6px;
   white-space: nowrap;
 }
 
-/* Tier 0 — cold ember: muted number, no flame glyph, no glow */
+.tmark {
+  width: 11px;
+  height: 11px;
+  color: var(--pom);
+}
+
+/* metric tones */
+.gold {
+  --fglow: var(--accent-glow);
+}
+.gold .streakNum,
+.gold .flame {
+  color: var(--accent);
+}
+.red {
+  --fglow: var(--pom-glow);
+}
+.red .streakNum,
+.red .flame {
+  color: var(--pom);
+}
+
+/* cold ember — no active streak */
 .tier0 .streakNum {
   color: var(--text-dim);
 }
 
-/* Optimum (≥8) reads hotter: near-white core */
-.hot .streakNum {
-  color: var(--text);
+/* molten optimum: pomodoro ≥8 with an active streak */
+.red.hot:not(.tier0) {
+  background: radial-gradient(90% 100% at 50% 100%, rgba(224, 87, 78, 0.22), transparent 72%);
+}
+.red.hot:not(.tier0) .flame {
+  color: var(--pom-hot);
+}
+.red.hot:not(.tier0) .streakNum {
+  background: var(--fire-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: ignite 1.5s ease-in-out infinite;
 }
 
-/* Flame size grows with tier */
-.tier1 .flame {
-  font-size: 13px;
-}
+/* flame size grows with tier */
 .tier2 .flame {
-  font-size: 16px;
+  width: 19px;
+  height: 23px;
 }
 .tier3 .flame {
-  font-size: 20px;
+  width: 24px;
+  height: 29px;
 }
 .tier4 .flame {
-  font-size: 24px;
+  width: 29px;
+  height: 35px;
 }
 
-/* Glow flicker on the whole unit (halos both the number and the flame glyph) */
+/* glow flicker on the whole unit (halos both number and flame) */
 .tier1 {
-  animation: flicker1 1.7s ease-in-out infinite;
+  animation: flick1 1.7s ease-in-out infinite;
   animation-delay: var(--delay);
 }
 .tier2 {
-  animation: flicker2 1.5s ease-in-out infinite;
+  animation: flick2 1.5s ease-in-out infinite;
   animation-delay: var(--delay);
 }
 .tier3 {
-  animation: flicker3 1.25s ease-in-out infinite;
+  animation: flick3 1.25s ease-in-out infinite;
   animation-delay: var(--delay);
 }
 .tier4 {
-  animation: flicker4 1s ease-in-out infinite;
+  animation: flick3 1s ease-in-out infinite;
   animation-delay: var(--delay);
 }
 
-/* Flame glyph dances (jitters) in sync with its unit's flicker */
 .tier1 .flame,
 .tier2 .flame,
 .tier3 .flame,
@@ -136,72 +182,31 @@
   animation-delay: var(--delay);
 }
 
-@keyframes flicker1 {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 3px var(--accent-glow));
-  }
-  50% {
-    filter: drop-shadow(0 0 6px var(--accent-glow));
-  }
+@keyframes flick1 {
+  0%, 100% { filter: drop-shadow(0 0 3px var(--fglow)); }
+  50% { filter: drop-shadow(0 0 6px var(--fglow)); }
 }
-@keyframes flicker2 {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 5px var(--accent-glow));
-  }
-  40% {
-    filter: drop-shadow(0 0 9px var(--accent-glow));
-  }
-  70% {
-    filter: drop-shadow(0 0 7px var(--accent-glow));
-  }
+@keyframes flick2 {
+  0%, 100% { filter: drop-shadow(0 0 5px var(--fglow)); }
+  45% { filter: drop-shadow(0 0 10px var(--fglow)); }
+  72% { filter: drop-shadow(0 0 7px var(--fglow)); }
 }
-@keyframes flicker3 {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 7px var(--accent-glow)) drop-shadow(0 0 12px var(--accent-glow));
-  }
-  35% {
-    filter: drop-shadow(0 0 11px var(--accent-glow)) drop-shadow(0 0 18px var(--accent-glow));
-  }
-  65% {
-    filter: drop-shadow(0 0 9px var(--accent-glow)) drop-shadow(0 0 14px var(--accent-glow));
-  }
+@keyframes flick3 {
+  0%, 100% { filter: drop-shadow(0 0 8px var(--fglow)) drop-shadow(0 0 14px var(--fglow)); }
+  35% { filter: drop-shadow(0 0 12px var(--fglow)) drop-shadow(0 0 20px var(--fglow)); }
+  66% { filter: drop-shadow(0 0 10px var(--fglow)) drop-shadow(0 0 16px var(--fglow)); }
 }
-@keyframes flicker4 {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 10px var(--accent-glow)) drop-shadow(0 0 18px var(--accent-glow));
-  }
-  30% {
-    filter: drop-shadow(0 0 16px var(--accent-glow)) drop-shadow(0 0 26px var(--accent-glow));
-  }
-  55% {
-    filter: drop-shadow(0 0 12px var(--accent-glow)) drop-shadow(0 0 20px var(--accent-glow));
-  }
-  80% {
-    filter: drop-shadow(0 0 15px var(--accent-glow)) drop-shadow(0 0 24px var(--accent-glow));
-  }
-}
-
 @keyframes flameDance {
-  0%,
-  100% {
-    transform: scale(1) translateY(0) rotate(-2deg);
-  }
-  25% {
-    transform: scale(1.12) translateY(-1px) rotate(2deg);
-  }
-  50% {
-    transform: scale(0.96) translateY(0) rotate(-1deg);
-  }
-  75% {
-    transform: scale(1.06) translateY(-0.5px) rotate(1deg);
-  }
+  0%, 100% { transform: translateY(0) scale(1) rotate(-2deg); }
+  25% { transform: translateY(-1px) scale(1.1) rotate(2deg); }
+  50% { transform: translateY(0) scale(0.97) rotate(-1deg); }
+  75% { transform: translateY(-0.5px) scale(1.05) rotate(1deg); }
+}
+@keyframes ignite {
+  0%, 100% { filter: drop-shadow(0 0 8px var(--pom-glow)); transform: scale(1); }
+  50% { filter: drop-shadow(0 0 16px var(--pom-glow)) drop-shadow(0 0 7px var(--ember)); transform: scale(1.04); }
 }
 
-/* Accessibility: no flicker/dance under reduced-motion — keep a steady glow sized by tier */
 @media (prefers-reduced-motion: reduce) {
   .tier1,
   .tier2,
@@ -210,35 +215,38 @@
   .tier1 .flame,
   .tier2 .flame,
   .tier3 .flame,
-  .tier4 .flame {
-    animation: none;
+  .tier4 .flame,
+  .red.hot:not(.tier0) .streakNum {
+    animation: none !important;
   }
-  .tier1 {
-    filter: drop-shadow(0 0 4px var(--accent-glow));
-  }
-  .tier2 {
-    filter: drop-shadow(0 0 7px var(--accent-glow));
-  }
-  .tier3 {
-    filter: drop-shadow(0 0 10px var(--accent-glow));
-  }
-  .tier4 {
-    filter: drop-shadow(0 0 14px var(--accent-glow));
-  }
+  .tier1 { filter: drop-shadow(0 0 4px var(--fglow)); }
+  .tier2 { filter: drop-shadow(0 0 7px var(--fglow)); }
+  .tier3,
+  .tier4 { filter: drop-shadow(0 0 11px var(--fglow)); }
+  .red.hot:not(.tier0) .streakNum { filter: drop-shadow(0 0 12px var(--pom-glow)); }
 }
 
 .gearBtn {
   background: var(--panel-alt);
   border: 1px solid var(--border);
   color: var(--text-muted);
-  border-radius: 6px;
-  width: 34px;
-  height: 34px;
-  font-size: 16px;
+  border-radius: 7px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
   cursor: pointer;
+  transition: border-color 0.18s, color 0.18s;
 }
 
-.gearBtn:hover {
-  border-color: var(--accent2);
-  color: var(--accent2);
+.gearIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.gearBtn:hover,
+.gearBtn:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
 }
