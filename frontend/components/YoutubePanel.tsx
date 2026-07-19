@@ -11,7 +11,7 @@ interface YoutubePanelProps {
 export default function YoutubePanel({ minutes, budget, onAdd, onReset, onBudgetChange }: YoutubePanelProps) {
   const pct = budget > 0 ? Math.min(100, (minutes / budget) * 100) : 0;
   let barColor = 'var(--yt)';
-  if (minutes > budget) barColor = 'var(--danger)';
+  if (minutes > budget) barColor = 'var(--pom)';
 
   return (
     <div className={styles.panel}>

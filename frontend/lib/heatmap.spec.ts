@@ -19,17 +19,20 @@ describe('youtubeHeatmapColor', () => {
   it('returns the empty panel color when no minutes were logged', () => {
     expect(youtubeHeatmapColor(0, 60)).toBe('var(--panel-alt)');
   });
-  it('returns the muted steel tone well under budget', () => {
+  it('returns the faint steel tone comfortably under budget', () => {
     expect(youtubeHeatmapColor(10, 60)).toBe('var(--yt-soft)');
   });
-  it('returns solid steel between 70% and 100% of budget', () => {
+  it('returns solid steel while nearing the budget', () => {
     expect(youtubeHeatmapColor(45, 60)).toBe('var(--yt)');
   });
-  it('returns a danger tone just over budget', () => {
-    expect(youtubeHeatmapColor(70, 60)).toBe('rgba(217, 100, 90, 0.55)');
+  it('escalates to bordo just over budget', () => {
+    expect(youtubeHeatmapColor(70, 60)).toBe('var(--pom-deep)');
   });
-  it('returns solid danger far over budget', () => {
-    expect(youtubeHeatmapColor(100, 60)).toBe('var(--danger)');
+  it('escalates to red well over budget', () => {
+    expect(youtubeHeatmapColor(100, 60)).toBe('var(--pom)');
+  });
+  it('escalates to the hottest red far over budget', () => {
+    expect(youtubeHeatmapColor(120, 60)).toBe('var(--pom-hot)');
   });
 });
 
