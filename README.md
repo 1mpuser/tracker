@@ -1,249 +1,124 @@
 # Daily Tracker
 
-Personal, single-user, self-hosted daily tracker. No auth, runs only on localhost via Docker Compose.
+Personal, single-user, self-hosted daily tracker. No auth, runs on localhost via Docker Compose.
 
-## Quick Start (with Docker)
+## Run it (Docker only — no Bun / Node needed)
 
-### Prerequisites
+The **only** things you need installed are **Docker** (with Compose) and **Git**. Everything else — Bun, the database, migrations — lives inside the containers.
 
-You need:
-- **Docker** (with Compose) — [macOS](https://docs.docker.com/desktop/setup/install/mac-install/) / [Windows](https://docs.docker.com/desktop/setup/install/windows-install/)
-- **Git** — [macOS](https://git-scm.com/download/mac) / [Windows](https://git-scm.com/download/win)
-- **Bun** (for local dev only) — [macOS/Windows](https://bun.sh/docs/installation)
+- Docker Desktop: [macOS](https://docs.docker.com/desktop/setup/install/mac-install/) · [Windows](https://docs.docker.com/desktop/setup/install/windows-install/) (on Windows, enable the **WSL2** backend when prompted)
+- Git: [macOS](https://git-scm.com/download/mac) · [Windows](https://git-scm.com/download/win)
 
-### macOS
+Then, in a terminal (macOS Terminal, or on Windows: PowerShell / Git Bash):
 
-1. **Clone the repo:**
-   ```bash
-   git clone <repo-url>
-   cd tracker
-   ```
+```bash
+git clone <repo-url>
+cd tracker
+docker compose up -d --build postgres backend frontend
+```
 
-2. **Install Bun** (if not already installed):
-   ```bash
-   curl -fsSL https://bun.sh/install | bash
-   ```
+Open **http://localhost:4887**. That's it. 🎉
 
-3. **Start the full stack:**
-   ```bash
-   cp .env.example .env
-   docker compose up -d --build
-   ```
+- You do **not** need Bun or Node — the containers already have everything.
+- The backend **applies database migrations and seeds the data automatically** on startup. No manual step.
+- Data is stored in a Docker volume (`pgdata`) and survives restarts.
 
-4. **Check if services are running:**
-   ```bash
-   docker compose ps
-   ```
+Handy commands:
 
-5. **Access the app:**
-   - Frontend: http://localhost:4887
-   - Backend: http://localhost:3001
+```bash
+docker compose ps            # service status
+docker compose logs -f       # follow logs (add a service name to filter)
+docker compose down          # stop everything (data is kept in the volume)
+docker compose down -v       # stop AND wipe the database volume
+```
 
-### Windows
+> The 4th service, `caddy`, is only for the optional HTTPS hostname below — that's why it's left out of the command above. Skipping it means one less thing to set up, and `http://localhost:4887` works without it.
 
-1. **Clone the repo:**
-   - Open PowerShell or Git Bash
-   ```powershell
-   git clone <repo-url>
-   cd tracker
-   ```
+---
 
-2. **Install Bun** (if not already installed):
-   ```powershell
-   powershell -Command "& {param($v='1.0'); iwr https://bun.sh/install.ps1 | iex}"
-   ```
-   Or using `scoop`:
-   ```powershell
-   scoop install bun
-   ```
+## Local development (optional)
 
-3. **Start the full stack:**
-   ```powershell
-   cp .env.example .env
-   docker compose up -d --build
-   ```
+**Only** needed if you want to edit the code with hot-reload or run the test suites. A regular user just running the app can skip this whole section.
 
-4. **Check if services are running:**
-   ```powershell
-   docker compose ps
-   ```
+This is the only part that needs **Bun** installed on your machine — [install instructions](https://bun.sh/docs/installation) (`curl -fsSL https://bun.sh/install | bash` on macOS/Linux, `scoop install bun` on Windows).
 
-5. **Access the app:**
-   - Frontend: http://localhost:4887
-   - Backend: http://localhost:3001
+### Backend
 
-## Local Development (without Docker rebuilds)
+```bash
+docker compose up -d postgres            # just the database
+cd backend
+cp ../.env.example .env                   # then set DATABASE_URL to use localhost:5434:
+                                          #   postgresql://tracker:tracker@localhost:5434/tracker
+bun install
+bunx prisma migrate dev                   # create/apply migrations
+bunx prisma db seed                       # seed categories + settings
+bun run start:dev                         # dev server on http://localhost:3001
+bun run test                              # backend tests
+```
 
-### Backend Development
+### Frontend
 
-**macOS / Windows (same):**
+```bash
+docker compose up -d postgres backend     # backend deps
+cd frontend
+cp .env.example .env.local                 # NEXT_PUBLIC_API_URL=http://localhost:3001
+bun install
+bun run dev                                # dev server on http://localhost:4887 (NOT 3000 — backend CORS is locked to 4887)
+bun run test                               # frontend tests
+```
 
-1. Start only the database:
-   ```bash
-   docker compose up -d postgres
-   ```
+### Database migrations
 
-2. Set up the backend:
-   ```bash
-   cd backend
-   cp ../.env.example .env
-   ```
+The running backend container applies existing migrations on startup automatically. You only touch this when **creating a new** migration during development (`bunx prisma migrate dev`, above). To re-apply migrations manually inside the container:
 
-3. Edit `.env` — change the database host to your machine:
-   ```
-   DATABASE_URL=postgresql://tracker:tracker@localhost:5434/tracker
-   ```
-
-4. Install dependencies and set up database:
-   ```bash
-   bun install
-   bunx prisma migrate dev
-   bunx prisma db seed
-   ```
-
-5. Start dev server:
-   ```bash
-   bun run start:dev
-   ```
-   Backend runs on http://localhost:3001
-
-6. Run backend tests:
-   ```bash
-   bun run test
-   ```
-
-### Frontend Development
-
-**macOS / Windows (same):**
-
-1. Start database + backend (or use running Docker stack):
-   ```bash
-   docker compose up -d postgres backend
-   ```
-
-2. Set up the frontend:
-   ```bash
-   cd frontend
-   cp .env.example .env.local
-   ```
-
-3. Edit `.env.local` (usually no changes needed, but check):
-   ```
-   NEXT_PUBLIC_API_URL=http://localhost:3001
-   ```
-
-4. Install dependencies:
-   ```bash
-   bun install
-   ```
-
-5. Start dev server:
-   ```bash
-   bun run dev
-   ```
-   Frontend runs on http://localhost:4887 (not 3000 — backend CORS is locked to 4887)
-
-6. Run frontend tests:
-   ```bash
-   bun run test
-   ```
-
-## Database Migrations
-
-To apply migrations manually (if needed):
-
-**macOS / Windows (same):**
 ```bash
 docker compose exec backend bunx prisma migrate deploy
 ```
 
-## HTTPS via tracker.performance (Optional)
+---
 
-Two browser features silently degrade on plain `http://localhost:4887`:
+## HTTPS via `tracker.performance` (optional — a macOS nicety)
 
-- **Safari doesn't reliably show the favicon** for pages served from the literal hostname `localhost`. Chrome/Firefox are unaffected.
-- **The Notification API silently no-ops** on plain HTTP. Browsers only allow notifications on `https:` or the literal `localhost` — never on arbitrary `/etc/hosts` entries even if they resolve to `127.0.0.1`.
+**Fully optional. Most people don't need this.** Plain `http://localhost:4887` works everywhere.
 
-The fix is a real HTTPS origin using [mkcert](https://github.com/FiloSottile/mkcert) (locally-trusted certificates) and a Caddy reverse proxy.
+This exists only because of two **Safari / macOS** quirks on plain `http://localhost`:
 
-### macOS Setup
+- Safari doesn't reliably show the favicon for the literal hostname `localhost`.
+- The Notification API silently does nothing on non-`localhost` HTTP origins.
 
-1. **Install mkcert via Homebrew:**
-   ```bash
-   brew install mkcert
-   ```
+**On Windows / Linux with Chrome, Edge or Firefox you do not need any of this** — `http://localhost:4887` is already a "secure context" (loopback is trusted), so notifications and favicons work there. Just use **http://localhost:4887** and skip this section.
 
-2. **Install the local CA into system trust store:**
-   ```bash
-   mkcert -install
-   ```
-   (asks for your sudo password)
+If you still want the pretty HTTPS hostname (mainly for Safari on a Mac), it uses [mkcert](https://github.com/FiloSottile/mkcert) for a locally-trusted certificate plus the `caddy` reverse proxy:
 
-3. **Add hostname to `/etc/hosts`:**
-   ```bash
-   echo '127.0.0.1  tracker.performance' | sudo tee -a /etc/hosts
-   ```
+### macOS
 
-4. **Generate certificates:**
-   ```bash
-   mkdir -p caddy/certs
-   cd caddy/certs
-   mkcert -cert-file tracker.performance.pem -key-file tracker.performance-key.pem tracker.performance
-   cd ../..
-   ```
+```bash
+brew install mkcert
+mkcert -install                                     # add local CA to the trust store (asks for sudo)
+echo '127.0.0.1  tracker.performance' | sudo tee -a /etc/hosts
+mkdir -p caddy/certs && cd caddy/certs
+mkcert -cert-file tracker.performance.pem -key-file tracker.performance-key.pem tracker.performance
+cd ../..
+docker compose up -d --build                        # now includes caddy
+```
 
-5. **Start the full stack with Caddy:**
-   ```bash
-   docker compose up -d --build
-   ```
+Open **https://tracker.performance:4888**.
 
-6. **Open the app:**
-   https://tracker.performance:4888
+### Windows
 
-### Windows Setup
-
-1. **Install mkcert via Chocolatey or Scoop:**
-   
-   Option A (Chocolatey):
+1. Install mkcert: `choco install mkcert` (Chocolatey) or `scoop install mkcert` (Scoop).
+2. `mkcert -install` — adds the local CA to the Windows trust store (Chrome/Edge pick it up).
+3. Add the hostname to the hosts file: open **Notepad as administrator**, File → Open `C:\Windows\System32\drivers\etc\hosts`, add a line `127.0.0.1  tracker.performance`, save.
+4. Generate the certificate:
    ```powershell
-   choco install mkcert
-   ```
-   
-   Option B (Scoop):
-   ```powershell
-   scoop install mkcert
-   ```
-
-2. **Install the local CA into Windows trust store:**
-   ```powershell
-   mkcert -install
-   ```
-
-3. **Add hostname to Windows hosts file:**
-   - **Right-click Notepad** → **Run as administrator**
-   - **File → Open** → navigate to `C:\Windows\System32\drivers\etc\hosts`
-   - Add this line at the end:
-     ```
-     127.0.0.1  tracker.performance
-     ```
-   - **Save and close**
-
-4. **Generate certificates:**
-   ```powershell
-   mkdir -p caddy\certs
-   cd caddy\certs
+   mkdir caddy\certs; cd caddy\certs
    mkcert -cert-file tracker.performance.pem -key-file tracker.performance-key.pem tracker.performance
    cd ..\..
    ```
+5. `docker compose up -d --build` (now includes caddy), then open **https://tracker.performance:4888**.
 
-5. **Start the full stack with Caddy:**
-   ```powershell
-   docker compose up -d --build
-   ```
-
-6. **Open the app:**
-   https://tracker.performance:4888
+> The generated certificate + private key live in `caddy/certs/` and are git-ignored — generate your own per machine, and never commit the private key.
 
 ---
 
-**Note:** `http://localhost:4887` still works for direct access. `backend/src/main.ts` allows both CORS origins (`http://localhost:4887` and `https://tracker.performance:4888`). The HTTPS route is primarily for Safari favicon + Notification API support.
+**Note:** `http://localhost:4887` always works for direct access. `backend/src/main.ts` allows both CORS origins (`http://localhost:4887` and `https://tracker.performance:4888`), so both routes work once set up.
