@@ -17,12 +17,13 @@ export default function StatsPanel({ history, onSelectDate }: StatsPanelProps) {
   return (
     <div className={styles.panel}>
       <h2 className={styles.heading}>Статистика</h2>
-      <CategoryHeatmap history={history} onSelectDate={onSelectDate} />
-      <StreakHeatmap history={history} onSelectDate={onSelectDate} />
-      <CategoryBars />
-      <YoutubeWeeklyChart />
+      {/* Heatmaps in focus order: YouTube (main focus) → pomodoro → 2+ spheres */}
       <YoutubeDailyHeatmap />
       <PomodoroHeatmap history={history} />
+      <StreakHeatmap history={history} onSelectDate={onSelectDate} />
+      <CategoryHeatmap history={history} onSelectDate={onSelectDate} />
+      <CategoryBars />
+      <YoutubeWeeklyChart />
       <RatingChart history={history} />
     </div>
   );
