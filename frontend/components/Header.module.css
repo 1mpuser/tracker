@@ -1,24 +1,29 @@
-.topbar {
+.header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 22px;
+  margin-bottom: 24px;
+}
+
+/* ---- title row ---- */
+.titlebar {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   flex-wrap: wrap;
   gap: 16px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 18px;
-  margin-bottom: 22px;
 }
 
 .title {
-  font-size: 22px;
-  font-weight: 620;
-  margin: 0 0 5px;
-  letter-spacing: -0.02em;
+  font-size: 31px;
+  font-weight: 640;
+  margin: 0 0 7px;
+  letter-spacing: -0.025em;
+  line-height: 1;
 }
 
 .date {
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 13px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -26,17 +31,17 @@
 
 .actions {
   display: flex;
-  align-items: flex-end;
-  gap: 18px;
+  align-items: center;
+  gap: 12px;
 }
 
 .iconBtn {
   background: var(--panel-alt);
   border: 1px solid var(--border);
   color: var(--text-muted);
-  border-radius: 7px;
-  padding: 8px 11px;
-  font-size: 11.5px;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
   cursor: pointer;
   transition: border-color 0.18s, color 0.18s;
 }
@@ -48,200 +53,23 @@
   outline: none;
 }
 
-/* ---- streak rail: three campfires (spheres gold, pomodoro red, optimum molten) ---- */
-.streakRail {
-  display: flex;
-  align-items: flex-end;
-  gap: 20px;
-}
-
-.streakUnit {
-  text-align: center;
-}
-
-.flameWrap {
-  --fglow: var(--accent-glow);
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  line-height: 1;
-  padding: 2px 5px;
-  border-radius: 7px;
-}
-
-.streakNum {
-  font-family: var(--font-mono);
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--accent);
-}
-
-.flame {
-  display: block;
-  width: 14px;
-  height: 17px;
-  color: var(--accent);
-}
-
-.streakLbl {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-top: 6px;
-  white-space: nowrap;
-}
-
-.tmark {
-  width: 11px;
-  height: 11px;
-  color: var(--pom);
-}
-
-/* metric tones */
-.gold {
-  --fglow: var(--accent-glow);
-}
-.gold .streakNum,
-.gold .flame {
-  color: var(--accent);
-}
-.red {
-  --fglow: var(--pom-glow);
-}
-.red .streakNum,
-.red .flame {
-  color: var(--pom);
-}
-
-/* cold ember — no active streak */
-.tier0 .streakNum {
-  color: var(--text-dim);
-}
-
-/* molten optimum: pomodoro ≥8 with an active streak */
-.red.hot:not(.tier0) {
-  background: radial-gradient(90% 100% at 50% 100%, rgba(224, 87, 78, 0.22), transparent 72%);
-}
-.red.hot:not(.tier0) .flame {
-  color: var(--pom-hot);
-}
-.red.hot:not(.tier0) .streakNum {
-  background: var(--fire-grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: ignite 1.5s ease-in-out infinite;
-}
-
-/* flame size grows with tier */
-.tier2 .flame {
-  width: 19px;
-  height: 23px;
-}
-.tier3 .flame {
-  width: 24px;
-  height: 29px;
-}
-.tier4 .flame {
-  width: 29px;
-  height: 35px;
-}
-
-/* glow flicker on the whole unit (halos both number and flame) */
-.tier1 {
-  animation: flick1 1.7s ease-in-out infinite;
-  animation-delay: var(--delay);
-}
-.tier2 {
-  animation: flick2 1.5s ease-in-out infinite;
-  animation-delay: var(--delay);
-}
-.tier3 {
-  animation: flick3 1.25s ease-in-out infinite;
-  animation-delay: var(--delay);
-}
-.tier4 {
-  animation: flick3 1s ease-in-out infinite;
-  animation-delay: var(--delay);
-}
-
-.tier1 .flame,
-.tier2 .flame,
-.tier3 .flame,
-.tier4 .flame {
-  animation: flameDance 1.4s ease-in-out infinite;
-  animation-delay: var(--delay);
-}
-
-@keyframes flick1 {
-  0%, 100% { filter: drop-shadow(0 0 3px var(--fglow)); }
-  50% { filter: drop-shadow(0 0 6px var(--fglow)); }
-}
-@keyframes flick2 {
-  0%, 100% { filter: drop-shadow(0 0 5px var(--fglow)); }
-  45% { filter: drop-shadow(0 0 10px var(--fglow)); }
-  72% { filter: drop-shadow(0 0 7px var(--fglow)); }
-}
-@keyframes flick3 {
-  0%, 100% { filter: drop-shadow(0 0 8px var(--fglow)) drop-shadow(0 0 14px var(--fglow)); }
-  35% { filter: drop-shadow(0 0 12px var(--fglow)) drop-shadow(0 0 20px var(--fglow)); }
-  66% { filter: drop-shadow(0 0 10px var(--fglow)) drop-shadow(0 0 16px var(--fglow)); }
-}
-@keyframes flameDance {
-  0%, 100% { transform: translateY(0) scale(1) rotate(-2deg); }
-  25% { transform: translateY(-1px) scale(1.1) rotate(2deg); }
-  50% { transform: translateY(0) scale(0.97) rotate(-1deg); }
-  75% { transform: translateY(-0.5px) scale(1.05) rotate(1deg); }
-}
-@keyframes ignite {
-  0%, 100% { filter: drop-shadow(0 0 8px var(--pom-glow)); transform: scale(1); }
-  50% { filter: drop-shadow(0 0 16px var(--pom-glow)) drop-shadow(0 0 7px var(--ember)); transform: scale(1.04); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tier1,
-  .tier2,
-  .tier3,
-  .tier4,
-  .tier1 .flame,
-  .tier2 .flame,
-  .tier3 .flame,
-  .tier4 .flame,
-  .red.hot:not(.tier0) .streakNum {
-    animation: none !important;
-  }
-  .tier1 { filter: drop-shadow(0 0 4px var(--fglow)); }
-  .tier2 { filter: drop-shadow(0 0 7px var(--fglow)); }
-  .tier3,
-  .tier4 { filter: drop-shadow(0 0 11px var(--fglow)); }
-  .red.hot:not(.tier0) .streakNum { filter: drop-shadow(0 0 12px var(--pom-glow)); }
-}
-
 .gearBtn {
   background: var(--panel-alt);
   border: 1px solid var(--border);
   color: var(--text-muted);
-  border-radius: 7px;
-  width: 36px;
-  height: 36px;
+  border-radius: 9px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--hair);
   transition: border-color 0.18s, color 0.18s;
 }
 
 .gearIcon {
-  width: 18px;
-  height: 18px;
+  width: 23px;
+  height: 23px;
 }
 
 .gearBtn:hover,
@@ -249,4 +77,189 @@
   border-color: var(--accent);
   color: var(--accent);
   outline: none;
+}
+
+/* ---- hero streak rail: three big campfires ---- */
+.heroRail {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.cell {
+  --fglow: var(--accent-glow);
+  flex: 1;
+  min-width: 0;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  box-shadow: inset 0 1px 0 var(--hair);
+  padding: 15px 12px 14px;
+  text-align: center;
+}
+
+.glyph {
+  height: 34px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.flame {
+  display: block;
+  width: 22px;
+  height: 27px;
+  color: var(--accent);
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  margin-top: 6px;
+}
+
+.lbl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 11px;
+  white-space: nowrap;
+}
+
+.tmark {
+  width: 12px;
+  height: 12px;
+  color: var(--pom);
+}
+
+/* metric tones */
+.gold {
+  --fglow: var(--accent-glow);
+}
+.gold .flame,
+.gold .num {
+  color: var(--accent);
+}
+.red {
+  --fglow: var(--pom-glow);
+}
+.red .flame,
+.red .num {
+  color: var(--pom);
+}
+
+/* cold ember — no active streak */
+.tier0 .num {
+  color: var(--text-dim);
+}
+
+/* molten optimum: pomodoro ≥8 with an active streak */
+.hot.red:not(.tier0) {
+  background: radial-gradient(90% 100% at 50% 100%, rgba(224, 87, 78, 0.2), transparent 72%), var(--panel-alt);
+  border-color: rgba(224, 87, 78, 0.42);
+}
+.hot.red:not(.tier0) .flame {
+  color: var(--pom-hot);
+}
+.hot.red:not(.tier0) .num {
+  background: var(--fire-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: ignite 1.6s ease-in-out infinite;
+}
+
+/* flame size grows with tier */
+.tier2 .flame {
+  width: 26px;
+  height: 32px;
+}
+.tier3 .flame {
+  width: 30px;
+  height: 37px;
+}
+.tier4 .flame {
+  width: 34px;
+  height: 41px;
+}
+
+/* flame flicker + dance */
+.tier1 .flame {
+  animation: flick1 1.7s ease-in-out infinite, dance 1.7s ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+.tier2 .flame {
+  animation: flick2 1.5s ease-in-out infinite, dance 1.5s ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+.tier3 .flame {
+  animation: flick3 1.25s ease-in-out infinite, dance 1.25s ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+.tier4 .flame {
+  animation: flick3 1s ease-in-out infinite, dance 1s ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+
+@keyframes flick1 {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--fglow)); }
+  50% { filter: drop-shadow(0 0 8px var(--fglow)); }
+}
+@keyframes flick2 {
+  0%, 100% { filter: drop-shadow(0 0 6px var(--fglow)); }
+  45% { filter: drop-shadow(0 0 12px var(--fglow)); }
+  72% { filter: drop-shadow(0 0 9px var(--fglow)); }
+}
+@keyframes flick3 {
+  0%, 100% { filter: drop-shadow(0 0 9px var(--fglow)) drop-shadow(0 0 16px var(--fglow)); }
+  35% { filter: drop-shadow(0 0 14px var(--fglow)) drop-shadow(0 0 24px var(--fglow)); }
+  66% { filter: drop-shadow(0 0 11px var(--fglow)) drop-shadow(0 0 19px var(--fglow)); }
+}
+@keyframes dance {
+  0%, 100% { transform: translateY(0) scale(1) rotate(-2deg); }
+  25% { transform: translateY(-1.5px) scale(1.1) rotate(2deg); }
+  50% { transform: translateY(0) scale(0.96) rotate(-1deg); }
+  75% { transform: translateY(-0.5px) scale(1.05) rotate(1deg); }
+}
+@keyframes ignite {
+  0%, 100% { filter: drop-shadow(0 0 9px var(--pom-glow)); transform: scale(1); }
+  50% { filter: drop-shadow(0 0 18px var(--pom-glow)) drop-shadow(0 0 8px var(--ember)); transform: scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tier1 .flame,
+  .tier2 .flame,
+  .tier3 .flame,
+  .tier4 .flame,
+  .hot.red:not(.tier0) .num {
+    animation: none !important;
+  }
+  .tier1 .flame { filter: drop-shadow(0 0 5px var(--fglow)); }
+  .tier2 .flame { filter: drop-shadow(0 0 8px var(--fglow)); }
+  .tier3 .flame,
+  .tier4 .flame { filter: drop-shadow(0 0 13px var(--fglow)); }
+  .hot.red:not(.tier0) .num { filter: drop-shadow(0 0 13px var(--pom-glow)); }
+}
+
+@media (max-width: 560px) {
+  .heroRail {
+    flex-wrap: wrap;
+  }
+  .cell {
+    min-width: 42%;
+  }
+  .num {
+    font-size: 38px;
+  }
 }
