@@ -6,6 +6,7 @@ import type {
   DayView,
   HistoryEntry,
   Settings,
+  TaskOverviewItem,
   TaskTemplate,
   YoutubeDayStat,
   YoutubeWeekStat,
@@ -58,6 +59,10 @@ export function updateDaily(id: number, data: { done?: boolean; text?: string })
 
 export function deleteDaily(id: number): Promise<{ id: number }> {
   return request(`/dailies/${id}`, { method: 'DELETE' });
+}
+
+export function getAllTasks(): Promise<TaskOverviewItem[]> {
+  return request(`/tasks`);
 }
 
 export function getCarryCandidates(date: string): Promise<CarryCandidate[]> {

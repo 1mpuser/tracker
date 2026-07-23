@@ -52,6 +52,15 @@ export interface CarryCandidate {
   originDate: string;
 }
 
+export interface TaskOverviewItem {
+  id: number;
+  text: string;
+  done: boolean;
+  date: string;
+  carriedFromDate: string | null;
+  carriedForward: boolean;
+}
+
 export interface Settings {
   id: number;
   youtubeBudget: number;
