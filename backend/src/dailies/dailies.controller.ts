@@ -8,6 +8,11 @@ import { CarryDailiesDto } from './dto/carry-dailies.dto';
 export class DailiesController {
   constructor(private readonly dailiesService: DailiesService) {}
 
+  @Get('tasks')
+  getAllTasks() {
+    return this.dailiesService.getAllTasks();
+  }
+
   @Get('days/:date/carry-candidates')
   getCarryCandidates(@Param('date') date: string, @Query('days') days?: string) {
     const parsed = days ? parseInt(days, 10) : 3;

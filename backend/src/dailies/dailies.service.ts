@@ -9,6 +9,15 @@ export interface CarryCandidate {
   originDate: string;
 }
 
+export interface TaskOverviewItem {
+  id: number;
+  text: string;
+  done: boolean;
+  date: string;
+  carriedFromDate: string | null;
+  carriedForward: boolean;
+}
+
 @Injectable()
 export class DailiesService {
   constructor(
@@ -25,6 +34,21 @@ export class DailiesService {
     return this.prisma.dailyTask.create({
       data: { dayId, text, order: (maxOrder._max.order ?? -1) + 1 },
     });
+  }
+
+  async getAllTasks(): Promise<TaskOverviewItem[]> {
+    const tasks = await this.prisma.dailyTask.findMany({
+      include: { day: true },
+      orderBy: [{ day: { date: 'desc' } }, { order: 'asc' }],
+    });
+    return tasks.map((t) => ({
+      id: t.id,
+      text: t.text,
+      done: t.done,
+      date: formatDate(t.day.date),
+      carriedFromDate: t.carriedFromDate ? formatDate(t.carriedFromDate) : null,
+      carriedForward: t.carriedForward,
+    }));
   }
 
   async getCarryCandidates(dateStr: string, days: number): Promise<CarryCandidate[]> {

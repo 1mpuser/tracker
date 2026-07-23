@@ -201,3 +201,47 @@ describe('DailiesService.carryTasks', () => {
     expect(result).toEqual({ date: '2026-07-16' });
   });
 });
+
+describe('DailiesService.getAllTasks', () => {
+  let service: DailiesService;
+  let prisma: any;
+
+  beforeEach(() => {
+    prisma = { dailyTask: { findMany: jest.fn() } };
+    service = new DailiesService(prisma, {} as any);
+  });
+
+  it('flattens every task with string dates, newest day first', async () => {
+    prisma.dailyTask.findMany.mockResolvedValue([
+      {
+        id: 3,
+        text: 'Созвон',
+        done: false,
+        order: 0,
+        carriedForward: false,
+        carriedFromDate: null,
+        day: { date: new Date('2026-07-23T00:00:00.000Z') },
+      },
+      {
+        id: 1,
+        text: 'Почта',
+        done: true,
+        order: 1,
+        carriedForward: false,
+        carriedFromDate: new Date('2026-07-20T00:00:00.000Z'),
+        day: { date: new Date('2026-07-21T00:00:00.000Z') },
+      },
+    ]);
+
+    const result = await service.getAllTasks();
+
+    expect(prisma.dailyTask.findMany).toHaveBeenCalledWith({
+      include: { day: true },
+      orderBy: [{ day: { date: 'desc' } }, { order: 'asc' }],
+    });
+    expect(result).toEqual([
+      { id: 3, text: 'Созвон', done: false, date: '2026-07-23', carriedFromDate: null, carriedForward: false },
+      { id: 1, text: 'Почта', done: true, date: '2026-07-21', carriedFromDate: '2026-07-20', carriedForward: false },
+    ]);
+  });
+});
