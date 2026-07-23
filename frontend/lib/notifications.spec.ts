@@ -1,4 +1,4 @@
-import { isEveningWindow, isMorningWindow } from './notifications';
+import { isEveningWindow, isMorningWindow, isWeeklyReviewWindow } from './notifications';
 
 describe('isMorningWindow', () => {
   it('is true at exactly 09:00', () => {
@@ -24,5 +24,22 @@ describe('isEveningWindow', () => {
   });
   it('is false before 21:30', () => {
     expect(isEveningWindow(new Date(2026, 6, 15, 21, 29))).toBe(false);
+  });
+});
+
+describe('isWeeklyReviewWindow', () => {
+  // Даты — локальные: new Date(year, monthIndex, day, hour, min). 2026-07-26 — воскресенье.
+  it('is false on Sunday before 11:00', () => {
+    expect(isWeeklyReviewWindow(new Date(2026, 6, 26, 10, 59))).toBe(false);
+  });
+  it('is true on Sunday at 11:00', () => {
+    expect(isWeeklyReviewWindow(new Date(2026, 6, 26, 11, 0))).toBe(true);
+  });
+  it('is true on Sunday in the evening', () => {
+    expect(isWeeklyReviewWindow(new Date(2026, 6, 26, 18, 0))).toBe(true);
+  });
+  it('is false on a weekday', () => {
+    // 2026-07-27 — понедельник
+    expect(isWeeklyReviewWindow(new Date(2026, 6, 27, 12, 0))).toBe(false);
   });
 });

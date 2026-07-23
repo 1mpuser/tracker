@@ -11,3 +11,7 @@ export function isEveningWindow(now: Date): boolean {
   const minutes = now.getHours() * 60 + now.getMinutes();
   return minutes >= 21 * 60 + 30 && minutes < 24 * 60;
 }
+
+export function isWeeklyReviewWindow(now: Date): boolean {
+  return now.getDay() === 0 && now.getHours() >= 11;
+}
