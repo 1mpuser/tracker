@@ -4,7 +4,6 @@ import { PrismaModule } from './prisma/prisma.module';
 import { CategoriesModule } from './categories/categories.module';
 import { SettingsModule } from './settings/settings.module';
 import { DaysModule } from './days/days.module';
-import { DailiesModule } from './dailies/dailies.module';
 import { TaskTemplatesModule } from './task-templates/task-templates.module';
 import { StatsModule } from './stats/stats.module';
 import { GtdModule } from './gtd/gtd.module';
@@ -15,7 +14,6 @@ import { GtdModule } from './gtd/gtd.module';
     CategoriesModule,
     SettingsModule,
     DaysModule,
-    DailiesModule,
     TaskTemplatesModule,
     StatsModule,
     GtdModule,
