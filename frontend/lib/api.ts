@@ -4,6 +4,8 @@ import type {
   CategoryStat,
   DailyTaskView,
   DayView,
+  GtdItem,
+  GtdStatus,
   HistoryEntry,
   Settings,
   TaskOverviewItem,
@@ -59,6 +61,25 @@ export function updateDaily(id: number, data: { done?: boolean; text?: string })
 
 export function deleteDaily(id: number): Promise<{ id: number }> {
   return request(`/dailies/${id}`, { method: 'DELETE' });
+}
+
+export function getGtdItems(status?: GtdStatus): Promise<GtdItem[]> {
+  return request(status ? `/gtd/items?status=${status}` : `/gtd/items`);
+}
+
+export function createGtdItem(title: string, parentId?: number): Promise<GtdItem> {
+  return request(`/gtd/items`, { method: 'POST', body: JSON.stringify({ title, parentId }) });
+}
+
+export function updateGtdItem(
+  id: number,
+  patch: Partial<Pick<GtdItem, 'title' | 'notes' | 'status' | 'scheduledDate' | 'waitingFor'>>,
+): Promise<GtdItem> {
+  return request(`/gtd/items/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+}
+
+export function deleteGtdItem(id: number): Promise<{ id: number }> {
+  return request(`/gtd/items/${id}`, { method: 'DELETE' });
 }
 
 export function getAllTasks(): Promise<TaskOverviewItem[]> {

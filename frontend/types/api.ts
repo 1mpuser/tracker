@@ -87,3 +87,18 @@ export interface YoutubeDayStat {
   budget: number;
   pct: number;
 }
+
+export type GtdStatus =
+  | 'inbox' | 'backlog' | 'calendar' | 'someday' | 'waiting' | 'project' | 'reference' | 'done' | 'archived';
+
+export interface GtdItem {
+  id: number;
+  title: string;
+  notes: string | null;
+  status: GtdStatus;
+  parentId: number | null;
+  scheduledDate: string | null;
+  waitingFor: string | null;
+  order: number;
+  completedAt: string | null;
+}

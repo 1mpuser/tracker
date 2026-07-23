@@ -1,4 +1,4 @@
-import { getAllTasks, getDay, updatePomodoros } from './api';
+import { getAllTasks, createGtdItem, getDay, getGtdItems, updateGtdItem, updatePomodoros } from './api';
 
 describe('api request helper', () => {
   const originalFetch = global.fetch;
@@ -64,5 +64,38 @@ describe('api request helper', () => {
       expect.objectContaining({ headers: expect.objectContaining({ 'Content-Type': 'application/json' }) }),
     );
     expect(result).toHaveLength(1);
+  });
+
+  it('fetches gtd items, optionally filtered by status', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] }) as unknown as typeof fetch;
+
+    await getGtdItems('backlog');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/gtd/items?status=backlog',
+      expect.objectContaining({ headers: expect.objectContaining({ 'Content-Type': 'application/json' }) }),
+    );
+  });
+
+  it('creates a gtd item via POST /gtd/items', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: 1 }) }) as unknown as typeof fetch;
+
+    await createGtdItem('Новая мысль', 7);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/gtd/items',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ title: 'Новая мысль', parentId: 7 }) }),
+    );
+  });
+
+  it('patches a gtd item via PATCH /gtd/items/:id', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: 1 }) }) as unknown as typeof fetch;
+
+    await updateGtdItem(1, { status: 'calendar', scheduledDate: '2026-07-30' });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/gtd/items/1',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'calendar', scheduledDate: '2026-07-30' }) }),
+    );
   });
 });
