@@ -142,7 +142,11 @@ export default function Dashboard() {
   }
 
   async function toggleTodayDone(item: GtdItem) {
-    await updateGtdItem(item.id, { status: item.status === 'done' ? 'backlog' : 'done' });
+    if (item.status === 'done') {
+      await updateGtdItem(item.id, { status: 'backlog' });
+    } else {
+      await updateGtdItem(item.id, { status: 'done', plannedDate: date });
+    }
     await refreshDay();
   }
 

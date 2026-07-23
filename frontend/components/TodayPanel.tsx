@@ -103,9 +103,11 @@ export default function TodayPanel({ items, onAdd, onToggleDone, onRemove }: Tod
               {item.status === 'calendar' && item.scheduledDate && (
                 <span className={styles.cal}>📅 {item.scheduledDate}</span>
               )}
-              <span className={styles.del} onClick={() => onRemove(item.id)}>
-                ×
-              </span>
+              {!(item.status === 'calendar' && !item.plannedDate) && (
+                <span className={styles.del} onClick={() => onRemove(item.id)}>
+                  ×
+                </span>
+              )}
             </li>
           );
         })}
