@@ -73,6 +73,17 @@
   color: var(--text);
 }
 
+.titleBtn {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13.5px;
+  cursor: pointer;
+  padding: 0;
+}
+
 .meta {
   font-family: var(--font-mono);
   font-size: 11px;

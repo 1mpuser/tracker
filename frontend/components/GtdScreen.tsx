@@ -5,6 +5,7 @@ import type { GtdItem, GtdStatus } from '@/types/api';
 import { deleteGtdItem, getGtdItems, updateGtdItem } from '@/lib/api';
 import { BUCKET_TABS } from '@/lib/gtd';
 import InboxProcessor from './InboxProcessor';
+import ProjectCard from './ProjectCard';
 import styles from './GtdScreen.module.css';
 
 const LAZY: GtdStatus[] = ['done', 'archived'];
@@ -14,6 +15,7 @@ export default function GtdScreen() {
   const [lazyItems, setLazyItems] = useState<GtdItem[]>([]);
   const [active, setActive] = useState<GtdStatus>('inbox');
   const [loading, setLoading] = useState(true);
+  const [openProject, setOpenProject] = useState<GtdItem | null>(null);
 
   const reload = useCallback(async () => {
     setItems(await getGtdItems());
@@ -66,45 +68,57 @@ export default function GtdScreen() {
         ))}
       </nav>
 
-      {loading && <div className={styles.empty}>загрузка…</div>}
-      {!loading && visible.length === 0 && <div className={styles.empty}>Пусто.</div>}
-
-      {active === 'inbox' ? (
-        <InboxProcessor items={visible} onChanged={reload} />
+      {openProject ? (
+        <ProjectCard project={openProject} onClose={() => setOpenProject(null)} onChanged={reload} />
       ) : (
-        <ul className={styles.list}>
-          {visible.map((item) => (
-            <li key={item.id} className={styles.item}>
-              <span className={styles.title}>{item.title}</span>
-              {item.status === 'calendar' && item.scheduledDate && (
-                <span className={styles.meta}>{item.scheduledDate}</span>
-              )}
-              {item.status === 'waiting' && item.waitingFor && (
-                <span className={styles.meta}>→ {item.waitingFor}</span>
-              )}
-              <span className={styles.actions}>
-                {item.status !== 'done' && (
-                  <button type="button" onClick={() => move(item.id, 'done')} title="Готово">
-                    ✓
-                  </button>
-                )}
-                {item.status !== 'archived' && (
-                  <button type="button" onClick={() => move(item.id, 'archived')} title="В архив">
-                    🗄
-                  </button>
-                )}
-                {item.status !== 'inbox' && (
-                  <button type="button" onClick={() => move(item.id, 'inbox')} title="Вернуть в Корзину">
-                    ↩
-                  </button>
-                )}
-                <button type="button" onClick={() => remove(item.id)} title="Удалить">
-                  ×
-                </button>
-              </span>
-            </li>
-          ))}
-        </ul>
+        <>
+          {loading && <div className={styles.empty}>загрузка…</div>}
+          {!loading && visible.length === 0 && <div className={styles.empty}>Пусто.</div>}
+
+          {active === 'inbox' ? (
+            <InboxProcessor items={visible} onChanged={reload} />
+          ) : (
+            <ul className={styles.list}>
+              {visible.map((item) => (
+                <li key={item.id} className={styles.item}>
+                  {item.status === 'project' ? (
+                    <button type="button" className={styles.titleBtn} onClick={() => setOpenProject(item)}>
+                      {item.title}
+                    </button>
+                  ) : (
+                    <span className={styles.title}>{item.title}</span>
+                  )}
+                  {item.status === 'calendar' && item.scheduledDate && (
+                    <span className={styles.meta}>{item.scheduledDate}</span>
+                  )}
+                  {item.status === 'waiting' && item.waitingFor && (
+                    <span className={styles.meta}>→ {item.waitingFor}</span>
+                  )}
+                  <span className={styles.actions}>
+                    {item.status !== 'done' && (
+                      <button type="button" onClick={() => move(item.id, 'done')} title="Готово">
+                        ✓
+                      </button>
+                    )}
+                    {item.status !== 'archived' && (
+                      <button type="button" onClick={() => move(item.id, 'archived')} title="В архив">
+                        🗄
+                      </button>
+                    )}
+                    {item.status !== 'inbox' && (
+                      <button type="button" onClick={() => move(item.id, 'inbox')} title="Вернуть в Корзину">
+                        ↩
+                      </button>
+                    )}
+                    <button type="button" onClick={() => remove(item.id)} title="Удалить">
+                      ×
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   );
