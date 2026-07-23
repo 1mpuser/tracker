@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CategoriesService } from '../categories/categories.service';
+import { GtdService, GtdItemView } from '../gtd/gtd.service';
 import { addDays, formatDate, parseDateParam, todayDate } from '../common/date.util';
 
 export interface DayCategoryView {
@@ -17,7 +18,7 @@ export interface DayView {
   rating: number | null;
   comment: string | null;
   categories: DayCategoryView[];
-  dailies: { id: number; text: string; done: boolean; order: number; carriedFromDate: string | null }[];
+  today: GtdItemView[];
 }
 
 export interface HistoryEntry {
@@ -40,6 +41,7 @@ export class DaysService {
   constructor(
     private prisma: PrismaService,
     private categoriesService: CategoriesService,
+    private gtdService: GtdService,
   ) {}
 
   async getOrCreateDayId(dateStr: string): Promise<number> {
@@ -54,17 +56,18 @@ export class DaysService {
     const date = parseDateParam(dateStr);
     let day = await this.prisma.day.findUnique({
       where: { date },
-      include: { categories: true, dailies: { orderBy: { order: 'asc' } } },
+      include: { categories: true },
     });
     if (!day) {
       day = await this.prisma.day.create({
         data: { date },
-        include: { categories: true, dailies: { orderBy: { order: 'asc' } } },
+        include: { categories: true },
       });
     }
 
     const activeCategories = await this.categoriesService.findActive();
     const statusByCategoryId = new Map(day.categories.map((s) => [s.categoryId, s]));
+    const today = await this.gtdService.getForDate(formatDate(day.date));
 
     return {
       date: formatDate(day.date),
@@ -78,13 +81,7 @@ export class DaysService {
         label: c.label,
         done: statusByCategoryId.get(c.id)?.done ?? false,
       })),
-      dailies: day.dailies.map((t) => ({
-        id: t.id,
-        text: t.text,
-        done: t.done,
-        order: t.order,
-        carriedFromDate: t.carriedFromDate ? formatDate(t.carriedFromDate) : null,
-      })),
+      today,
     };
   }
 

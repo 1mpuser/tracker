@@ -5,5 +5,6 @@ import { GtdService } from './gtd.service';
 @Module({
   controllers: [GtdController],
   providers: [GtdService],
+  exports: [GtdService],
 })
 export class GtdModule {}

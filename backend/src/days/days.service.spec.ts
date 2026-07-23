@@ -4,51 +4,13 @@ describe('DaysService.getDay', () => {
   let service: DaysService;
   let prisma: any;
   let categoriesService: any;
+  let gtdService: any;
 
   beforeEach(() => {
     prisma = { day: { findUnique: jest.fn(), create: jest.fn() } };
     categoriesService = { findActive: jest.fn().mockResolvedValue([]) };
-    service = new DaysService(prisma, categoriesService);
-  });
-
-  it('exposes carriedFromDate as a formatted date string when the task was carried', async () => {
-    prisma.day.findUnique.mockResolvedValue({
-      date: new Date('2026-07-15T00:00:00.000Z'),
-      youtubeMinutes: 0,
-      eveningClosed: false,
-      rating: null,
-      comment: null,
-      categories: [],
-      dailies: [
-        {
-          id: 1,
-          text: 'Перенесённая задача',
-          done: false,
-          order: 0,
-          carriedFromDate: new Date('2026-07-10T00:00:00.000Z'),
-        },
-      ],
-    });
-
-    const result = await service.getDay('2026-07-15');
-
-    expect(result.dailies[0].carriedFromDate).toBe('2026-07-10');
-  });
-
-  it('exposes carriedFromDate as null when the task was never carried', async () => {
-    prisma.day.findUnique.mockResolvedValue({
-      date: new Date('2026-07-15T00:00:00.000Z'),
-      youtubeMinutes: 0,
-      eveningClosed: false,
-      rating: null,
-      comment: null,
-      categories: [],
-      dailies: [{ id: 2, text: 'Обычная задача', done: false, order: 0, carriedFromDate: null }],
-    });
-
-    const result = await service.getDay('2026-07-15');
-
-    expect(result.dailies[0].carriedFromDate).toBeNull();
+    gtdService = { getForDate: jest.fn().mockResolvedValue([]) };
+    service = new DaysService(prisma, categoriesService, gtdService);
   });
 
   it('exposes the pomodoro count from the day row', async () => {
@@ -60,12 +22,26 @@ describe('DaysService.getDay', () => {
       rating: null,
       comment: null,
       categories: [],
-      dailies: [],
     });
 
     const result = await service.getDay('2026-07-15');
 
     expect(result.pomodoros).toBe(2);
+  });
+
+  it('returns today\'s gtd slice from getForDate', async () => {
+    prisma.day.findUnique.mockResolvedValue({
+      date: new Date('2026-07-15T00:00:00.000Z'),
+      youtubeMinutes: 0, pomodoros: 0, eveningClosed: false, rating: null, comment: null,
+      categories: [],
+    });
+    gtdService.getForDate.mockResolvedValue([{ id: 9, title: 'Из бэклога', status: 'backlog', plannedDate: '2026-07-15' }]);
+
+    const result = await service.getDay('2026-07-15');
+
+    expect(gtdService.getForDate).toHaveBeenCalledWith('2026-07-15');
+    expect(result.today).toEqual([{ id: 9, title: 'Из бэклога', status: 'backlog', plannedDate: '2026-07-15' }]);
+    expect((result as any).dailies).toBeUndefined();
   });
 });
 
@@ -82,7 +58,7 @@ describe('DaysService.getHistory', () => {
       category: { findMany: jest.fn() },
       settings: { findUnique: jest.fn() },
     };
-    service = new DaysService(prisma, {} as any);
+    service = new DaysService(prisma, {} as any, {} as any);
   });
 
   afterEach(() => {
@@ -214,7 +190,7 @@ describe('DaysService.updateDay', () => {
         update: jest.fn().mockResolvedValue({}),
       },
     };
-    service = new DaysService(prisma, {} as any);
+    service = new DaysService(prisma, {} as any, {} as any);
   });
 
   it('forwards only the provided fields to the Prisma update, not a merged full-day object', async () => {
@@ -250,7 +226,7 @@ describe('DaysService.updatePomodoros', () => {
         update: jest.fn().mockResolvedValue({}),
       },
     };
-    service = new DaysService(prisma, {} as any);
+    service = new DaysService(prisma, {} as any, {} as any);
     jest.spyOn(service, 'getDay').mockResolvedValue({} as any);
   });
 
