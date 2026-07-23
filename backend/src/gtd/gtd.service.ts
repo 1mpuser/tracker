@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { formatDate } from '../common/date.util';
+import { formatDate, parseDateParam } from '../common/date.util';
 
 export interface GtdItemView {
   id: number;
@@ -61,7 +61,7 @@ export class GtdService {
     if (patch.notes !== undefined) data.notes = patch.notes;
     if (patch.waitingFor !== undefined) data.waitingFor = patch.waitingFor;
     if (patch.scheduledDate !== undefined) {
-      data.scheduledDate = patch.scheduledDate ? new Date(`${patch.scheduledDate}T00:00:00.000Z`) : null;
+      data.scheduledDate = patch.scheduledDate ? parseDateParam(patch.scheduledDate) : null;
     }
     if (patch.status !== undefined) {
       data.status = patch.status;

@@ -1,5 +1,5 @@
 import { GtdService } from './gtd.service';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('GtdService.create', () => {
   let service: GtdService;
@@ -131,6 +131,13 @@ describe('GtdService.update', () => {
   it('throws NotFoundException for a missing item', async () => {
     prisma.gtdItem.findUnique.mockResolvedValue(null);
     await expect(service.update(999, { title: 'x' })).rejects.toThrow(NotFoundException);
+  });
+
+  it('rejects an invalid calendar date (no silent rollover)', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue({ id: 1, status: 'inbox' });
+    await expect(service.update(1, { status: 'calendar', scheduledDate: '2026-02-30' })).rejects.toThrow(
+      BadRequestException,
+    );
   });
 });
 
