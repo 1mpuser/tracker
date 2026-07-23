@@ -7,6 +7,7 @@ import { DaysModule } from './days/days.module';
 import { DailiesModule } from './dailies/dailies.module';
 import { TaskTemplatesModule } from './task-templates/task-templates.module';
 import { StatsModule } from './stats/stats.module';
+import { GtdModule } from './gtd/gtd.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { StatsModule } from './stats/stats.module';
     DailiesModule,
     TaskTemplatesModule,
     StatsModule,
+    GtdModule,
   ],
   controllers: [AppController],
 })
