@@ -36,6 +36,37 @@ docker compose down -v       # stop AND wipe the database volume
 
 ---
 
+## Updating to a new version
+
+When new changes land, pull them and rebuild the containers:
+
+```bash
+git pull
+docker compose up -d --build postgres backend frontend
+```
+
+That's the whole update. 🎉
+
+- **`--build` is required.** Without it Docker reuses the old images and your new code never makes it into the containers. `--build` rebuilds them from the freshly pulled source; `-d` runs them in the background.
+- **Migrations apply themselves.** The backend runs `prisma migrate deploy` on startup, so any new database migrations that came with the update are applied automatically the moment the rebuilt `backend` container boots. There is no manual migration step.
+- **Your data is safe.** The database lives in the `pgdata` Docker volume, which is untouched by a rebuild — existing days, categories and settings survive the update.
+- Only the containers whose source changed actually rebuild; the rest are reused, so repeat updates are fast.
+
+If you also use the optional HTTPS hostname, add `caddy` to the command (or just run `docker compose up -d --build` with no service names to rebuild everything):
+
+```bash
+docker compose up -d --build            # rebuilds all 4 services, incl. caddy
+```
+
+Watch it come up and confirm migrations ran:
+
+```bash
+docker compose ps                        # all services should be "healthy"/"running"
+docker compose logs -f backend           # look for the prisma migrate deploy output on startup
+```
+
+---
+
 ## Local development (optional)
 
 **Only** needed if you want to edit the code with hot-reload or run the test suites. A regular user just running the app can skip this whole section.
