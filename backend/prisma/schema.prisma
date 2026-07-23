@@ -63,3 +63,31 @@ model Settings {
   youtubeBudget        Int     @default(60)
   notificationsEnabled Boolean @default(false)
 }
+
+enum GtdStatus {
+  inbox
+  backlog
+  calendar
+  someday
+  waiting
+  project
+  reference
+  done
+  archived
+}
+
+model GtdItem {
+  id            Int       @id @default(autoincrement())
+  title         String
+  notes         String?
+  status        GtdStatus @default(inbox)
+  parentId      Int?
+  parent        GtdItem?  @relation("ProjectChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  children      GtdItem[] @relation("ProjectChildren")
+  scheduledDate DateTime? @db.Date
+  waitingFor    String?
+  order         Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  completedAt   DateTime?
+}
