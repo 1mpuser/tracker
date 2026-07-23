@@ -1,17 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { DayView, HistoryEntry, Settings } from '@/types/api';
+import type { DayView, GtdItem, HistoryEntry, Settings } from '@/types/api';
 import {
-  addDaily as apiAddDaily,
-  carryDailies,
-  deleteDaily as apiDeleteDaily,
   getDay,
   getHistory,
   getSettings,
+  planForToday,
   setCategoryDone,
-  updateDaily as apiUpdateDaily,
   updateDay,
+  updateGtdItem,
   updatePomodoros,
   updateSettings,
   updateYoutube,
@@ -22,13 +20,12 @@ import { computeStreak } from '@/lib/streak';
 import { computePomodoroStreak, POMODORO_MIN, POMODORO_OPT } from '@/lib/pomodoro';
 import Header from './Header';
 import SpheresPanel from './SpheresPanel';
-import DailiesPanel from './DailiesPanel';
+import TodayPanel from './TodayPanel';
 import YoutubePanel from './YoutubePanel';
 import PomodoroPanel from './PomodoroPanel';
 import StatsPanel from './StatsPanel';
 import SettingsModal from './SettingsModal';
 import DayDetailModal from './DayDetailModal';
-import TasksScreen from './TasksScreen';
 import GtdScreen from './GtdScreen';
 import styles from './Dashboard.module.css';
 
@@ -36,7 +33,6 @@ const HISTORY_LIMIT = 84;
 
 const TABS = [
   { key: 'home', label: 'Главный' },
-  { key: 'tasks', label: 'Задачи' },
   { key: 'gtd', label: 'GTD' },
 ] as const;
 
@@ -52,7 +48,6 @@ export default function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>('home');
-  const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
   const loadCore = useCallback(async () => {
     const [d, h, s] = await Promise.all([getDay(date), getHistory(HISTORY_LIMIT, date), getSettings()]);
@@ -87,7 +82,7 @@ export default function Dashboard() {
 
     const check = () => {
       const now = new Date();
-      if (isMorningWindow(now) && day && day.dailies.length === 0) {
+      if (isMorningWindow(now) && day && day.today.length === 0) {
         new Notification('Ещё не занёс задачи на сегодня');
       }
       if (isEveningWindow(now) && day && !day.eveningClosed) {
@@ -141,26 +136,19 @@ export default function Dashboard() {
     setDay(await updateDay(date, { comment }));
   }
 
-  async function addDailyTask(text: string) {
-    await apiAddDaily(date, text);
+  async function addToday(title: string) {
+    await planForToday(title, date);
     await refreshDay();
   }
 
-  async function toggleDaily(id: number) {
-    if (!day) return;
-    const current = day.dailies.find((t) => t.id === id);
-    if (!current) return;
-    await apiUpdateDaily(id, { done: !current.done });
+  async function toggleTodayDone(item: GtdItem) {
+    await updateGtdItem(item.id, { status: item.status === 'done' ? 'backlog' : 'done' });
     await refreshDay();
   }
 
-  async function deleteDailyTask(id: number) {
-    await apiDeleteDaily(id);
+  async function removeFromToday(id: number) {
+    await updateGtdItem(id, { plannedDate: null });
     await refreshDay();
-  }
-
-  async function carryDailyTasks(ids: number[]) {
-    setDay(await carryDailies(date, ids));
   }
 
   async function addYoutubeMinutes(delta: number) {
@@ -199,12 +187,6 @@ export default function Dashboard() {
   const streak = computeStreak(history, { date, completed: todayCompleted });
   const pomodoroStreakMin = computePomodoroStreak(history, { date, pomodoros: day.pomodoros }, POMODORO_MIN);
   const pomodoroStreakOpt = computePomodoroStreak(history, { date, pomodoros: day.pomodoros }, POMODORO_OPT);
-  // Notification.permission is scoped per browser origin (scheme+host+port), but
-  // settings.notificationsEnabled is one global flag on the backend — so granting
-  // permission on http://localhost:4887 doesn't carry over to http://tracker.test:4887.
-  // Re-check the actual per-origin permission here so the "Включить уведомления"
-  // button reappears on an origin that never got a real browser grant, even if the
-  // backend flag is already true from a different origin.
   const notificationsActive =
     settings.notificationsEnabled && typeof Notification !== 'undefined' && Notification.permission === 'granted';
 
@@ -248,13 +230,11 @@ export default function Dashboard() {
               onRatingChange={changeRating}
               onCommentChange={changeComment}
             />
-            <DailiesPanel
-              date={date}
-              dailies={day.dailies}
-              onAdd={addDailyTask}
-              onToggle={toggleDaily}
-              onDelete={deleteDailyTask}
-              onCarry={carryDailyTasks}
+            <TodayPanel
+              items={day.today}
+              onAdd={addToday}
+              onToggleDone={toggleTodayDone}
+              onRemove={removeFromToday}
             />
             <YoutubePanel
               minutes={day.youtubeMinutes}
@@ -269,20 +249,10 @@ export default function Dashboard() {
         </>
       )}
 
-      {activeTab === 'tasks' && <TasksScreen onSelectDate={setSelectedDate} refreshKey={tasksRefreshKey} />}
       {activeTab === 'gtd' && <GtdScreen />}
-      {settingsOpen && (
-        <SettingsModal onClose={() => setSettingsOpen(false)} onCategoriesChanged={refreshDay} />
-      )}
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} onCategoriesChanged={refreshDay} />}
       {selectedDate && (
-        <DayDetailModal
-          date={selectedDate}
-          onClose={() => setSelectedDate(null)}
-          onDataChanged={() => {
-            refreshHistory();
-            setTasksRefreshKey((k) => k + 1);
-          }}
-        />
+        <DayDetailModal date={selectedDate} onClose={() => setSelectedDate(null)} onDataChanged={refreshHistory} />
       )}
     </div>
   );

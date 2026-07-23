@@ -4,14 +4,6 @@ export interface CategoryView {
   done: boolean;
 }
 
-export interface DailyTaskView {
-  id: number;
-  text: string;
-  done: boolean;
-  order: number;
-  carriedFromDate: string | null;
-}
-
 export interface DayView {
   date: string;
   youtubeMinutes: number;
@@ -20,7 +12,7 @@ export interface DayView {
   rating: number | null;
   comment: string | null;
   categories: CategoryView[];
-  dailies: DailyTaskView[];
+  today: GtdItem[];
 }
 
 export interface HistoryEntry {
@@ -44,21 +36,6 @@ export interface TaskTemplate {
   id: number;
   text: string;
   order: number;
-}
-
-export interface CarryCandidate {
-  id: number;
-  text: string;
-  originDate: string;
-}
-
-export interface TaskOverviewItem {
-  id: number;
-  text: string;
-  done: boolean;
-  date: string;
-  carriedFromDate: string | null;
-  carriedForward: boolean;
 }
 
 export interface Settings {
@@ -99,6 +76,7 @@ export interface GtdItem {
   parentId: number | null;
   scheduledDate: string | null;
   waitingFor: string | null;
+  plannedDate: string | null;
   order: number;
   completedAt: string | null;
 }

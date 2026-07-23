@@ -1,4 +1,4 @@
-import { getAllTasks, createGtdItem, getDay, getGtdItems, updateGtdItem, updatePomodoros } from './api';
+import { createGtdItem, getDay, getGtdItems, planForToday, updateGtdItem, updatePomodoros } from './api';
 
 describe('api request helper', () => {
   const originalFetch = global.fetch;
@@ -48,22 +48,15 @@ describe('api request helper', () => {
     );
   });
 
-  it('fetches all tasks from the /tasks endpoint', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => [
-        { id: 1, text: 'x', done: false, date: '2026-07-23', carriedFromDate: null, carriedForward: false },
-      ],
-    }) as unknown as typeof fetch;
+  it('creates a today gtd item via POST /gtd/items/today', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: 1 }) }) as unknown as typeof fetch;
 
-    const result = await getAllTasks();
+    await planForToday('Сделать презу', '2026-07-23');
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'http://localhost:3001/tasks',
-      expect.objectContaining({ headers: expect.objectContaining({ 'Content-Type': 'application/json' }) }),
+      'http://localhost:3001/gtd/items/today',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ title: 'Сделать презу', date: '2026-07-23' }) }),
     );
-    expect(result).toHaveLength(1);
   });
 
   it('fetches gtd items, optionally filtered by status', async () => {

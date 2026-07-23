@@ -3,10 +3,9 @@
 import { useEffect, useState } from 'react';
 import styles from './DayDetailModal.module.css';
 import type { DayView } from '@/types/api';
-import { addDaily, carryDailies, deleteDaily, getDay, setCategoryDone, updateDaily, updateDay, updatePomodoros, updateYoutube } from '@/lib/api';
+import { getDay, setCategoryDone, updateDay, updatePomodoros, updateYoutube } from '@/lib/api';
 import { formatDisplayDate } from '@/lib/date';
 import SpheresPanel from './SpheresPanel';
-import DailiesPanel from './DailiesPanel';
 
 type Stage = 'loading' | 'view' | 'confirm' | 'edit';
 
@@ -61,29 +60,6 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
 
   async function changeComment(comment: string) {
     await updateDay(date, { comment });
-    await refresh();
-  }
-
-  async function addDailyTask(text: string) {
-    await addDaily(date, text);
-    await refresh();
-  }
-
-  async function toggleDaily(id: number) {
-    if (!day) return;
-    const current = day.dailies.find((t) => t.id === id);
-    if (!current) return;
-    await updateDaily(id, { done: !current.done });
-    await refresh();
-  }
-
-  async function deleteDailyTask(id: number) {
-    await deleteDaily(id);
-    await refresh();
-  }
-
-  async function carryDailyTasks(ids: number[]) {
-    await carryDailies(date, ids);
     await refresh();
   }
 
@@ -151,10 +127,10 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
               {day.comment && <div className={styles.viewLine}>Комментарий: {day.comment}</div>}
             </div>
             <div className={styles.section}>
-              {day.dailies.length === 0 && <div className={styles.viewEmpty}>Задач не было</div>}
-              {day.dailies.map((t) => (
-                <div key={t.id} className={`${styles.viewTask} ${t.done ? styles.viewTaskDone : ''}`}>
-                  {t.text}
+              {day.today.length === 0 && <div className={styles.viewEmpty}>Задач не было</div>}
+              {day.today.map((t) => (
+                <div key={t.id} className={`${styles.viewTask} ${t.status === 'done' ? styles.viewTaskDone : ''}`}>
+                  {t.title}
                 </div>
               ))}
             </div>
@@ -188,14 +164,6 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
               onToggleEveningClosed={toggleEveningClosed}
               onRatingChange={changeRating}
               onCommentChange={changeComment}
-            />
-            <DailiesPanel
-              date={date}
-              dailies={day.dailies}
-              onAdd={addDailyTask}
-              onToggle={toggleDaily}
-              onDelete={deleteDailyTask}
-              onCarry={carryDailyTasks}
             />
             <div className={styles.ytEditor}>
               <div className={styles.ytEditorHeading}>YouTube</div>

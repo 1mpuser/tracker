@@ -1,14 +1,11 @@
 import type {
-  CarryCandidate,
   Category,
   CategoryStat,
-  DailyTaskView,
   DayView,
   GtdItem,
   GtdStatus,
   HistoryEntry,
   Settings,
-  TaskOverviewItem,
   TaskTemplate,
   YoutubeDayStat,
   YoutubeWeekStat,
@@ -51,18 +48,6 @@ export function setCategoryDone(date: string, key: string, done: boolean): Promi
   });
 }
 
-export function addDaily(date: string, text: string): Promise<DailyTaskView> {
-  return request(`/days/${date}/dailies`, { method: 'POST', body: JSON.stringify({ text }) });
-}
-
-export function updateDaily(id: number, data: { done?: boolean; text?: string }): Promise<DailyTaskView> {
-  return request(`/dailies/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
-}
-
-export function deleteDaily(id: number): Promise<{ id: number }> {
-  return request(`/dailies/${id}`, { method: 'DELETE' });
-}
-
 export function getGtdItems(status?: GtdStatus): Promise<GtdItem[]> {
   return request(status ? `/gtd/items?status=${status}` : `/gtd/items`);
 }
@@ -73,7 +58,7 @@ export function createGtdItem(title: string, parentId?: number): Promise<GtdItem
 
 export function updateGtdItem(
   id: number,
-  patch: Partial<Pick<GtdItem, 'title' | 'notes' | 'status' | 'scheduledDate' | 'waitingFor'>>,
+  patch: Partial<Pick<GtdItem, 'title' | 'notes' | 'status' | 'scheduledDate' | 'waitingFor' | 'plannedDate'>>,
 ): Promise<GtdItem> {
   return request(`/gtd/items/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
 }
@@ -82,19 +67,8 @@ export function deleteGtdItem(id: number): Promise<{ id: number }> {
   return request(`/gtd/items/${id}`, { method: 'DELETE' });
 }
 
-export function getAllTasks(): Promise<TaskOverviewItem[]> {
-  return request(`/tasks`);
-}
-
-export function getCarryCandidates(date: string): Promise<CarryCandidate[]> {
-  return request(`/days/${date}/carry-candidates`);
-}
-
-export function carryDailies(date: string, ids: number[]): Promise<DayView> {
-  return request(`/days/${date}/dailies/carry`, {
-    method: 'POST',
-    body: JSON.stringify({ ids }),
-  });
+export function planForToday(title: string, date: string): Promise<GtdItem> {
+  return request(`/gtd/items/today`, { method: 'POST', body: JSON.stringify({ title, date }) });
 }
 
 export function updateYoutube(date: string, data: { delta?: number; reset?: boolean }): Promise<DayView> {
