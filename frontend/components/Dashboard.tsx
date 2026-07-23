@@ -28,9 +28,17 @@ import PomodoroPanel from './PomodoroPanel';
 import StatsPanel from './StatsPanel';
 import SettingsModal from './SettingsModal';
 import DayDetailModal from './DayDetailModal';
+import TasksScreen from './TasksScreen';
 import styles from './Dashboard.module.css';
 
 const HISTORY_LIMIT = 84;
+
+const TABS = [
+  { key: 'home', label: 'Главный' },
+  { key: 'tasks', label: 'Задачи' },
+] as const;
+
+type TabKey = (typeof TABS)[number]['key'];
 
 export default function Dashboard() {
   const [date, setDate] = useState(() => todayLocal());
@@ -41,6 +49,8 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>('home');
+  const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
   const loadCore = useCallback(async () => {
     const [d, h, s] = await Promise.all([getDay(date), getHistory(HISTORY_LIMIT, date), getSettings()]);
@@ -198,54 +208,78 @@ export default function Dashboard() {
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.sysline}>sys / daily-tracker</div>
-      <Header
-        dateLabel={formatDisplayDate(date)}
-        streak={streak}
-        pomodoroStreakMin={pomodoroStreakMin}
-        pomodoroStreakOpt={pomodoroStreakOpt}
-        notificationsEnabled={notificationsActive}
-        onEnableNotifications={enableNotifications}
-        onOpenSettings={() => setSettingsOpen(true)}
-      />
-      <div className={styles.grid}>
-        <SpheresPanel
-          categories={day.categories}
-          eveningClosed={day.eveningClosed}
-          rating={day.rating}
-          comment={day.comment}
-          onToggle={toggleCategory}
-          onToggleEveningClosed={toggleEveningClosed}
-          onRatingChange={changeRating}
-          onCommentChange={changeComment}
-        />
-        <DailiesPanel
-          date={date}
-          dailies={day.dailies}
-          onAdd={addDailyTask}
-          onToggle={toggleDaily}
-          onDelete={deleteDailyTask}
-          onCarry={carryDailyTasks}
-        />
-        <YoutubePanel
-          minutes={day.youtubeMinutes}
-          budget={settings.youtubeBudget}
-          onAdd={addYoutubeMinutes}
-          onReset={resetYoutube}
-          onBudgetChange={changeYoutubeBudget}
-        />
-        <PomodoroPanel
-          count={day.pomodoros}
-          onAdd={addPomodoro}
-          onReset={resetPomodoro}
-        />
+      <div className={styles.topbar}>
+        <nav className={styles.tabBar}>
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className={`${styles.tab} ${activeTab === t.key ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+        <span className={styles.sysHint}>sys / daily-tracker</span>
       </div>
-      <StatsPanel history={history} onSelectDate={setSelectedDate} />
+
+      {activeTab === 'home' && (
+        <>
+          <Header
+            dateLabel={formatDisplayDate(date)}
+            streak={streak}
+            pomodoroStreakMin={pomodoroStreakMin}
+            pomodoroStreakOpt={pomodoroStreakOpt}
+            notificationsEnabled={notificationsActive}
+            onEnableNotifications={enableNotifications}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
+          <div className={styles.grid}>
+            <SpheresPanel
+              categories={day.categories}
+              eveningClosed={day.eveningClosed}
+              rating={day.rating}
+              comment={day.comment}
+              onToggle={toggleCategory}
+              onToggleEveningClosed={toggleEveningClosed}
+              onRatingChange={changeRating}
+              onCommentChange={changeComment}
+            />
+            <DailiesPanel
+              date={date}
+              dailies={day.dailies}
+              onAdd={addDailyTask}
+              onToggle={toggleDaily}
+              onDelete={deleteDailyTask}
+              onCarry={carryDailyTasks}
+            />
+            <YoutubePanel
+              minutes={day.youtubeMinutes}
+              budget={settings.youtubeBudget}
+              onAdd={addYoutubeMinutes}
+              onReset={resetYoutube}
+              onBudgetChange={changeYoutubeBudget}
+            />
+            <PomodoroPanel count={day.pomodoros} onAdd={addPomodoro} onReset={resetPomodoro} />
+          </div>
+          <StatsPanel history={history} onSelectDate={setSelectedDate} />
+        </>
+      )}
+
+      {activeTab === 'tasks' && <TasksScreen onSelectDate={setSelectedDate} refreshKey={tasksRefreshKey} />}
       {settingsOpen && (
         <SettingsModal onClose={() => setSettingsOpen(false)} onCategoriesChanged={refreshDay} />
       )}
       {selectedDate && (
-        <DayDetailModal date={selectedDate} onClose={() => setSelectedDate(null)} onDataChanged={refreshHistory} />
+        <DayDetailModal
+          date={selectedDate}
+          onClose={() => setSelectedDate(null)}
+          onDataChanged={() => {
+            refreshHistory();
+            setTasksRefreshKey((k) => k + 1);
+          }}
+        />
       )}
     </div>
   );
