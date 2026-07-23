@@ -1,4 +1,4 @@
-import { BUCKET_TABS, CLARIFY, CLARIFY_START, groupByStatus } from './gtd';
+import { BUCKET_TABS, CLARIFY, CLARIFY_START, groupByStatus, sortGtdItems } from './gtd';
 import type { GtdItem } from '@/types/api';
 
 function item(id: number, status: GtdItem['status']): GtdItem {
@@ -50,5 +50,36 @@ describe('BUCKET_TABS', () => {
     expect(BUCKET_TABS.map((b) => b.status)).toEqual([
       'inbox', 'backlog', 'calendar', 'project', 'waiting', 'someday', 'reference', 'done', 'archived',
     ]);
+  });
+});
+
+describe('sortGtdItems', () => {
+  function it2(over: Partial<GtdItem>): GtdItem {
+    return {
+      id: over.id ?? 0, title: 't', notes: null, status: 'backlog', parentId: null,
+      scheduledDate: null, plannedDate: null, dueDate: null, priority: false,
+      waitingFor: null, order: over.order ?? 0, completedAt: null, ...over,
+    };
+  }
+
+  it('puts priority items first', () => {
+    const r = sortGtdItems([it2({ id: 1, order: 0 }), it2({ id: 2, order: 1, priority: true })]);
+    expect(r.map((i) => i.id)).toEqual([2, 1]);
+  });
+
+  it('sorts by nearest dueDate within same priority, no-due last', () => {
+    const r = sortGtdItems([
+      it2({ id: 1, order: 0, dueDate: null }),
+      it2({ id: 2, order: 1, dueDate: '2026-08-01' }),
+      it2({ id: 3, order: 2, dueDate: '2026-07-25' }),
+    ]);
+    expect(r.map((i) => i.id)).toEqual([3, 2, 1]);
+  });
+
+  it('breaks ties by order and does not mutate input', () => {
+    const input = [it2({ id: 1, order: 2 }), it2({ id: 2, order: 1 })];
+    const r = sortGtdItems(input);
+    expect(r.map((i) => i.id)).toEqual([2, 1]);
+    expect(input.map((i) => i.id)).toEqual([1, 2]);
   });
 });

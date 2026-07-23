@@ -85,3 +85,15 @@ export function groupByStatus(items: GtdItem[]): Record<GtdStatus, GtdItem[]> {
   }
   return grouped;
 }
+
+export function sortGtdItems(items: GtdItem[]): GtdItem[] {
+  return [...items].sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority ? -1 : 1;
+    if (a.dueDate !== b.dueDate) {
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return a.dueDate < b.dueDate ? -1 : 1;
+    }
+    return a.order - b.order;
+  });
+}
