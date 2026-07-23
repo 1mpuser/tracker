@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { GtdItem, GtdStatus } from '@/types/api';
 import { deleteGtdItem, getGtdItems, updateGtdItem } from '@/lib/api';
 import { BUCKET_TABS } from '@/lib/gtd';
+import { todayLocal } from '@/lib/date';
 import InboxProcessor from './InboxProcessor';
 import ProjectCard from './ProjectCard';
 import styles from './GtdScreen.module.css';
@@ -48,6 +49,18 @@ export default function GtdScreen() {
     await deleteGtdItem(id);
     if (LAZY.includes(active)) setLazyItems(await getGtdItems(active));
     else await reload();
+  }
+
+  async function planToday(id: number) {
+    await updateGtdItem(id, { plannedDate: todayLocal() });
+    await reload();
+    if (LAZY.includes(active)) setLazyItems(await getGtdItems(active));
+  }
+
+  async function unplan(id: number) {
+    await updateGtdItem(id, { plannedDate: null });
+    await reload();
+    if (LAZY.includes(active)) setLazyItems(await getGtdItems(active));
   }
 
   const visible = LAZY.includes(active) ? lazyItems : items.filter((i) => i.status === active);
@@ -109,6 +122,17 @@ export default function GtdScreen() {
                       <button type="button" onClick={() => move(item.id, 'inbox')} title="Вернуть в Корзину">
                         ↩
                       </button>
+                    )}
+                    {(item.status === 'backlog' || item.status === 'someday' || item.status === 'calendar') && (
+                      item.plannedDate === todayLocal() ? (
+                        <button type="button" onClick={() => unplan(item.id)} title="Убрать из сегодня">
+                          ☀×
+                        </button>
+                      ) : (
+                        <button type="button" onClick={() => planToday(item.id)} title="В сегодня">
+                          ☀
+                        </button>
+                      )
                     )}
                     <button type="button" onClick={() => remove(item.id)} title="Удалить">
                       ×
