@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { GtdItem, GtdStatus } from '@/types/api';
 import { deleteGtdItem, getGtdItems, updateGtdItem } from '@/lib/api';
 import { BUCKET_TABS } from '@/lib/gtd';
+import InboxProcessor from './InboxProcessor';
 import styles from './GtdScreen.module.css';
 
 const LAZY: GtdStatus[] = ['done', 'archived'];
@@ -68,37 +69,43 @@ export default function GtdScreen() {
       {loading && <div className={styles.empty}>загрузка…</div>}
       {!loading && visible.length === 0 && <div className={styles.empty}>Пусто.</div>}
 
-      <ul className={styles.list}>
-        {visible.map((item) => (
-          <li key={item.id} className={styles.item}>
-            <span className={styles.title}>{item.title}</span>
-            {item.status === 'calendar' && item.scheduledDate && (
-              <span className={styles.meta}>{item.scheduledDate}</span>
-            )}
-            {item.status === 'waiting' && item.waitingFor && <span className={styles.meta}>→ {item.waitingFor}</span>}
-            <span className={styles.actions}>
-              {item.status !== 'done' && (
-                <button type="button" onClick={() => move(item.id, 'done')} title="Готово">
-                  ✓
-                </button>
+      {active === 'inbox' ? (
+        <InboxProcessor items={visible} onChanged={reload} />
+      ) : (
+        <ul className={styles.list}>
+          {visible.map((item) => (
+            <li key={item.id} className={styles.item}>
+              <span className={styles.title}>{item.title}</span>
+              {item.status === 'calendar' && item.scheduledDate && (
+                <span className={styles.meta}>{item.scheduledDate}</span>
               )}
-              {item.status !== 'archived' && (
-                <button type="button" onClick={() => move(item.id, 'archived')} title="В архив">
-                  🗄
-                </button>
+              {item.status === 'waiting' && item.waitingFor && (
+                <span className={styles.meta}>→ {item.waitingFor}</span>
               )}
-              {item.status !== 'inbox' && (
-                <button type="button" onClick={() => move(item.id, 'inbox')} title="Вернуть в Корзину">
-                  ↩
+              <span className={styles.actions}>
+                {item.status !== 'done' && (
+                  <button type="button" onClick={() => move(item.id, 'done')} title="Готово">
+                    ✓
+                  </button>
+                )}
+                {item.status !== 'archived' && (
+                  <button type="button" onClick={() => move(item.id, 'archived')} title="В архив">
+                    🗄
+                  </button>
+                )}
+                {item.status !== 'inbox' && (
+                  <button type="button" onClick={() => move(item.id, 'inbox')} title="Вернуть в Корзину">
+                    ↩
+                  </button>
+                )}
+                <button type="button" onClick={() => remove(item.id)} title="Удалить">
+                  ×
                 </button>
-              )}
-              <button type="button" onClick={() => remove(item.id)} title="Удалить">
-                ×
-              </button>
-            </span>
-          </li>
-        ))}
-      </ul>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
