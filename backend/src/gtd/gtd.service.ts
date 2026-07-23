@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { formatDate } from '../common/date.util';
 
@@ -45,5 +45,43 @@ export class GtdService {
     const where = status ? { status } : { status: { notIn: ACTIVE_EXCLUDED } };
     const items = await this.prisma.gtdItem.findMany({ where: where as any, orderBy: { order: 'asc' } });
     return items.map((i) => this.toView(i));
+  }
+
+  async update(
+    id: number,
+    patch: { title?: string; notes?: string; status?: string; scheduledDate?: string | null; waitingFor?: string | null },
+  ): Promise<GtdItemView> {
+    const existing = await this.prisma.gtdItem.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`GtdItem ${id} not found`);
+    }
+
+    const data: any = {};
+    if (patch.title !== undefined) data.title = patch.title;
+    if (patch.notes !== undefined) data.notes = patch.notes;
+    if (patch.waitingFor !== undefined) data.waitingFor = patch.waitingFor;
+    if (patch.scheduledDate !== undefined) {
+      data.scheduledDate = patch.scheduledDate ? new Date(`${patch.scheduledDate}T00:00:00.000Z`) : null;
+    }
+    if (patch.status !== undefined) {
+      data.status = patch.status;
+      if (patch.status === 'done' && existing.status !== 'done') {
+        data.completedAt = new Date();
+      } else if (patch.status !== 'done' && existing.status === 'done') {
+        data.completedAt = null;
+      }
+    }
+
+    const updated = await this.prisma.gtdItem.update({ where: { id }, data });
+    return this.toView(updated);
+  }
+
+  async remove(id: number): Promise<{ id: number }> {
+    const existing = await this.prisma.gtdItem.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`GtdItem ${id} not found`);
+    }
+    await this.prisma.gtdItem.delete({ where: { id } });
+    return { id };
   }
 }

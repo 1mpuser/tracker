@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { GtdService } from './gtd.service';
 import { CreateGtdItemDto } from './dto/create-gtd-item.dto';
+import { UpdateGtdItemDto } from './dto/update-gtd-item.dto';
 
 @Controller('gtd')
 export class GtdController {
@@ -14,5 +15,15 @@ export class GtdController {
   @Post('items')
   create(@Body() dto: CreateGtdItemDto) {
     return this.gtdService.create(dto.title, dto.parentId);
+  }
+
+  @Patch('items/:id')
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateGtdItemDto) {
+    return this.gtdService.update(id, dto);
+  }
+
+  @Delete('items/:id')
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.gtdService.remove(id);
   }
 }
