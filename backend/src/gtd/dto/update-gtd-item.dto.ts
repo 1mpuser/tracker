@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MaxLength, Matches } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, Matches } from 'class-validator';
 
 const STATUSES = ['inbox', 'backlog', 'calendar', 'someday', 'waiting', 'project', 'reference', 'done', 'archived'];
 
@@ -31,4 +31,13 @@ export class UpdateGtdItemDto {
   @IsString()
   @MaxLength(200)
   waitingFor?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'dueDate must be YYYY-MM-DD' })
+  dueDate?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  priority?: boolean;
 }

@@ -57,8 +57,8 @@ describe('GtdService.getItems', () => {
     prisma.gtdItem.findMany.mockResolvedValue([
       {
         id: 3, title: 'Встреча', notes: null, status: 'calendar', parentId: null,
-        scheduledDate: new Date('2026-07-25T00:00:00.000Z'), plannedDate: null, waitingFor: null,
-        order: 0, completedAt: null,
+        scheduledDate: new Date('2026-07-25T00:00:00.000Z'), plannedDate: null, dueDate: null, priority: false,
+        waitingFor: null, order: 0, completedAt: null,
       },
     ]);
 
@@ -71,7 +71,8 @@ describe('GtdService.getItems', () => {
     expect(result).toEqual([
       {
         id: 3, title: 'Встреча', notes: null, status: 'calendar', parentId: null,
-        scheduledDate: '2026-07-25', plannedDate: null, waitingFor: null, order: 0, completedAt: null,
+        scheduledDate: '2026-07-25', plannedDate: null, dueDate: null, priority: false,
+        waitingFor: null, order: 0, completedAt: null,
       },
     ]);
   });
@@ -265,5 +266,45 @@ describe('GtdService.update plannedDate', () => {
     await service.update(1, { plannedDate: null });
 
     expect(prisma.gtdItem.update.mock.calls[0][0].data.plannedDate).toBeNull();
+  });
+});
+
+describe('GtdService.update due/priority', () => {
+  let service: GtdService;
+  let prisma: any;
+
+  beforeEach(() => {
+    prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn() } };
+    service = new GtdService(prisma);
+  });
+
+  it('sets dueDate via parseDateParam and priority', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue({ id: 1, status: 'backlog' });
+    prisma.gtdItem.update.mockResolvedValue({
+      id: 1, title: 't', notes: null, status: 'backlog', parentId: null,
+      scheduledDate: null, plannedDate: null, dueDate: new Date('2026-07-30T00:00:00.000Z'),
+      priority: true, waitingFor: null, order: 0, completedAt: null,
+    });
+
+    const result = await service.update(1, { dueDate: '2026-07-30', priority: true });
+
+    const data = prisma.gtdItem.update.mock.calls[0][0].data;
+    expect(data.dueDate).toEqual(new Date('2026-07-30T00:00:00.000Z'));
+    expect(data.priority).toBe(true);
+    expect(result.dueDate).toBe('2026-07-30');
+    expect(result.priority).toBe(true);
+  });
+
+  it('clears dueDate on null', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue({ id: 1, status: 'backlog' });
+    prisma.gtdItem.update.mockResolvedValue({
+      id: 1, title: 't', notes: null, status: 'backlog', parentId: null,
+      scheduledDate: null, plannedDate: null, dueDate: null, priority: false,
+      waitingFor: null, order: 0, completedAt: null,
+    });
+
+    await service.update(1, { dueDate: null });
+
+    expect(prisma.gtdItem.update.mock.calls[0][0].data.dueDate).toBeNull();
   });
 });
