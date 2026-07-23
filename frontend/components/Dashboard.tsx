@@ -15,7 +15,7 @@ import {
   updateYoutube,
 } from '@/lib/api';
 import { formatDisplayDate, todayLocal } from '@/lib/date';
-import { isEveningWindow, isMorningWindow } from '@/lib/notifications';
+import { isEveningWindow, isMorningWindow, isWeeklyReviewWindow } from '@/lib/notifications';
 import { computeStreak } from '@/lib/streak';
 import { computePomodoroStreak, POMODORO_MIN, POMODORO_OPT } from '@/lib/pomodoro';
 import Header from './Header';
@@ -90,6 +90,13 @@ export default function Dashboard() {
       }
       if (isEveningWindow(now) && day && day.pomodoros < POMODORO_MIN) {
         new Notification(`Помидорки за день: ${day.pomodoros}/${POMODORO_MIN} — добей минимум`);
+      }
+      if (isWeeklyReviewWindow(now)) {
+        const key = todayLocal();
+        if (localStorage.getItem('weeklyReviewNotified') !== key) {
+          new Notification('Воскресенье — время для Weekly Review: разбери Корзину, пройдись по Бэклогу и Проектам');
+          localStorage.setItem('weeklyReviewNotified', key);
+        }
       }
     };
 

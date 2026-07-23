@@ -67,6 +67,9 @@ export default function GtdScreen() {
 
   return (
     <div className={styles.screen}>
+      {new Date().getDay() === 0 && (
+        <div className={styles.reviewBanner}>🗓 Воскресный разбор — время для Weekly Review</div>
+      )}
       <nav className={styles.buckets}>
         {BUCKET_TABS.map((b) => (
           <button
