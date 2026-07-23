@@ -16,8 +16,12 @@ export default function ProjectCard({ project, onClose, onChanged }: ProjectCard
   const [stepTitle, setStepTitle] = useState('');
 
   const load = useCallback(async () => {
-    const all = await getGtdItems();
-    setChildren(all.filter((i) => i.parentId === project.id));
+    const [active, done, archived] = await Promise.all([
+      getGtdItems(),
+      getGtdItems('done'),
+      getGtdItems('archived'),
+    ]);
+    setChildren([...active, ...done, ...archived].filter((i) => i.parentId === project.id));
   }, [project.id]);
 
   useEffect(() => {

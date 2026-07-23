@@ -38,7 +38,8 @@ export default function InboxProcessor({ items, onChanged }: InboxProcessorProps
     }
     if (route.needs === 'waitingFor') {
       const value = window.prompt('Кому делегировано?');
-      patch.waitingFor = value ?? undefined;
+      if (!value) return;
+      patch.waitingFor = value;
     }
     await updateGtdItem(item.id, patch);
     setStep((s) => {
