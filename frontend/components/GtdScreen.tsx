@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { GtdItem, GtdStatus } from '@/types/api';
 import { deleteGtdItem, getGtdItems, updateGtdItem } from '@/lib/api';
-import { BUCKET_TABS } from '@/lib/gtd';
+import { BUCKET_TABS, sortGtdItems } from '@/lib/gtd';
 import { todayLocal } from '@/lib/date';
 import InboxProcessor from './InboxProcessor';
 import ProjectCard from './ProjectCard';
@@ -63,7 +63,21 @@ export default function GtdScreen() {
     if (LAZY.includes(active)) setLazyItems(await getGtdItems(active));
   }
 
-  const visible = LAZY.includes(active) ? lazyItems : items.filter((i) => i.status === active);
+  async function setDue(id: number) {
+    const value = window.prompt('Дедлайн (YYYY-MM-DD, пусто — снять):');
+    if (value === null) return;
+    await updateGtdItem(id, { dueDate: value.trim() === '' ? null : value.trim() });
+    await reload();
+    if (LAZY.includes(active)) setLazyItems(await getGtdItems(active));
+  }
+
+  async function togglePriority(item: GtdItem) {
+    await updateGtdItem(item.id, { priority: !item.priority });
+    await reload();
+    if (LAZY.includes(active)) setLazyItems(await getGtdItems(active));
+  }
+
+  const visible = sortGtdItems(LAZY.includes(active) ? lazyItems : items.filter((i) => i.status === active));
 
   return (
     <div className={styles.screen}>
@@ -110,6 +124,14 @@ export default function GtdScreen() {
                   {item.status === 'waiting' && item.waitingFor && (
                     <span className={styles.meta}>→ {item.waitingFor}</span>
                   )}
+                  {item.priority && <span className={styles.prio}>❗</span>}
+                  {item.dueDate && (
+                    <span
+                      className={`${styles.due} ${item.dueDate < todayLocal() && item.status !== 'done' ? styles.overdue : ''}`}
+                    >
+                      ⏰ {item.dueDate}
+                    </span>
+                  )}
                   <span className={styles.actions}>
                     {item.status !== 'done' && (
                       <button type="button" onClick={() => move(item.id, 'done')} title="Готово">
@@ -137,6 +159,12 @@ export default function GtdScreen() {
                         </button>
                       )
                     )}
+                    <button type="button" onClick={() => togglePriority(item)} title="Важное">
+                      {item.priority ? '❗' : '❕'}
+                    </button>
+                    <button type="button" onClick={() => setDue(item.id)} title="Дедлайн">
+                      ⏰
+                    </button>
                     <button type="button" onClick={() => remove(item.id)} title="Удалить">
                       ×
                     </button>

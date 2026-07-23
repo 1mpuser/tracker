@@ -180,3 +180,19 @@
   font-size: 12.5px;
   font-style: italic;
 }
+
+.prio {
+  color: var(--danger);
+  font-size: 11px;
+}
+
+.due {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.overdue {
+  color: var(--danger);
+}

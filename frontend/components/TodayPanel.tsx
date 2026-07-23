@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import type { GtdItem, TaskTemplate } from '@/types/api';
 import { getTaskTemplates } from '@/lib/api';
+import { sortGtdItems } from '@/lib/gtd';
+import { todayLocal } from '@/lib/date';
 import styles from './TodayPanel.module.css';
 
 interface TodayPanelProps {
@@ -85,7 +87,7 @@ export default function TodayPanel({ items, onAdd, onToggleDone, onRemove }: Tod
         {items.length === 0 && (
           <li className={styles.empty}>Пусто — возьми что-нибудь из Бэклога (вкладка GTD) или добавь задачу.</li>
         )}
-        {items.map((item) => {
+        {sortGtdItems(items).map((item) => {
           const done = item.status === 'done';
           return (
             <li key={item.id} className={styles.item}>
@@ -100,6 +102,14 @@ export default function TodayPanel({ items, onAdd, onToggleDone, onRemove }: Tod
               <span className={`${styles.text} ${done ? styles.textDone : ''}`} onClick={() => onToggleDone(item)}>
                 {item.title}
               </span>
+              {item.priority && <span className={styles.prio}>❗</span>}
+              {item.dueDate && (
+                <span
+                  className={`${styles.due} ${item.dueDate < todayLocal() && item.status !== 'done' ? styles.overdue : ''}`}
+                >
+                  ⏰ {item.dueDate}
+                </span>
+              )}
               {item.status === 'calendar' && item.scheduledDate && (
                 <span className={styles.cal}>📅 {item.scheduledDate}</span>
               )}
