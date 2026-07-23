@@ -9,6 +9,7 @@ export interface GtdItemView {
   status: string;
   parentId: number | null;
   scheduledDate: string | null;
+  plannedDate: string | null;
   waitingFor: string | null;
   order: number;
   completedAt: string | null;
@@ -28,6 +29,7 @@ export class GtdService {
       status: item.status,
       parentId: item.parentId,
       scheduledDate: item.scheduledDate ? formatDate(item.scheduledDate) : null,
+      plannedDate: item.plannedDate ? formatDate(item.plannedDate) : null,
       waitingFor: item.waitingFor,
       order: item.order,
       completedAt: item.completedAt ? item.completedAt.toISOString() : null,
@@ -49,7 +51,7 @@ export class GtdService {
 
   async update(
     id: number,
-    patch: { title?: string; notes?: string; status?: string; scheduledDate?: string | null; waitingFor?: string | null },
+    patch: { title?: string; notes?: string; status?: string; scheduledDate?: string | null; waitingFor?: string | null; plannedDate?: string | null },
   ): Promise<GtdItemView> {
     const existing = await this.prisma.gtdItem.findUnique({ where: { id } });
     if (!existing) {
@@ -62,6 +64,9 @@ export class GtdService {
     if (patch.waitingFor !== undefined) data.waitingFor = patch.waitingFor;
     if (patch.scheduledDate !== undefined) {
       data.scheduledDate = patch.scheduledDate ? parseDateParam(patch.scheduledDate) : null;
+    }
+    if (patch.plannedDate !== undefined) {
+      data.plannedDate = patch.plannedDate ? parseDateParam(patch.plannedDate) : null;
     }
     if (patch.status !== undefined) {
       data.status = patch.status;
@@ -83,5 +88,25 @@ export class GtdService {
     }
     await this.prisma.gtdItem.delete({ where: { id } });
     return { id };
+  }
+
+  async getForDate(dateStr: string): Promise<GtdItemView[]> {
+    const date = parseDateParam(dateStr);
+    const items = await this.prisma.gtdItem.findMany({
+      where: {
+        status: { not: 'archived' },
+        OR: [{ plannedDate: date }, { status: 'calendar', scheduledDate: date }],
+      } as any,
+      orderBy: { order: 'asc' },
+    });
+    return items.map((i) => this.toView(i));
+  }
+
+  async createForDate(title: string, dateStr: string) {
+    const date = parseDateParam(dateStr);
+    const maxOrder = await this.prisma.gtdItem.aggregate({ _max: { order: true } });
+    return this.prisma.gtdItem.create({
+      data: { title, status: 'backlog', order: (maxOrder._max.order ?? -1) + 1, plannedDate: date },
+    });
   }
 }

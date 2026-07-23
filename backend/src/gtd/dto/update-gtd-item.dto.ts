@@ -24,6 +24,11 @@ export class UpdateGtdItemDto {
 
   @IsOptional()
   @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'plannedDate must be YYYY-MM-DD' })
+  plannedDate?: string | null;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(200)
   waitingFor?: string | null;
 }

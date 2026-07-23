@@ -57,7 +57,7 @@ describe('GtdService.getItems', () => {
     prisma.gtdItem.findMany.mockResolvedValue([
       {
         id: 3, title: 'Встреча', notes: null, status: 'calendar', parentId: null,
-        scheduledDate: new Date('2026-07-25T00:00:00.000Z'), waitingFor: null,
+        scheduledDate: new Date('2026-07-25T00:00:00.000Z'), plannedDate: null, waitingFor: null,
         order: 0, completedAt: null,
       },
     ]);
@@ -71,7 +71,7 @@ describe('GtdService.getItems', () => {
     expect(result).toEqual([
       {
         id: 3, title: 'Встреча', notes: null, status: 'calendar', parentId: null,
-        scheduledDate: '2026-07-25', waitingFor: null, order: 0, completedAt: null,
+        scheduledDate: '2026-07-25', plannedDate: null, waitingFor: null, order: 0, completedAt: null,
       },
     ]);
   });
@@ -163,5 +163,107 @@ describe('GtdService.remove', () => {
 
     expect(prisma.gtdItem.delete).toHaveBeenCalledWith({ where: { id: 5 } });
     expect(result).toEqual({ id: 5 });
+  });
+});
+
+describe('GtdService.getForDate', () => {
+  let service: GtdService;
+  let prisma: any;
+
+  beforeEach(() => {
+    prisma = { gtdItem: { findMany: jest.fn() } };
+    service = new GtdService(prisma);
+  });
+
+  it('queries planned-for-date OR calendar-scheduled-for-date, excluding archived', async () => {
+    prisma.gtdItem.findMany.mockResolvedValue([]);
+
+    await service.getForDate('2026-07-23');
+
+    const date = new Date('2026-07-23T00:00:00.000Z');
+    expect(prisma.gtdItem.findMany).toHaveBeenCalledWith({
+      where: {
+        status: { not: 'archived' },
+        OR: [{ plannedDate: date }, { status: 'calendar', scheduledDate: date }],
+      },
+      orderBy: { order: 'asc' },
+    });
+  });
+
+  it('serializes plannedDate/scheduledDate as strings', async () => {
+    prisma.gtdItem.findMany.mockResolvedValue([
+      {
+        id: 5, title: 'Задача', notes: null, status: 'backlog', parentId: null,
+        scheduledDate: null, plannedDate: new Date('2026-07-23T00:00:00.000Z'),
+        waitingFor: null, order: 0, completedAt: null,
+      },
+    ]);
+
+    const result = await service.getForDate('2026-07-23');
+
+    expect(result[0].plannedDate).toBe('2026-07-23');
+  });
+});
+
+describe('GtdService.createForDate', () => {
+  let service: GtdService;
+  let prisma: any;
+
+  beforeEach(() => {
+    prisma = { gtdItem: { aggregate: jest.fn(), create: jest.fn() } };
+    service = new GtdService(prisma);
+  });
+
+  it('creates a backlog item planned for the date', async () => {
+    prisma.gtdItem.aggregate.mockResolvedValue({ _max: { order: 2 } });
+    prisma.gtdItem.create.mockResolvedValue({ id: 1 });
+
+    await service.createForDate('Сделать презу', '2026-07-23');
+
+    expect(prisma.gtdItem.create).toHaveBeenCalledWith({
+      data: {
+        title: 'Сделать презу',
+        status: 'backlog',
+        order: 3,
+        plannedDate: new Date('2026-07-23T00:00:00.000Z'),
+      },
+    });
+  });
+});
+
+describe('GtdService.update plannedDate', () => {
+  let service: GtdService;
+  let prisma: any;
+
+  beforeEach(() => {
+    prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn() } };
+    service = new GtdService(prisma);
+  });
+
+  it('sets plannedDate from a valid string', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue({ id: 1, status: 'backlog' });
+    prisma.gtdItem.update.mockResolvedValue({
+      id: 1, title: 't', notes: null, status: 'backlog', parentId: null,
+      scheduledDate: null, plannedDate: new Date('2026-07-23T00:00:00.000Z'),
+      waitingFor: null, order: 0, completedAt: null,
+    });
+
+    await service.update(1, { plannedDate: '2026-07-23' });
+
+    expect(prisma.gtdItem.update.mock.calls[0][0].data.plannedDate).toEqual(
+      new Date('2026-07-23T00:00:00.000Z'),
+    );
+  });
+
+  it('clears plannedDate on null', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue({ id: 1, status: 'backlog' });
+    prisma.gtdItem.update.mockResolvedValue({
+      id: 1, title: 't', notes: null, status: 'backlog', parentId: null,
+      scheduledDate: null, plannedDate: null, waitingFor: null, order: 0, completedAt: null,
+    });
+
+    await service.update(1, { plannedDate: null });
+
+    expect(prisma.gtdItem.update.mock.calls[0][0].data.plannedDate).toBeNull();
   });
 });
