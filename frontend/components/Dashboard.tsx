@@ -29,6 +29,7 @@ import StatsPanel from './StatsPanel';
 import SettingsModal from './SettingsModal';
 import DayDetailModal from './DayDetailModal';
 import TasksScreen from './TasksScreen';
+import GtdScreen from './GtdScreen';
 import styles from './Dashboard.module.css';
 
 const HISTORY_LIMIT = 84;
@@ -36,6 +37,7 @@ const HISTORY_LIMIT = 84;
 const TABS = [
   { key: 'home', label: 'Главный' },
   { key: 'tasks', label: 'Задачи' },
+  { key: 'gtd', label: 'GTD' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -268,6 +270,7 @@ export default function Dashboard() {
       )}
 
       {activeTab === 'tasks' && <TasksScreen onSelectDate={setSelectedDate} refreshKey={tasksRefreshKey} />}
+      {activeTab === 'gtd' && <GtdScreen />}
       {settingsOpen && (
         <SettingsModal onClose={() => setSettingsOpen(false)} onCategoriesChanged={refreshDay} />
       )}
