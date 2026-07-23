@@ -85,6 +85,7 @@ model GtdItem {
   parent        GtdItem?  @relation("ProjectChildren", fields: [parentId], references: [id], onDelete: SetNull)
   children      GtdItem[] @relation("ProjectChildren")
   scheduledDate DateTime? @db.Date
+  plannedDate   DateTime? @db.Date
   waitingFor    String?
   order         Int       @default(0)
   createdAt     DateTime  @default(now())
