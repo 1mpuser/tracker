@@ -51,7 +51,12 @@ export default function GtdScreen() {
 
   async function onUpdate(
     id: number,
-    patch: Partial<Pick<GtdItem, 'title' | 'notes' | 'status' | 'plannedDate' | 'dueDate' | 'priority'>>,
+    patch: Partial<
+      Pick<
+        GtdItem,
+        'title' | 'notes' | 'status' | 'plannedDate' | 'dueDate' | 'priority' | 'scheduledDate' | 'scheduledTime'
+      >
+    >,
   ) {
     await updateGtdItem(id, patch);
     await reload();

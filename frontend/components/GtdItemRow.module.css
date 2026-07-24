@@ -156,12 +156,25 @@
   color: var(--danger);
 }
 
+.moveWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
+  margin-left: 4px;
+}
+
 .dueInputWrap {
   padding: 2px 8px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .dueInput {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   background: var(--panel-alt);
   border: 1px solid var(--border);
   color: var(--text);

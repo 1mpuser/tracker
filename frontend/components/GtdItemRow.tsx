@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { GtdItem } from '@/types/api';
+import type { GtdItem, GtdStatus } from '@/types/api';
+import { formatRuDate } from '@/lib/date';
 import styles from './GtdItemRow.module.css';
 
 interface GtdItemRowProps {
@@ -10,14 +11,32 @@ interface GtdItemRowProps {
   onOpenProject: (item: GtdItem) => void;
   onUpdate: (
     id: number,
-    patch: Partial<Pick<GtdItem, 'title' | 'notes' | 'status' | 'plannedDate' | 'dueDate' | 'priority'>>,
+    patch: Partial<
+      Pick<
+        GtdItem,
+        'title' | 'notes' | 'status' | 'plannedDate' | 'dueDate' | 'priority' | 'scheduledDate' | 'scheduledTime'
+      >
+    >,
   ) => void | Promise<void>;
   onDelete: (id: number) => void | Promise<void>;
 }
 
+const MOVE_TARGETS: { status: GtdStatus; label: string }[] = [
+  { status: 'backlog', label: 'Бэклог' },
+  { status: 'calendar', label: 'Календарь' },
+  { status: 'someday', label: 'Когда-нибудь' },
+  { status: 'waiting', label: 'Ожидание' },
+  { status: 'project', label: 'Проект' },
+  { status: 'reference', label: 'Заметки' },
+];
+
 export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDelete }: GtdItemRowProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dueOpen, setDueOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveCalendarOpen, setMoveCalendarOpen] = useState(false);
+  const [moveDateValue, setMoveDateValue] = useState('');
+  const [moveTimeValue, setMoveTimeValue] = useState('');
   const [editing, setEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(item.title);
   const [notesDraft, setNotesDraft] = useState(item.notes ?? '');
@@ -25,6 +44,25 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
   function closeMenu() {
     setMenuOpen(false);
     setDueOpen(false);
+    setMoveOpen(false);
+    setMoveCalendarOpen(false);
+    setMoveDateValue('');
+    setMoveTimeValue('');
+  }
+
+  function moveTo(target: GtdStatus) {
+    if (target === 'calendar') {
+      setMoveCalendarOpen((v) => !v);
+      return;
+    }
+    onUpdate(item.id, { status: target });
+    closeMenu();
+  }
+
+  function confirmMoveToCalendar() {
+    if (!moveDateValue) return;
+    onUpdate(item.id, { status: 'calendar', scheduledDate: moveDateValue, scheduledTime: moveTimeValue || null });
+    closeMenu();
   }
 
   function startEdit() {
@@ -83,11 +121,13 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
         <span className={styles.title}>{item.title}</span>
       )}
 
-      {item.status === 'calendar' && item.scheduledDate && <span className={styles.meta}>📅 {item.scheduledDate}</span>}
+      {item.status === 'calendar' && item.scheduledDate && (
+        <span className={styles.meta}>📅 {formatRuDate(item.scheduledDate, item.scheduledTime)}</span>
+      )}
       {item.status === 'waiting' && item.waitingFor && <span className={styles.meta}>→ {item.waitingFor}</span>}
       {item.priority && <span className={styles.prio}>❗</span>}
       {item.dueDate && (
-        <span className={`${styles.due} ${isOverdue ? styles.overdue : ''}`}>⏰ {item.dueDate}</span>
+        <span className={`${styles.due} ${isOverdue ? styles.overdue : ''}`}>⏰ {formatRuDate(item.dueDate)}</span>
       )}
 
       <span className={styles.actions}>
@@ -151,6 +191,51 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
                 >
                   снять срок
                 </button>
+              )}
+              <button
+                type="button"
+                className={styles.menuItem}
+                onClick={() => setMoveOpen((v) => !v)}
+              >
+                Перенести в…
+              </button>
+              {moveOpen && (
+                <div className={styles.moveWrap}>
+                  {MOVE_TARGETS.filter((t) => t.status !== item.status).map((t) => (
+                    <button
+                      key={t.status}
+                      type="button"
+                      className={styles.menuItem}
+                      onClick={() => moveTo(t.status)}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                  {moveCalendarOpen && (
+                    <div className={styles.dueInputWrap}>
+                      <input
+                        type="date"
+                        className={styles.dueInput}
+                        value={moveDateValue}
+                        onChange={(e) => setMoveDateValue(e.target.value)}
+                      />
+                      <input
+                        type="time"
+                        className={styles.dueInput}
+                        value={moveTimeValue}
+                        onChange={(e) => setMoveTimeValue(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className={styles.saveBtn}
+                        disabled={!moveDateValue}
+                        onClick={confirmMoveToCalendar}
+                      >
+                        OK
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
               <button
                 type="button"

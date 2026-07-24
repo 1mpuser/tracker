@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { GtdItem, TaskTemplate } from '@/types/api';
 import { getTaskTemplates } from '@/lib/api';
 import { sortGtdItems } from '@/lib/gtd';
-import { todayLocal } from '@/lib/date';
+import { todayLocal, formatRuDate } from '@/lib/date';
 import styles from './TodayPanel.module.css';
 
 interface TodayPanelProps {
@@ -107,11 +107,11 @@ export default function TodayPanel({ items, onAdd, onToggleDone, onRemove }: Tod
                 <span
                   className={`${styles.due} ${item.dueDate < todayLocal() && item.status !== 'done' ? styles.overdue : ''}`}
                 >
-                  ⏰ {item.dueDate}
+                  ⏰ {formatRuDate(item.dueDate)}
                 </span>
               )}
               {item.status === 'calendar' && item.scheduledDate && (
-                <span className={styles.cal}>📅 {item.scheduledDate}</span>
+                <span className={styles.cal}>📅 {formatRuDate(item.scheduledDate, item.scheduledTime)}</span>
               )}
               {!(item.status === 'calendar' && !item.plannedDate) && (
                 <span className={styles.del} onClick={() => onRemove(item.id)}>

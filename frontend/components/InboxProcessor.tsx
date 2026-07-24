@@ -18,6 +18,7 @@ export default function InboxProcessor({ items, onChanged }: InboxProcessorProps
   // per-item pending route awaiting an inline date pick
   const [datePick, setDatePick] = useState<Record<number, ClarifyRoute>>({});
   const [dateValue, setDateValue] = useState<Record<number, string>>({});
+  const [timeValue, setTimeValue] = useState<Record<number, string>>({});
 
   async function capture() {
     const trimmed = title.trim();
@@ -56,13 +57,22 @@ export default function InboxProcessor({ items, onChanged }: InboxProcessorProps
     const route = datePick[item.id];
     const value = dateValue[item.id];
     if (!route || !value) return;
-    await updateGtdItem(item.id, { status: route.status, scheduledDate: value });
+    await updateGtdItem(item.id, {
+      status: route.status,
+      scheduledDate: value,
+      scheduledTime: timeValue[item.id] || null,
+    });
     setDatePick((s) => {
       const next = { ...s };
       delete next[item.id];
       return next;
     });
     setDateValue((s) => {
+      const next = { ...s };
+      delete next[item.id];
+      return next;
+    });
+    setTimeValue((s) => {
       const next = { ...s };
       delete next[item.id];
       return next;
@@ -115,6 +125,12 @@ export default function InboxProcessor({ items, onChanged }: InboxProcessorProps
                     className={styles.dateInput}
                     value={dateValue[item.id] ?? ''}
                     onChange={(e) => setDateValue((s) => ({ ...s, [item.id]: e.target.value }))}
+                  />
+                  <input
+                    type="time"
+                    className={styles.dateInput}
+                    value={timeValue[item.id] ?? ''}
+                    onChange={(e) => setTimeValue((s) => ({ ...s, [item.id]: e.target.value }))}
                   />
                   <button
                     type="button"
