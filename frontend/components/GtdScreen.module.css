@@ -53,6 +53,27 @@
   line-height: 15px;
 }
 
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 720px;
+}
+
+.search {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 9px 12px;
+  font-size: 14px;
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .list {
   list-style: none;
   margin: 0;

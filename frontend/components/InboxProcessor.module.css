@@ -91,3 +91,24 @@
   font-size: 12.5px;
   font-style: italic;
 }
+
+.datePick {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.dateInput {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 12.5px;
+  font-family: var(--font-mono);
+}
+
+.dateInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}

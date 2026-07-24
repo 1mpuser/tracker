@@ -18,6 +18,7 @@ export default function GtdScreen() {
   const [active, setActive] = useState<GtdStatus>('inbox');
   const [loading, setLoading] = useState(true);
   const [openProject, setOpenProject] = useState<GtdItem | null>(null);
+  const [query, setQuery] = useState('');
 
   const reload = useCallback(async () => {
     setItems(await getGtdItems());
@@ -56,6 +57,30 @@ export default function GtdScreen() {
   }
 
   const visible = sortGtdItems(LAZY.includes(active) ? lazyItems : items.filter((i) => i.status === active));
+  const filtered =
+    active === 'inbox'
+      ? visible
+      : visible.filter((item) => item.title.toLowerCase().includes(query.trim().toLowerCase()));
+
+  const emptyMessage = (() => {
+    if (query.trim()) return 'Ничего не найдено.';
+    switch (active) {
+      case 'backlog':
+        return 'Бэклог пуст — разбери Корзину или добавь задачу.';
+      case 'calendar':
+        return 'Пока ничего не запланировано.';
+      case 'project':
+        return 'Нет активных проектов.';
+      case 'waiting':
+        return 'Никого не ждём.';
+      case 'someday':
+        return 'Пока ничего не отложено на потом.';
+      case 'reference':
+        return 'Заметок пока нет.';
+      default:
+        return 'Здесь пока пусто.';
+    }
+  })();
 
   return (
     <div className={styles.screen}>
@@ -79,29 +104,37 @@ export default function GtdScreen() {
       {openProject ? (
         <ProjectCard project={openProject} onClose={() => setOpenProject(null)} onChanged={reload} />
       ) : (
-        <>
+        <div className={styles.container}>
           {loading && <div className={styles.empty}>загрузка…</div>}
-          {!loading && active !== 'inbox' && visible.length === 0 && (
-            <div className={styles.empty}>Пусто.</div>
-          )}
 
           {active === 'inbox' ? (
             <InboxProcessor items={visible} onChanged={reload} />
           ) : (
-            <ul className={styles.list}>
-              {visible.map((item) => (
-                <GtdItemRow
-                  key={item.id}
-                  item={item}
-                  today={todayLocal()}
-                  onOpenProject={setOpenProject}
-                  onUpdate={onUpdate}
-                  onDelete={remove}
-                />
-              ))}
-            </ul>
+            <>
+              <input
+                className={styles.search}
+                placeholder="Поиск по названию…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              {!loading && filtered.length === 0 && <div className={styles.empty}>{emptyMessage}</div>}
+              {!loading && filtered.length > 0 && (
+                <ul className={styles.list}>
+                  {filtered.map((item) => (
+                    <GtdItemRow
+                      key={item.id}
+                      item={item}
+                      today={todayLocal()}
+                      onOpenProject={setOpenProject}
+                      onUpdate={onUpdate}
+                      onDelete={remove}
+                    />
+                  ))}
+                </ul>
+              )}
+            </>
           )}
-        </>
+        </div>
       )}
     </div>
   );
