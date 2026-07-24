@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ObsidianService } from '../obsidian/obsidian.service';
 import { formatDate, parseDateParam } from '../common/date.util';
 
 export interface GtdItemView {
@@ -21,7 +22,10 @@ const ACTIVE_EXCLUDED = ['done', 'archived'];
 
 @Injectable()
 export class GtdService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private obsidian: ObsidianService,
+  ) {}
 
   private toView(item: any): GtdItemView {
     return {
@@ -86,6 +90,13 @@ export class GtdService {
     }
 
     const updated = await this.prisma.gtdItem.update({ where: { id }, data });
+
+    if (updated.status === 'reference') {
+      await this.obsidian.syncNote(updated);
+    } else if (existing.status === 'reference') {
+      await this.obsidian.removeNote(id);
+    }
+
     return this.toView(updated);
   }
 
@@ -93,6 +104,9 @@ export class GtdService {
     const existing = await this.prisma.gtdItem.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException(`GtdItem ${id} not found`);
+    }
+    if (existing.status === 'reference') {
+      await this.obsidian.removeNote(id);
     }
     await this.prisma.gtdItem.delete({ where: { id } });
     return { id };

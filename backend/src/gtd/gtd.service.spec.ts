@@ -7,7 +7,8 @@ describe('GtdService.create', () => {
 
   beforeEach(() => {
     prisma = { gtdItem: { aggregate: jest.fn(), create: jest.fn() } };
-    service = new GtdService(prisma);
+    const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
+    service = new GtdService(prisma, obsidian as any);
   });
 
   it('creates an inbox item with the next order', async () => {
@@ -39,7 +40,8 @@ describe('GtdService.getItems', () => {
 
   beforeEach(() => {
     prisma = { gtdItem: { findMany: jest.fn() } };
-    service = new GtdService(prisma);
+    const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
+    service = new GtdService(prisma, obsidian as any);
   });
 
   it('excludes done and archived when no status filter is given', async () => {
@@ -84,7 +86,8 @@ describe('GtdService.update', () => {
 
   beforeEach(() => {
     prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn() } };
-    service = new GtdService(prisma);
+    const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
+    service = new GtdService(prisma, obsidian as any);
   });
 
   it('sets completedAt when moving to done', async () => {
@@ -148,7 +151,8 @@ describe('GtdService.remove', () => {
 
   beforeEach(() => {
     prisma = { gtdItem: { findUnique: jest.fn(), delete: jest.fn() } };
-    service = new GtdService(prisma);
+    const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
+    service = new GtdService(prisma, obsidian as any);
   });
 
   it('throws NotFoundException for a missing item', async () => {
@@ -173,7 +177,8 @@ describe('GtdService.getForDate', () => {
 
   beforeEach(() => {
     prisma = { gtdItem: { findMany: jest.fn() } };
-    service = new GtdService(prisma);
+    const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
+    service = new GtdService(prisma, obsidian as any);
   });
 
   it('queries planned-for-date OR calendar-scheduled-for-date, excluding archived', async () => {
@@ -212,7 +217,8 @@ describe('GtdService.createForDate', () => {
 
   beforeEach(() => {
     prisma = { gtdItem: { aggregate: jest.fn(), create: jest.fn() } };
-    service = new GtdService(prisma);
+    const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
+    service = new GtdService(prisma, obsidian as any);
   });
 
   it('creates a backlog item planned for the date', async () => {
@@ -238,7 +244,8 @@ describe('GtdService.update plannedDate', () => {
 
   beforeEach(() => {
     prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn() } };
-    service = new GtdService(prisma);
+    const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
+    service = new GtdService(prisma, obsidian as any);
   });
 
   it('sets plannedDate from a valid string', async () => {
@@ -275,7 +282,8 @@ describe('GtdService.update due/priority', () => {
 
   beforeEach(() => {
     prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn() } };
-    service = new GtdService(prisma);
+    const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
+    service = new GtdService(prisma, obsidian as any);
   });
 
   it('sets dueDate via parseDateParam and priority', async () => {
@@ -306,5 +314,54 @@ describe('GtdService.update due/priority', () => {
     await service.update(1, { dueDate: null });
 
     expect(prisma.gtdItem.update.mock.calls[0][0].data.dueDate).toBeNull();
+  });
+});
+
+describe('GtdService reference -> obsidian', () => {
+  let service: GtdService;
+  let prisma: any;
+  let obsidian: any;
+
+  beforeEach(() => {
+    prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn(), delete: jest.fn() } };
+    obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
+    service = new GtdService(prisma, obsidian as any);
+  });
+
+  it('syncs a note when an item becomes reference', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue({ id: 1, status: 'inbox' });
+    prisma.gtdItem.update.mockResolvedValue({
+      id: 1, title: 'Ссылка', notes: 'x', status: 'reference', parentId: null,
+      scheduledDate: null, plannedDate: null, dueDate: null, priority: false,
+      waitingFor: null, order: 0, completedAt: null,
+    });
+
+    await service.update(1, { status: 'reference' });
+
+    expect(obsidian.syncNote).toHaveBeenCalledWith(expect.objectContaining({ id: 1, status: 'reference' }));
+    expect(obsidian.removeNote).not.toHaveBeenCalled();
+  });
+
+  it('removes the note when an item leaves reference', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue({ id: 2, status: 'reference' });
+    prisma.gtdItem.update.mockResolvedValue({
+      id: 2, title: 'T', notes: null, status: 'backlog', parentId: null,
+      scheduledDate: null, plannedDate: null, dueDate: null, priority: false,
+      waitingFor: null, order: 0, completedAt: null,
+    });
+
+    await service.update(2, { status: 'backlog' });
+
+    expect(obsidian.removeNote).toHaveBeenCalledWith(2);
+    expect(obsidian.syncNote).not.toHaveBeenCalled();
+  });
+
+  it('removes the note when a reference item is deleted', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue({ id: 3, status: 'reference' });
+    prisma.gtdItem.delete.mockResolvedValue({ id: 3 });
+
+    await service.remove(3);
+
+    expect(obsidian.removeNote).toHaveBeenCalledWith(3);
   });
 });
