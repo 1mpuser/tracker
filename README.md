@@ -108,6 +108,15 @@ docker compose exec backend bunx prisma migrate deploy
 
 ---
 
+### Obsidian-экспорт Заметок (GTD)
+
+GTD-пункты со статусом «Заметка» (`reference`) автоматически экспортируются `.md`-файлами
+в Obsidian. Путь к папке хранилища задаётся `OBSIDIAN_VAULT_DIR` в корневом `.env`
+(по умолчанию — локальная `./data/obsidian-export`). Backend монтирует её как `/vault`
+и пишет туда при изменении Заметок + разово синкает все Заметки на старте.
+
+---
+
 ## HTTPS via `tracker.performance` (optional — a macOS nicety)
 
 **Fully optional. Most people don't need this.** Plain `http://localhost:4887` works everywhere.

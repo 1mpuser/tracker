@@ -23,8 +23,11 @@ services:
       DATABASE_URL: postgresql://tracker:tracker@postgres:5432/tracker
       YOUTUBE_BUDGET_DEFAULT: "60"
       PORT: "3001"
+      OBSIDIAN_EXPORT_DIR: /vault
     ports:
       - "3001:3001"
+    volumes:
+      - "${OBSIDIAN_VAULT_DIR:-./data/obsidian-export}:/vault"
     depends_on:
       postgres:
         condition: service_healthy
