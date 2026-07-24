@@ -317,6 +317,44 @@ describe('GtdService.update due/priority', () => {
   });
 });
 
+describe('GtdService.update scheduledTime', () => {
+  let service: GtdService;
+  let prisma: any;
+
+  beforeEach(() => {
+    prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn() } };
+    const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
+    service = new GtdService(prisma, obsidian as any);
+  });
+
+  it('sets scheduledTime from a valid string', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue({ id: 1, status: 'calendar' });
+    prisma.gtdItem.update.mockResolvedValue({
+      id: 1, title: 't', notes: null, status: 'calendar', parentId: null,
+      scheduledDate: null, plannedDate: null, dueDate: null, priority: false,
+      waitingFor: null, order: 0, completedAt: null, scheduledTime: '14:30',
+    });
+
+    const result = await service.update(1, { scheduledTime: '14:30' });
+
+    expect(prisma.gtdItem.update.mock.calls[0][0].data.scheduledTime).toBe('14:30');
+    expect(result.scheduledTime).toBe('14:30');
+  });
+
+  it('clears scheduledTime on empty string', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue({ id: 1, status: 'calendar' });
+    prisma.gtdItem.update.mockResolvedValue({
+      id: 1, title: 't', notes: null, status: 'calendar', parentId: null,
+      scheduledDate: null, plannedDate: null, dueDate: null, priority: false,
+      waitingFor: null, order: 0, completedAt: null, scheduledTime: null,
+    });
+
+    await service.update(1, { scheduledTime: '' });
+
+    expect(prisma.gtdItem.update.mock.calls[0][0].data.scheduledTime).toBeNull();
+  });
+});
+
 describe('GtdService reference -> obsidian', () => {
   let service: GtdService;
   let prisma: any;

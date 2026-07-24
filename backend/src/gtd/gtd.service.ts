@@ -10,6 +10,7 @@ export interface GtdItemView {
   status: string;
   parentId: number | null;
   scheduledDate: string | null;
+  scheduledTime: string | null;
   plannedDate: string | null;
   dueDate: string | null;
   priority: boolean;
@@ -35,6 +36,7 @@ export class GtdService {
       status: item.status,
       parentId: item.parentId,
       scheduledDate: item.scheduledDate ? formatDate(item.scheduledDate) : null,
+      scheduledTime: item.scheduledTime,
       plannedDate: item.plannedDate ? formatDate(item.plannedDate) : null,
       dueDate: item.dueDate ? formatDate(item.dueDate) : null,
       priority: item.priority,
@@ -59,7 +61,7 @@ export class GtdService {
 
   async update(
     id: number,
-    patch: { title?: string; notes?: string; status?: string; scheduledDate?: string | null; waitingFor?: string | null; plannedDate?: string | null; dueDate?: string | null; priority?: boolean },
+    patch: { title?: string; notes?: string; status?: string; scheduledDate?: string | null; scheduledTime?: string | null; waitingFor?: string | null; plannedDate?: string | null; dueDate?: string | null; priority?: boolean },
   ): Promise<GtdItemView> {
     const existing = await this.prisma.gtdItem.findUnique({ where: { id } });
     if (!existing) {
@@ -79,6 +81,7 @@ export class GtdService {
     if (patch.dueDate !== undefined) {
       data.dueDate = patch.dueDate ? parseDateParam(patch.dueDate) : null;
     }
+    if (patch.scheduledTime !== undefined) data.scheduledTime = patch.scheduledTime || null;
     if (patch.priority !== undefined) data.priority = patch.priority;
     if (patch.status !== undefined) {
       data.status = patch.status;
