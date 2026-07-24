@@ -45,3 +45,9 @@ export function formatOriginDate(originDate: string, targetDate: string): string
   if (diffDays === 2) return 'позавчера';
   return `с ${formatDayMonth(originDate)}`;
 }
+
+export function formatRuDate(dateStr: string, time?: string | null): string {
+  const [y, m, d] = dateStr.split('-');
+  const base = `${d}.${m}.${y}`;
+  return time ? `${base} ${time}` : base;
+}

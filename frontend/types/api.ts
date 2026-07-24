@@ -75,6 +75,7 @@ export interface GtdItem {
   status: GtdStatus;
   parentId: number | null;
   scheduledDate: string | null;
+  scheduledTime: string | null;
   waitingFor: string | null;
   plannedDate: string | null;
   dueDate: string | null;

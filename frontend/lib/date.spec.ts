@@ -1,4 +1,4 @@
-import { addDaysUTC, formatDisplayDate, formatOriginDate, formatUTC, parseUTC, todayLocal } from './date';
+import { addDaysUTC, formatDisplayDate, formatOriginDate, formatRuDate, formatUTC, parseUTC, todayLocal } from './date';
 
 describe('date utils', () => {
   it('parses a YYYY-MM-DD string as UTC midnight', () => {
@@ -33,5 +33,21 @@ describe('date utils', () => {
 
   it('formatOriginDate falls back to "с <day month>" for anything older', () => {
     expect(formatOriginDate('2026-07-10', '2026-07-16')).toBe('с 10 июля');
+  });
+
+  it('formatRuDate converts YYYY-MM-DD to DD.MM.YYYY', () => {
+    expect(formatRuDate('2026-07-25')).toBe('25.07.2026');
+  });
+
+  it('formatRuDate appends time when provided', () => {
+    expect(formatRuDate('2026-07-25', '14:30')).toBe('25.07.2026 14:30');
+  });
+
+  it('formatRuDate ignores null time', () => {
+    expect(formatRuDate('2026-07-25', null)).toBe('25.07.2026');
+  });
+
+  it('formatRuDate ignores empty string time', () => {
+    expect(formatRuDate('2026-07-25', '')).toBe('25.07.2026');
   });
 });
