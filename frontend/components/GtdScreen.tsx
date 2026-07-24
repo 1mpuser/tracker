@@ -8,6 +8,7 @@ import { todayLocal } from '@/lib/date';
 import InboxProcessor from './InboxProcessor';
 import ProjectCard from './ProjectCard';
 import GtdItemRow from './GtdItemRow';
+import WeeklyReview from './WeeklyReview';
 import styles from './GtdScreen.module.css';
 
 const LAZY: GtdStatus[] = ['done', 'archived'];
@@ -19,6 +20,7 @@ export default function GtdScreen() {
   const [loading, setLoading] = useState(true);
   const [openProject, setOpenProject] = useState<GtdItem | null>(null);
   const [query, setQuery] = useState('');
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const reload = useCallback(async () => {
     setItems(await getGtdItems());
@@ -85,21 +87,38 @@ export default function GtdScreen() {
   return (
     <div className={styles.screen}>
       {new Date().getDay() === 0 && (
-        <div className={styles.reviewBanner}>🗓 Воскресный разбор — время для Weekly Review</div>
+        <button type="button" className={styles.reviewBanner} onClick={() => setReviewOpen(true)}>
+          🗓 Воскресный разбор — время для Weekly Review
+        </button>
       )}
-      <nav className={styles.buckets}>
-        {BUCKET_TABS.map((b) => (
-          <button
-            key={b.status}
-            type="button"
-            className={`${styles.bucket} ${active === b.status ? styles.bucketActive : ''}`}
-            onClick={() => setActive(b.status)}
-          >
-            {b.label}
-            {counts[b.status] ? <span className={styles.badge}>{counts[b.status]}</span> : null}
-          </button>
-        ))}
-      </nav>
+      <div className={styles.bucketsRow}>
+        <nav className={styles.buckets}>
+          {BUCKET_TABS.map((b) => (
+            <button
+              key={b.status}
+              type="button"
+              className={`${styles.bucket} ${active === b.status ? styles.bucketActive : ''}`}
+              onClick={() => setActive(b.status)}
+            >
+              {b.label}
+              {counts[b.status] ? <span className={styles.badge}>{counts[b.status]}</span> : null}
+            </button>
+          ))}
+        </nav>
+        <button type="button" className={styles.reviewButton} onClick={() => setReviewOpen(true)}>
+          Разбор недели
+        </button>
+      </div>
+
+      {reviewOpen && (
+        <WeeklyReview
+          onClose={() => setReviewOpen(false)}
+          onGoToBucket={(s) => {
+            setActive(s);
+            setReviewOpen(false);
+          }}
+        />
+      )}
 
       {openProject ? (
         <ProjectCard project={openProject} onClose={() => setOpenProject(null)} onChanged={reload} />
