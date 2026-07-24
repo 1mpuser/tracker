@@ -123,12 +123,19 @@
   display: flex;
   flex-direction: column;
   min-width: 160px;
+  max-height: 80vh;
+  overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--elev);
   padding: 4px;
   gap: 2px;
+}
+
+.menuUp {
+  top: auto;
+  bottom: calc(100% + 4px);
 }
 
 .menuItem {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { GtdItem, GtdStatus } from '@/types/api';
 import { formatRuDate } from '@/lib/date';
 import styles from './GtdItemRow.module.css';
@@ -31,7 +31,9 @@ const MOVE_TARGETS: { status: GtdStatus; label: string }[] = [
 ];
 
 export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDelete }: GtdItemRowProps) {
+  const moreBtnRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuUp, setMenuUp] = useState(false);
   const [dueOpen, setDueOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveCalendarOpen, setMoveCalendarOpen] = useState(false);
@@ -48,6 +50,17 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
     setMoveCalendarOpen(false);
     setMoveDateValue('');
     setMoveTimeValue('');
+  }
+
+  function toggleMenu() {
+    if (!menuOpen && moreBtnRef.current) {
+      const rect = moreBtnRef.current.getBoundingClientRect();
+      // Generous estimate of the fully-expanded menu height (incl. the move
+      // submenu) — good enough to decide whether it fits below the button.
+      const estimatedMenuHeight = 380;
+      setMenuUp(rect.bottom + estimatedMenuHeight > window.innerHeight);
+    }
+    setMenuOpen((v) => !v);
   }
 
   function moveTo(target: GtdStatus) {
@@ -151,15 +164,16 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
 
         <div className={styles.menuWrap}>
           <button
+            ref={moreBtnRef}
             type="button"
             className={styles.moreBtn}
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={toggleMenu}
             aria-label="Ещё"
           >
             ⋯
           </button>
           {menuOpen && (
-            <div className={styles.menu}>
+            <div className={`${styles.menu} ${menuUp ? styles.menuUp : ''}`}>
               <button
                 type="button"
                 className={styles.menuItem}

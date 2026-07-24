@@ -116,7 +116,10 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: inset 0 1px 0 var(--hair), var(--elev);
-  overflow: hidden;
+  /* No overflow:hidden here on purpose — each row's "⋯" menu is an absolutely
+     positioned popover that must be able to extend past this container's
+     edges (especially for the last row(s)). Clipping it here caused the
+     menu to appear to silently do nothing, most visibly in Safari. */
 }
 
 .empty {
