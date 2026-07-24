@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import type { GtdItem, GtdStatus } from '@/types/api';
 import { formatRuDate } from '@/lib/date';
+import DatePicker from './DatePicker';
 import styles from './GtdItemRow.module.css';
 
 interface GtdItemRowProps {
@@ -58,7 +59,12 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
       // Generous estimate of the fully-expanded menu height (incl. the move
       // submenu) — good enough to decide whether it fits below the button.
       const estimatedMenuHeight = 380;
-      setMenuUp(rect.bottom + estimatedMenuHeight > window.innerHeight);
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      // Only flip up when there's truly more room above than below —
+      // otherwise a menu near the top of the viewport would flip up and
+      // clip off-screen instead of just scrolling within its own max-height.
+      setMenuUp(spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow);
     }
     setMenuOpen((v) => !v);
   }
@@ -183,14 +189,13 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
               </button>
               {dueOpen && (
                 <div className={styles.dueInputWrap}>
-                  <input
-                    type="date"
-                    className={styles.dueInput}
-                    value={item.dueDate ?? ''}
-                    onChange={(e) => {
-                      onUpdate(item.id, { dueDate: e.target.value || null });
+                  <DatePicker
+                    value={item.dueDate}
+                    onChange={(v) => {
+                      onUpdate(item.id, { dueDate: v });
                       closeMenu();
                     }}
+                    allowClear
                   />
                 </div>
               )}
@@ -227,12 +232,7 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
                   ))}
                   {moveCalendarOpen && (
                     <div className={styles.dueInputWrap}>
-                      <input
-                        type="date"
-                        className={styles.dueInput}
-                        value={moveDateValue}
-                        onChange={(e) => setMoveDateValue(e.target.value)}
-                      />
+                      <DatePicker value={moveDateValue || null} onChange={(v) => setMoveDateValue(v ?? '')} />
                       <input
                         type="time"
                         className={styles.dueInput}

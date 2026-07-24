@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { GtdItem } from '@/types/api';
 import { createGtdItem, updateGtdItem } from '@/lib/api';
 import { CLARIFY, CLARIFY_START, type ClarifyOption, type ClarifyRoute } from '@/lib/gtd';
+import DatePicker from './DatePicker';
 import styles from './InboxProcessor.module.css';
 
 interface InboxProcessorProps {
@@ -120,11 +121,9 @@ export default function InboxProcessor({ items, onChanged }: InboxProcessorProps
               </div>
               {datePick[item.id] && (
                 <div className={styles.datePick}>
-                  <input
-                    type="date"
-                    className={styles.dateInput}
-                    value={dateValue[item.id] ?? ''}
-                    onChange={(e) => setDateValue((s) => ({ ...s, [item.id]: e.target.value }))}
+                  <DatePicker
+                    value={dateValue[item.id] ?? null}
+                    onChange={(v) => setDateValue((s) => ({ ...s, [item.id]: v ?? '' }))}
                   />
                   <input
                     type="time"

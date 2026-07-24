@@ -123,14 +123,18 @@
   display: flex;
   flex-direction: column;
   min-width: 160px;
-  max-height: 80vh;
-  overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--elev);
   padding: 4px;
   gap: 2px;
+  /* No max-height/overflow-y here on purpose — per the CSS overflow spec,
+     setting overflow-y to anything but `visible` forces overflow-x to
+     `auto` too when it isn't set explicitly, which silently clipped the
+     nested DatePicker popover (position:absolute, wider than this menu)
+     that opens from "Дедлайн…"/"Перенести в…". A tall menu just grows the
+     page instead — acceptable, since a hidden calendar is worse. */
 }
 
 .menuUp {

@@ -1,0 +1,153 @@
+.wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.trigger {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.trigger:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.placeholder {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--elev);
+  padding: 10px;
+  width: 240px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.popoverUp {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.monthLabel {
+  font-size: 12.5px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.navBtn {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 5px;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.navBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 2px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  padding: 2px 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.day {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text);
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.day:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dayOutside {
+  color: var(--text-dim);
+}
+
+.dayToday {
+  border-color: var(--border);
+  color: var(--accent);
+}
+
+.daySelected {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.daySelected:hover {
+  color: var(--bg);
+}
+
+.footer {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.footerBtn {
+  flex: 1;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 5px;
+  padding: 5px 0;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.footerBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
