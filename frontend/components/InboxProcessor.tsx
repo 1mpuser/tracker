@@ -20,6 +20,9 @@ export default function InboxProcessor({ items, onChanged }: InboxProcessorProps
   const [datePick, setDatePick] = useState<Record<number, ClarifyRoute>>({});
   const [dateValue, setDateValue] = useState<Record<number, string>>({});
   const [timeValue, setTimeValue] = useState<Record<number, string>>({});
+  // per-item pending route awaiting an inline "who is this waiting on" name
+  const [waitingPick, setWaitingPick] = useState<Record<number, ClarifyRoute>>({});
+  const [waitingValue, setWaitingValue] = useState<Record<number, string>>({});
 
   async function capture() {
     const trimmed = title.trim();
@@ -39,13 +42,34 @@ export default function InboxProcessor({ items, onChanged }: InboxProcessorProps
       setDatePick((s) => ({ ...s, [item.id]: route }));
       return;
     }
-    const patch: Parameters<typeof updateGtdItem>[1] = { status: route.status };
     if (route.needs === 'waitingFor') {
-      const value = window.prompt('Кому делегировано?');
-      if (!value) return;
-      patch.waitingFor = value;
+      setWaitingPick((s) => ({ ...s, [item.id]: route }));
+      return;
     }
-    await updateGtdItem(item.id, patch);
+    await updateGtdItem(item.id, { status: route.status });
+    setStep((s) => {
+      const next = { ...s };
+      delete next[item.id];
+      return next;
+    });
+    await onChanged();
+  }
+
+  async function confirmWaiting(item: GtdItem) {
+    const route = waitingPick[item.id];
+    const value = (waitingValue[item.id] ?? '').trim();
+    if (!route || !value) return;
+    await updateGtdItem(item.id, { status: route.status, waitingFor: value });
+    setWaitingPick((s) => {
+      const next = { ...s };
+      delete next[item.id];
+      return next;
+    });
+    setWaitingValue((s) => {
+      const next = { ...s };
+      delete next[item.id];
+      return next;
+    });
     setStep((s) => {
       const next = { ...s };
       delete next[item.id];
@@ -136,6 +160,28 @@ export default function InboxProcessor({ items, onChanged }: InboxProcessorProps
                     className={styles.addBtn}
                     disabled={!dateValue[item.id]}
                     onClick={() => confirmDate(item)}
+                  >
+                    OK
+                  </button>
+                </div>
+              )}
+              {waitingPick[item.id] && (
+                <div className={styles.datePick}>
+                  <input
+                    className={styles.dateInput}
+                    placeholder="Кому делегировано?"
+                    value={waitingValue[item.id] ?? ''}
+                    onChange={(e) => setWaitingValue((s) => ({ ...s, [item.id]: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') confirmWaiting(item);
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className={styles.addBtn}
+                    disabled={!(waitingValue[item.id] ?? '').trim()}
+                    onClick={() => confirmWaiting(item)}
                   >
                     OK
                   </button>

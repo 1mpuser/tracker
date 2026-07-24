@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { GtdItem } from '@/types/api';
-import { createGtdItem, getGtdItems } from '@/lib/api';
+import { createGtdItem, getGtdItems, updateGtdItem } from '@/lib/api';
+import { BUCKET_TABS } from '@/lib/gtd';
 import styles from './ProjectCard.module.css';
+
+const STATUS_LABELS = Object.fromEntries(BUCKET_TABS.map((b) => [b.status, b.label])) as Record<string, string>;
 
 interface ProjectCardProps {
   project: GtdItem;
@@ -37,6 +40,12 @@ export default function ProjectCard({ project, onClose, onChanged }: ProjectCard
     await onChanged();
   }
 
+  async function toggleStepDone(step: GtdItem) {
+    await updateGtdItem(step.id, { status: step.status === 'done' ? 'backlog' : 'done' });
+    await load();
+    await onChanged();
+  }
+
   return (
     <div className={styles.card}>
       <div className={styles.head}>
@@ -53,8 +62,18 @@ export default function ProjectCard({ project, onClose, onChanged }: ProjectCard
         {children.length === 0 && <li className={styles.empty}>Шагов пока нет.</li>}
         {children.map((c) => (
           <li key={c.id} className={styles.step}>
-            <span className={styles.stepTitle}>{c.title}</span>
-            <span className={styles.stepStatus}>{c.status}</span>
+            <button
+              type="button"
+              className={`${styles.stepCheck} ${c.status === 'done' ? styles.stepCheckDone : ''}`}
+              onClick={() => toggleStepDone(c)}
+              title="Отметить готово"
+            >
+              {c.status === 'done' ? '✓' : ''}
+            </button>
+            <span className={`${styles.stepTitle} ${c.status === 'done' ? styles.stepTitleDone : ''}`}>
+              {c.title}
+            </span>
+            <span className={styles.stepStatus}>{STATUS_LABELS[c.status] ?? c.status}</span>
           </li>
         ))}
       </ul>

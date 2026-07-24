@@ -21,6 +21,9 @@ export default function GtdScreen() {
   const [openProject, setOpenProject] = useState<GtdItem | null>(null);
   const [query, setQuery] = useState('');
   const [reviewOpen, setReviewOpen] = useState(false);
+  // Only one row's "⋯" menu can be open at a time — lifted here so opening
+  // a new row's menu closes whichever other row's menu was open before.
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   const reload = useCallback(async () => {
     setItems(await getGtdItems());
@@ -149,6 +152,8 @@ export default function GtdScreen() {
                       key={item.id}
                       item={item}
                       today={todayLocal()}
+                      isMenuOpen={openMenuId === item.id}
+                      onMenuOpenChange={(open) => setOpenMenuId(open ? item.id : null)}
                       onOpenProject={setOpenProject}
                       onUpdate={onUpdate}
                       onDelete={remove}

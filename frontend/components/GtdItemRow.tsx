@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { GtdItem, GtdStatus } from '@/types/api';
 import { formatRuDate } from '@/lib/date';
 import DatePicker from './DatePicker';
@@ -9,6 +9,8 @@ import styles from './GtdItemRow.module.css';
 interface GtdItemRowProps {
   item: GtdItem;
   today: string;
+  isMenuOpen: boolean;
+  onMenuOpenChange: (open: boolean) => void;
   onOpenProject: (item: GtdItem) => void;
   onUpdate: (
     id: number,
@@ -31,30 +33,65 @@ const MOVE_TARGETS: { status: GtdStatus; label: string }[] = [
   { status: 'reference', label: 'Заметки' },
 ];
 
-export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDelete }: GtdItemRowProps) {
+export default function GtdItemRow({
+  item,
+  today,
+  isMenuOpen,
+  onMenuOpenChange,
+  onOpenProject,
+  onUpdate,
+  onDelete,
+}: GtdItemRowProps) {
   const moreBtnRef = useRef<HTMLButtonElement>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const menuWrapRef = useRef<HTMLDivElement>(null);
   const [menuUp, setMenuUp] = useState(false);
   const [dueOpen, setDueOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveCalendarOpen, setMoveCalendarOpen] = useState(false);
   const [moveDateValue, setMoveDateValue] = useState('');
   const [moveTimeValue, setMoveTimeValue] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(item.title);
   const [notesDraft, setNotesDraft] = useState(item.notes ?? '');
 
+  // Whenever this row's menu closes — whether by its own toggle, an outside
+  // click, Escape, or another row's menu opening (isMenuOpen is controlled by
+  // the parent so only one row's menu is ever open at a time) — reset every
+  // sub-panel so the next open starts clean.
+  useEffect(() => {
+    if (!isMenuOpen) {
+      setDueOpen(false);
+      setMoveOpen(false);
+      setMoveCalendarOpen(false);
+      setMoveDateValue('');
+      setMoveTimeValue('');
+      setConfirmDelete(false);
+    }
+  }, [isMenuOpen]);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    function onOutside(e: MouseEvent) {
+      if (menuWrapRef.current && !menuWrapRef.current.contains(e.target as Node)) onMenuOpenChange(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onMenuOpenChange(false);
+    }
+    document.addEventListener('mousedown', onOutside);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onOutside);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isMenuOpen, onMenuOpenChange]);
+
   function closeMenu() {
-    setMenuOpen(false);
-    setDueOpen(false);
-    setMoveOpen(false);
-    setMoveCalendarOpen(false);
-    setMoveDateValue('');
-    setMoveTimeValue('');
+    onMenuOpenChange(false);
   }
 
   function toggleMenu() {
-    if (!menuOpen && moreBtnRef.current) {
+    if (!isMenuOpen && moreBtnRef.current) {
       const rect = moreBtnRef.current.getBoundingClientRect();
       // Generous estimate of the fully-expanded menu height (incl. the move
       // submenu) — good enough to decide whether it fits below the button.
@@ -66,7 +103,7 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
       // clip off-screen instead of just scrolling within its own max-height.
       setMenuUp(spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow);
     }
-    setMenuOpen((v) => !v);
+    onMenuOpenChange(!isMenuOpen);
   }
 
   function moveTo(target: GtdStatus) {
@@ -137,7 +174,13 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
           {item.title}
         </button>
       ) : (
-        <span className={styles.title}>{item.title}</span>
+        <span
+          className={`${styles.title} ${styles.titleClickable}`}
+          onClick={() => onUpdate(item.id, { status: item.status === 'done' ? 'backlog' : 'done' })}
+          title="Отметить готово"
+        >
+          {item.title}
+        </span>
       )}
 
       {item.status === 'calendar' && item.scheduledDate && (
@@ -168,7 +211,7 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
           </button>
         )}
 
-        <div className={styles.menuWrap}>
+        <div className={styles.menuWrap} ref={menuWrapRef}>
           <button
             ref={moreBtnRef}
             type="button"
@@ -178,7 +221,7 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
           >
             ⋯
           </button>
-          {menuOpen && (
+          {isMenuOpen && (
             <div className={`${styles.menu} ${menuUp ? styles.menuUp : ''}`}>
               <button
                 type="button"
@@ -231,22 +274,25 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
                     </button>
                   ))}
                   {moveCalendarOpen && (
-                    <div className={styles.dueInputWrap}>
-                      <DatePicker value={moveDateValue || null} onChange={(v) => setMoveDateValue(v ?? '')} />
-                      <input
-                        type="time"
-                        className={styles.dueInput}
-                        value={moveTimeValue}
-                        onChange={(e) => setMoveTimeValue(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className={styles.saveBtn}
-                        disabled={!moveDateValue}
-                        onClick={confirmMoveToCalendar}
-                      >
-                        OK
-                      </button>
+                    <div className={styles.moveCalendarPick}>
+                      <span className={styles.moveCalendarHint}>Дата (и время — по желанию), затем «OK»</span>
+                      <div className={styles.dueInputWrap}>
+                        <DatePicker value={moveDateValue || null} onChange={(v) => setMoveDateValue(v ?? '')} />
+                        <input
+                          type="time"
+                          className={styles.dueInput}
+                          value={moveTimeValue}
+                          onChange={(e) => setMoveTimeValue(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className={styles.saveBtn}
+                          disabled={!moveDateValue}
+                          onClick={confirmMoveToCalendar}
+                        >
+                          OK
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -288,16 +334,32 @@ export default function GtdItemRow({ item, today, onOpenProject, onUpdate, onDel
                   В Корзину
                 </button>
               )}
-              <button
-                type="button"
-                className={`${styles.menuItem} ${styles.menuItemDanger}`}
-                onClick={() => {
-                  onDelete(item.id);
-                  closeMenu();
-                }}
-              >
-                Удалить
-              </button>
+              {!confirmDelete ? (
+                <button
+                  type="button"
+                  className={`${styles.menuItem} ${styles.menuItemDanger}`}
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  Удалить
+                </button>
+              ) : (
+                <div className={styles.confirmDeleteRow}>
+                  <span className={styles.confirmDeleteText}>Точно удалить?</span>
+                  <button
+                    type="button"
+                    className={`${styles.confirmBtn} ${styles.confirmBtnDanger}`}
+                    onClick={() => {
+                      onDelete(item.id);
+                      closeMenu();
+                    }}
+                  >
+                    Да
+                  </button>
+                  <button type="button" className={styles.confirmBtn} onClick={() => setConfirmDelete(false)}>
+                    Отмена
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
