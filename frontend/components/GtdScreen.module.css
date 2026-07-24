@@ -64,81 +64,9 @@
   overflow: hidden;
 }
 
-.item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-}
-
-.item:last-child {
-  border-bottom: none;
-}
-
-.title {
-  flex: 1;
-  font-size: 13.5px;
-  color: var(--text);
-}
-
-.titleBtn {
-  flex: 1;
-  text-align: left;
-  background: none;
-  border: none;
-  color: var(--accent);
-  font-size: 13.5px;
-  cursor: pointer;
-  padding: 0;
-}
-
-.meta {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-dim);
-  white-space: nowrap;
-}
-
-.actions {
-  display: flex;
-  gap: 4px;
-}
-
-.actions button {
-  background: var(--panel-alt);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  border-radius: 5px;
-  padding: 2px 7px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.actions button:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 .empty {
   color: var(--text-dim);
   font-size: 12.5px;
   font-style: italic;
   padding: 8px 0;
-}
-
-.prio {
-  color: var(--danger);
-  font-size: 11px;
-}
-
-.due {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--text-dim);
-  white-space: nowrap;
-}
-
-.overdue {
-  color: var(--danger);
 }

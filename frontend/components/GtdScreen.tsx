@@ -7,6 +7,7 @@ import { BUCKET_TABS, sortGtdItems } from '@/lib/gtd';
 import { todayLocal } from '@/lib/date';
 import InboxProcessor from './InboxProcessor';
 import ProjectCard from './ProjectCard';
+import GtdItemRow from './GtdItemRow';
 import styles from './GtdScreen.module.css';
 
 const LAZY: GtdStatus[] = ['done', 'archived'];
@@ -39,40 +40,17 @@ export default function GtdScreen() {
     return c;
   }, [items]);
 
-  async function move(id: number, status: GtdStatus) {
-    await updateGtdItem(id, { status });
-    await reload();
-    if (LAZY.includes(active)) setLazyItems(await getGtdItems(active));
-  }
-
   async function remove(id: number) {
     await deleteGtdItem(id);
     if (LAZY.includes(active)) setLazyItems(await getGtdItems(active));
     else await reload();
   }
 
-  async function planToday(id: number) {
-    await updateGtdItem(id, { plannedDate: todayLocal() });
-    await reload();
-    if (LAZY.includes(active)) setLazyItems(await getGtdItems(active));
-  }
-
-  async function unplan(id: number) {
-    await updateGtdItem(id, { plannedDate: null });
-    await reload();
-    if (LAZY.includes(active)) setLazyItems(await getGtdItems(active));
-  }
-
-  async function setDue(id: number) {
-    const value = window.prompt('Дедлайн (YYYY-MM-DD, пусто — снять):');
-    if (value === null) return;
-    await updateGtdItem(id, { dueDate: value.trim() === '' ? null : value.trim() });
-    await reload();
-    if (LAZY.includes(active)) setLazyItems(await getGtdItems(active));
-  }
-
-  async function togglePriority(item: GtdItem) {
-    await updateGtdItem(item.id, { priority: !item.priority });
+  async function onUpdate(
+    id: number,
+    patch: Partial<Pick<GtdItem, 'title' | 'notes' | 'status' | 'plannedDate' | 'dueDate' | 'priority'>>,
+  ) {
+    await updateGtdItem(id, patch);
     await reload();
     if (LAZY.includes(active)) setLazyItems(await getGtdItems(active));
   }
@@ -103,73 +81,23 @@ export default function GtdScreen() {
       ) : (
         <>
           {loading && <div className={styles.empty}>загрузка…</div>}
-          {!loading && visible.length === 0 && <div className={styles.empty}>Пусто.</div>}
+          {!loading && active !== 'inbox' && visible.length === 0 && (
+            <div className={styles.empty}>Пусто.</div>
+          )}
 
           {active === 'inbox' ? (
             <InboxProcessor items={visible} onChanged={reload} />
           ) : (
             <ul className={styles.list}>
               {visible.map((item) => (
-                <li key={item.id} className={styles.item}>
-                  {item.status === 'project' ? (
-                    <button type="button" className={styles.titleBtn} onClick={() => setOpenProject(item)}>
-                      {item.title}
-                    </button>
-                  ) : (
-                    <span className={styles.title}>{item.title}</span>
-                  )}
-                  {item.status === 'calendar' && item.scheduledDate && (
-                    <span className={styles.meta}>{item.scheduledDate}</span>
-                  )}
-                  {item.status === 'waiting' && item.waitingFor && (
-                    <span className={styles.meta}>→ {item.waitingFor}</span>
-                  )}
-                  {item.priority && <span className={styles.prio}>❗</span>}
-                  {item.dueDate && (
-                    <span
-                      className={`${styles.due} ${item.dueDate < todayLocal() && item.status !== 'done' ? styles.overdue : ''}`}
-                    >
-                      ⏰ {item.dueDate}
-                    </span>
-                  )}
-                  <span className={styles.actions}>
-                    {item.status !== 'done' && (
-                      <button type="button" onClick={() => move(item.id, 'done')} title="Готово">
-                        ✓
-                      </button>
-                    )}
-                    {item.status !== 'archived' && (
-                      <button type="button" onClick={() => move(item.id, 'archived')} title="В архив">
-                        🗄
-                      </button>
-                    )}
-                    {item.status !== 'inbox' && (
-                      <button type="button" onClick={() => move(item.id, 'inbox')} title="Вернуть в Корзину">
-                        ↩
-                      </button>
-                    )}
-                    {(item.status === 'backlog' || item.status === 'someday' || item.status === 'calendar') && (
-                      item.plannedDate === todayLocal() ? (
-                        <button type="button" onClick={() => unplan(item.id)} title="Убрать из сегодня">
-                          ☀×
-                        </button>
-                      ) : (
-                        <button type="button" onClick={() => planToday(item.id)} title="В сегодня">
-                          ☀
-                        </button>
-                      )
-                    )}
-                    <button type="button" onClick={() => togglePriority(item)} title="Важное">
-                      {item.priority ? '❗' : '❕'}
-                    </button>
-                    <button type="button" onClick={() => setDue(item.id)} title="Дедлайн">
-                      ⏰
-                    </button>
-                    <button type="button" onClick={() => remove(item.id)} title="Удалить">
-                      ×
-                    </button>
-                  </span>
-                </li>
+                <GtdItemRow
+                  key={item.id}
+                  item={item}
+                  today={todayLocal()}
+                  onOpenProject={setOpenProject}
+                  onUpdate={onUpdate}
+                  onDelete={remove}
+                />
               ))}
             </ul>
           )}
