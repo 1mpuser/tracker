@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { GtdService } from './gtd/gtd.service';
 import { ObsidianService } from './obsidian/obsidian.service';
+import { ICloudService } from './icloud/icloud.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,9 +16,12 @@ async function bootstrap() {
     const gtd = app.get(GtdService);
     const obsidian = app.get(ObsidianService);
     await obsidian.syncAllReference(await gtd.getItems('reference'));
+
+    const icloud = app.get(ICloudService);
+    await icloud.syncAllOnStartup(await gtd.getItems());
   } catch (e) {
-    // startup export is best-effort; never block boot
-    console.warn('Obsidian startup sync skipped:', e);
+    // startup export/sync is best-effort; never block boot
+    console.warn('Startup sync skipped:', e);
   }
 }
 bootstrap();

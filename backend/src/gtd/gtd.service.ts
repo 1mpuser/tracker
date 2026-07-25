@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ObsidianService } from '../obsidian/obsidian.service';
+import { ICloudService } from '../icloud/icloud.service';
+import { effectiveDue } from '../icloud/icloud.helpers';
 import { formatDate, parseDateParam } from '../common/date.util';
 
 export interface GtdItemView {
@@ -26,6 +28,7 @@ export class GtdService {
   constructor(
     private prisma: PrismaService,
     private obsidian: ObsidianService,
+    private icloud: ICloudService,
   ) {}
 
   private toView(item: any): GtdItemView {
@@ -93,14 +96,27 @@ export class GtdService {
     }
 
     const updated = await this.prisma.gtdItem.update({ where: { id }, data });
+    const existingView = this.toView(existing);
+    const updatedView = this.toView(updated);
 
-    if (updated.status === 'reference') {
-      await this.obsidian.syncNote(updated);
-    } else if (existing.status === 'reference') {
+    if (updatedView.status === 'reference') {
+      await this.obsidian.syncNote(updatedView);
+    } else if (existingView.status === 'reference') {
       await this.obsidian.removeNote(id);
     }
 
-    return this.toView(updated);
+    const dueBefore = effectiveDue(existingView);
+    const dueAfter = effectiveDue(updatedView);
+
+    if (updatedView.status === 'done' && dueBefore) {
+      await this.icloud.completeReminder(id, updatedView, dueBefore);
+    } else if (dueAfter) {
+      await this.icloud.syncReminder(updatedView, dueAfter);
+    } else if (dueBefore) {
+      await this.icloud.removeReminder(id);
+    }
+
+    return updatedView;
   }
 
   async remove(id: number): Promise<{ id: number }> {
@@ -108,8 +124,12 @@ export class GtdService {
     if (!existing) {
       throw new NotFoundException(`GtdItem ${id} not found`);
     }
-    if (existing.status === 'reference') {
+    const existingView = this.toView(existing);
+    if (existingView.status === 'reference') {
       await this.obsidian.removeNote(id);
+    }
+    if (effectiveDue(existingView) || existingView.status === 'done') {
+      await this.icloud.removeReminder(id);
     }
     await this.prisma.gtdItem.delete({ where: { id } });
     return { id };

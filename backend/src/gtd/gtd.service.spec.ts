@@ -8,7 +8,8 @@ describe('GtdService.create', () => {
   beforeEach(() => {
     prisma = { gtdItem: { aggregate: jest.fn(), create: jest.fn() } };
     const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
-    service = new GtdService(prisma, obsidian as any);
+    const icloud = { syncReminder: jest.fn(), completeReminder: jest.fn(), removeReminder: jest.fn(), syncAllOnStartup: jest.fn() };
+    service = new GtdService(prisma, obsidian as any, icloud as any);
   });
 
   it('creates an inbox item with the next order', async () => {
@@ -41,7 +42,8 @@ describe('GtdService.getItems', () => {
   beforeEach(() => {
     prisma = { gtdItem: { findMany: jest.fn() } };
     const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
-    service = new GtdService(prisma, obsidian as any);
+    const icloud = { syncReminder: jest.fn(), completeReminder: jest.fn(), removeReminder: jest.fn(), syncAllOnStartup: jest.fn() };
+    service = new GtdService(prisma, obsidian as any, icloud as any);
   });
 
   it('excludes done and archived when no status filter is given', async () => {
@@ -87,7 +89,8 @@ describe('GtdService.update', () => {
   beforeEach(() => {
     prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn() } };
     const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
-    service = new GtdService(prisma, obsidian as any);
+    const icloud = { syncReminder: jest.fn(), completeReminder: jest.fn(), removeReminder: jest.fn(), syncAllOnStartup: jest.fn() };
+    service = new GtdService(prisma, obsidian as any, icloud as any);
   });
 
   it('sets completedAt when moving to done', async () => {
@@ -152,7 +155,8 @@ describe('GtdService.remove', () => {
   beforeEach(() => {
     prisma = { gtdItem: { findUnique: jest.fn(), delete: jest.fn() } };
     const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
-    service = new GtdService(prisma, obsidian as any);
+    const icloud = { syncReminder: jest.fn(), completeReminder: jest.fn(), removeReminder: jest.fn(), syncAllOnStartup: jest.fn() };
+    service = new GtdService(prisma, obsidian as any, icloud as any);
   });
 
   it('throws NotFoundException for a missing item', async () => {
@@ -178,7 +182,8 @@ describe('GtdService.getForDate', () => {
   beforeEach(() => {
     prisma = { gtdItem: { findMany: jest.fn() } };
     const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
-    service = new GtdService(prisma, obsidian as any);
+    const icloud = { syncReminder: jest.fn(), completeReminder: jest.fn(), removeReminder: jest.fn(), syncAllOnStartup: jest.fn() };
+    service = new GtdService(prisma, obsidian as any, icloud as any);
   });
 
   it('queries planned-for-date OR calendar-scheduled-for-date, excluding archived', async () => {
@@ -218,7 +223,8 @@ describe('GtdService.createForDate', () => {
   beforeEach(() => {
     prisma = { gtdItem: { aggregate: jest.fn(), create: jest.fn() } };
     const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
-    service = new GtdService(prisma, obsidian as any);
+    const icloud = { syncReminder: jest.fn(), completeReminder: jest.fn(), removeReminder: jest.fn(), syncAllOnStartup: jest.fn() };
+    service = new GtdService(prisma, obsidian as any, icloud as any);
   });
 
   it('creates a backlog item planned for the date', async () => {
@@ -245,7 +251,8 @@ describe('GtdService.update plannedDate', () => {
   beforeEach(() => {
     prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn() } };
     const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
-    service = new GtdService(prisma, obsidian as any);
+    const icloud = { syncReminder: jest.fn(), completeReminder: jest.fn(), removeReminder: jest.fn(), syncAllOnStartup: jest.fn() };
+    service = new GtdService(prisma, obsidian as any, icloud as any);
   });
 
   it('sets plannedDate from a valid string', async () => {
@@ -283,7 +290,8 @@ describe('GtdService.update due/priority', () => {
   beforeEach(() => {
     prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn() } };
     const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
-    service = new GtdService(prisma, obsidian as any);
+    const icloud = { syncReminder: jest.fn(), completeReminder: jest.fn(), removeReminder: jest.fn(), syncAllOnStartup: jest.fn() };
+    service = new GtdService(prisma, obsidian as any, icloud as any);
   });
 
   it('sets dueDate via parseDateParam and priority', async () => {
@@ -324,7 +332,8 @@ describe('GtdService.update scheduledTime', () => {
   beforeEach(() => {
     prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn() } };
     const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
-    service = new GtdService(prisma, obsidian as any);
+    const icloud = { syncReminder: jest.fn(), completeReminder: jest.fn(), removeReminder: jest.fn(), syncAllOnStartup: jest.fn() };
+    service = new GtdService(prisma, obsidian as any, icloud as any);
   });
 
   it('sets scheduledTime from a valid string', async () => {
@@ -363,7 +372,8 @@ describe('GtdService reference -> obsidian', () => {
   beforeEach(() => {
     prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn(), delete: jest.fn() } };
     obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
-    service = new GtdService(prisma, obsidian as any);
+    const icloud = { syncReminder: jest.fn(), completeReminder: jest.fn(), removeReminder: jest.fn(), syncAllOnStartup: jest.fn() };
+    service = new GtdService(prisma, obsidian as any, icloud as any);
   });
 
   it('syncs a note when an item becomes reference', async () => {
@@ -401,5 +411,117 @@ describe('GtdService reference -> obsidian', () => {
     await service.remove(3);
 
     expect(obsidian.removeNote).toHaveBeenCalledWith(3);
+  });
+});
+
+describe('GtdService reminders (effectiveDue-driven)', () => {
+  let service: GtdService;
+  let prisma: any;
+  let obsidian: any;
+  let icloud: any;
+
+  beforeEach(() => {
+    prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn(), delete: jest.fn() } };
+    obsidian = { syncNote: jest.fn(), removeNote: jest.fn() };
+    icloud = { syncReminder: jest.fn(), completeReminder: jest.fn(), removeReminder: jest.fn() };
+    service = new GtdService(prisma, obsidian, icloud as any);
+  });
+
+  function row(overrides: Partial<any> = {}) {
+    return {
+      id: 1, title: 'T', notes: null, status: 'inbox', parentId: null,
+      scheduledDate: null, scheduledTime: null, plannedDate: null, dueDate: null,
+      priority: false, waitingFor: null, order: 0, completedAt: null,
+      ...overrides,
+    };
+  }
+
+  it('syncs a reminder when a dueDate is set', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(row({ status: 'backlog' }));
+    prisma.gtdItem.update.mockResolvedValue(row({ status: 'backlog', dueDate: new Date('2026-08-01T00:00:00.000Z') }));
+
+    await service.update(1, { dueDate: '2026-08-01' });
+
+    expect(icloud.syncReminder).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1, dueDate: '2026-08-01' }),
+      { date: '2026-08-01', time: null },
+    );
+    expect(icloud.removeReminder).not.toHaveBeenCalled();
+    expect(icloud.completeReminder).not.toHaveBeenCalled();
+  });
+
+  it('syncs a reminder when status becomes calendar with a scheduledDate', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(row({ status: 'backlog' }));
+    prisma.gtdItem.update.mockResolvedValue(
+      row({ status: 'calendar', scheduledDate: new Date('2026-08-02T00:00:00.000Z'), scheduledTime: '10:00' }),
+    );
+
+    await service.update(1, { status: 'calendar', scheduledDate: '2026-08-02', scheduledTime: '10:00' });
+
+    expect(icloud.syncReminder).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1, status: 'calendar' }),
+      { date: '2026-08-02', time: '10:00' },
+    );
+  });
+
+  it('completes (not removes) the reminder when a due item transitions to done', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(
+      row({ status: 'backlog', dueDate: new Date('2026-08-01T00:00:00.000Z') }),
+    );
+    prisma.gtdItem.update.mockResolvedValue(
+      row({ status: 'done', dueDate: new Date('2026-08-01T00:00:00.000Z'), completedAt: new Date() }),
+    );
+
+    await service.update(1, { status: 'done' });
+
+    expect(icloud.completeReminder).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ status: 'done' }),
+      { date: '2026-08-01', time: null },
+    );
+    expect(icloud.removeReminder).not.toHaveBeenCalled();
+    expect(icloud.syncReminder).not.toHaveBeenCalled();
+  });
+
+  it('removes the reminder when the effective due disappears (not done)', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(
+      row({ status: 'backlog', dueDate: new Date('2026-08-01T00:00:00.000Z') }),
+    );
+    prisma.gtdItem.update.mockResolvedValue(row({ status: 'backlog', dueDate: null }));
+
+    await service.update(1, { dueDate: null });
+
+    expect(icloud.removeReminder).toHaveBeenCalledWith(1);
+    expect(icloud.syncReminder).not.toHaveBeenCalled();
+    expect(icloud.completeReminder).not.toHaveBeenCalled();
+  });
+
+  it('removes the reminder on delete when the item had an effective due date', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(
+      row({ status: 'backlog', dueDate: new Date('2026-08-01T00:00:00.000Z') }),
+    );
+    prisma.gtdItem.delete.mockResolvedValue({ id: 1 });
+
+    await service.remove(1);
+
+    expect(icloud.removeReminder).toHaveBeenCalledWith(1);
+  });
+
+  it('removes the reminder on delete when the item was done (had a completed reminder)', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(row({ status: 'done' }));
+    prisma.gtdItem.delete.mockResolvedValue({ id: 1 });
+
+    await service.remove(1);
+
+    expect(icloud.removeReminder).toHaveBeenCalledWith(1);
+  });
+
+  it('does not touch icloud on delete for an item with no due and not done', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(row({ status: 'someday' }));
+    prisma.gtdItem.delete.mockResolvedValue({ id: 1 });
+
+    await service.remove(1);
+
+    expect(icloud.removeReminder).not.toHaveBeenCalled();
   });
 });
