@@ -30,13 +30,17 @@ export class ICloudService {
     if (this.remindersCalendar) return this.remindersCalendar;
     try {
       if (!this.client) {
-        this.client = new DAVClient({
+        // Assign only after a successful login — if login() throws, `this.client`
+        // must stay null so the next call retries instead of reusing a permanently
+        // unauthenticated instance (which would silently no-op forever).
+        const client = new DAVClient({
           serverUrl: 'https://caldav.icloud.com',
           credentials: creds,
           authMethod: 'Basic',
           defaultAccountType: 'caldav',
         });
-        await this.client.login();
+        await client.login();
+        this.client = client;
       }
       const listName = process.env.ICLOUD_REMINDERS_LIST_NAME || 'GTD';
       const calendars = await this.client.fetchCalendars();
