@@ -59,7 +59,16 @@ export default function GtdScreen() {
     patch: Partial<
       Pick<
         GtdItem,
-        'title' | 'notes' | 'status' | 'plannedDate' | 'dueDate' | 'priority' | 'scheduledDate' | 'scheduledTime'
+        | 'title'
+        | 'notes'
+        | 'status'
+        | 'plannedDate'
+        | 'dueDate'
+        | 'priority'
+        | 'scheduledDate'
+        | 'scheduledTime'
+        | 'acceptanceCriteria'
+        | 'discussWith'
       >
     >,
   ) {

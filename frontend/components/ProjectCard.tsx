@@ -21,6 +21,9 @@ export default function ProjectCard({ project, onClose, onChanged }: ProjectCard
   const [criteriaDraft, setCriteriaDraft] = useState(project.acceptanceCriteria ?? '');
   const [discussDraft, setDiscussDraft] = useState(project.discussWith ?? '');
 
+  // Deps intentionally omit the field values (react-hooks/exhaustive-deps) —
+  // resyncing on every project prop change would clobber in-progress typing;
+  // this only needs to reset when a *different* project is opened.
   useEffect(() => {
     setNotesDraft(project.notes ?? '');
     setCriteriaDraft(project.acceptanceCriteria ?? '');
@@ -56,18 +59,33 @@ export default function ProjectCard({ project, onClose, onChanged }: ProjectCard
   }
 
   async function saveNotes() {
-    await updateGtdItem(project.id, { notes: notesDraft || undefined });
-    await onChanged();
+    if (notesDraft.trim() === (project.notes ?? '')) return;
+    try {
+      await updateGtdItem(project.id, { notes: notesDraft.trim() || null });
+      await onChanged();
+    } catch (e) {
+      console.error('Failed to save project notes', e);
+    }
   }
 
   async function saveCriteria() {
-    await updateGtdItem(project.id, { acceptanceCriteria: criteriaDraft || undefined });
-    await onChanged();
+    if (criteriaDraft.trim() === (project.acceptanceCriteria ?? '')) return;
+    try {
+      await updateGtdItem(project.id, { acceptanceCriteria: criteriaDraft.trim() || null });
+      await onChanged();
+    } catch (e) {
+      console.error('Failed to save project acceptance criteria', e);
+    }
   }
 
   async function saveDiscussWith() {
-    await updateGtdItem(project.id, { discussWith: discussDraft || undefined });
-    await onChanged();
+    if (discussDraft.trim() === (project.discussWith ?? '')) return;
+    try {
+      await updateGtdItem(project.id, { discussWith: discussDraft.trim() || null });
+      await onChanged();
+    } catch (e) {
+      console.error('Failed to save project discussWith', e);
+    }
   }
 
   const nextId = nextActionId(children);
@@ -88,6 +106,7 @@ export default function ProjectCard({ project, onClose, onChanged }: ProjectCard
           value={notesDraft}
           onChange={(e) => setNotesDraft(e.target.value)}
           onBlur={saveNotes}
+          maxLength={4000}
           placeholder="Свободные заметки по проекту…"
         />
       </label>
@@ -99,6 +118,7 @@ export default function ProjectCard({ project, onClose, onChanged }: ProjectCard
           value={criteriaDraft}
           onChange={(e) => setCriteriaDraft(e.target.value)}
           onBlur={saveCriteria}
+          maxLength={4000}
           placeholder="Когда проект считается завершённым…"
         />
       </label>
@@ -110,6 +130,7 @@ export default function ProjectCard({ project, onClose, onChanged }: ProjectCard
           value={discussDraft}
           onChange={(e) => setDiscussDraft(e.target.value)}
           onBlur={saveDiscussWith}
+          maxLength={200}
           placeholder="Имя/роль…"
         />
       </label>
