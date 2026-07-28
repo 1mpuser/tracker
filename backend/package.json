@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "nest build",
+    "build": "bun run --bun nest build",
     "start": "bun dist/main.js",
-    "start:dev": "nest start --watch",
+    "start:dev": "bun run --bun nest start --watch",
     "test": "jest"
   },
   "dependencies": {
@@ -28,7 +28,7 @@
     "jest": "30.4.2",
     "prisma": "6.19.3",
     "ts-jest": "29.4.12",
-    "typescript": "5.9.3"
+    "typescript": "6.0.3"
   },
   "prisma": {
     "seed": "bun prisma/seed.ts"
