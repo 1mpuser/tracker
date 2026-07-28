@@ -34,6 +34,16 @@ export class UpdateGtdItemDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(4000)
+  acceptanceCriteria?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  discussWith?: string | null;
+
+  @IsOptional()
+  @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'dueDate must be YYYY-MM-DD' })
   dueDate?: string | null;
 
