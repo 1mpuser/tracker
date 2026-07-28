@@ -12,9 +12,11 @@
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",
     "@nestjs/platform-express": "11.1.28",
-    "@prisma/client": "6.19.3",
+    "@prisma/adapter-pg": "7.9.1",
+    "@prisma/client": "7.9.1",
     "class-transformer": "^0.5.1",
     "class-validator": "0.15.1",
+    "pg": "^8.22.0",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
     "tsdav": "2.3.1"
@@ -25,13 +27,12 @@
     "@types/express": "5.0.6",
     "@types/jest": "30.0.0",
     "@types/node": "26.1.2",
+    "@types/pg": "^8.20.0",
+    "dotenv": "^17.4.2",
     "jest": "30.4.2",
-    "prisma": "6.19.3",
+    "prisma": "7.9.1",
     "ts-jest": "29.4.12",
     "typescript": "6.0.3"
-  },
-  "prisma": {
-    "seed": "bun prisma/seed.ts"
   },
   "jest": {
     "rootDir": "src",
