@@ -1,2 +1,4 @@
 caddy/certs/
 /.env
+.claude/settings.local.json
+.worktrees/
