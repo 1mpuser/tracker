@@ -26,7 +26,9 @@ export default function GtdScreen() {
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   const reload = useCallback(async () => {
-    setItems(await getGtdItems());
+    const fresh = await getGtdItems();
+    setItems(fresh);
+    setOpenProject((prev) => (prev ? fresh.find((i) => i.id === prev.id) ?? null : prev));
   }, []);
 
   useEffect(() => {
