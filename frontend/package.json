@@ -9,7 +9,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "next": "^14.2.5",
+    "next": "15.5.22",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "3.10.1"
