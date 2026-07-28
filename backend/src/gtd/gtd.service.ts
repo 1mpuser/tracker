@@ -17,6 +17,8 @@ export interface GtdItemView {
   dueDate: string | null;
   priority: boolean;
   waitingFor: string | null;
+  acceptanceCriteria: string | null;
+  discussWith: string | null;
   order: number;
   completedAt: string | null;
 }
@@ -44,6 +46,8 @@ export class GtdService {
       dueDate: item.dueDate ? formatDate(item.dueDate) : null,
       priority: item.priority,
       waitingFor: item.waitingFor,
+      acceptanceCriteria: item.acceptanceCriteria,
+      discussWith: item.discussWith,
       order: item.order,
       completedAt: item.completedAt ? item.completedAt.toISOString() : null,
     };
@@ -64,7 +68,7 @@ export class GtdService {
 
   async update(
     id: number,
-    patch: { title?: string; notes?: string; status?: string; scheduledDate?: string | null; scheduledTime?: string | null; waitingFor?: string | null; plannedDate?: string | null; dueDate?: string | null; priority?: boolean },
+    patch: { title?: string; notes?: string; status?: string; scheduledDate?: string | null; scheduledTime?: string | null; waitingFor?: string | null; plannedDate?: string | null; dueDate?: string | null; priority?: boolean; acceptanceCriteria?: string | null; discussWith?: string | null },
   ): Promise<GtdItemView> {
     const existing = await this.prisma.gtdItem.findUnique({ where: { id } });
     if (!existing) {
@@ -75,6 +79,8 @@ export class GtdService {
     if (patch.title !== undefined) data.title = patch.title;
     if (patch.notes !== undefined) data.notes = patch.notes;
     if (patch.waitingFor !== undefined) data.waitingFor = patch.waitingFor;
+    if (patch.acceptanceCriteria !== undefined) data.acceptanceCriteria = patch.acceptanceCriteria;
+    if (patch.discussWith !== undefined) data.discussWith = patch.discussWith;
     if (patch.scheduledDate !== undefined) {
       data.scheduledDate = patch.scheduledDate ? parseDateParam(patch.scheduledDate) : null;
     }

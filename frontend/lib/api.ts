@@ -58,7 +58,7 @@ export function createGtdItem(title: string, parentId?: number): Promise<GtdItem
 
 export function updateGtdItem(
   id: number,
-  patch: Partial<Pick<GtdItem, 'title' | 'notes' | 'status' | 'scheduledDate' | 'scheduledTime' | 'waitingFor' | 'plannedDate' | 'dueDate' | 'priority'>>,
+  patch: Partial<Pick<GtdItem, 'title' | 'notes' | 'status' | 'scheduledDate' | 'scheduledTime' | 'waitingFor' | 'plannedDate' | 'dueDate' | 'priority' | 'acceptanceCriteria' | 'discussWith'>>,
 ): Promise<GtdItem> {
   return request(`/gtd/items/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
 }

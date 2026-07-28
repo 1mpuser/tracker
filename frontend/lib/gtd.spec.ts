@@ -1,10 +1,11 @@
-import { BUCKET_TABS, CLARIFY, CLARIFY_START, groupByStatus, sortGtdItems } from './gtd';
+import { BUCKET_TABS, CLARIFY, CLARIFY_START, groupByStatus, sortGtdItems, nextActionId } from './gtd';
 import type { GtdItem } from '@/types/api';
 
 function item(id: number, status: GtdItem['status']): GtdItem {
   return {
     id, title: `t${id}`, notes: null, status, parentId: null,
-    scheduledDate: null, waitingFor: null, order: id, completedAt: null,
+    scheduledDate: null, scheduledTime: null, plannedDate: null, dueDate: null, priority: false,
+    waitingFor: null, acceptanceCriteria: null, discussWith: null, order: id, completedAt: null,
   };
 }
 
@@ -58,7 +59,7 @@ describe('sortGtdItems', () => {
     return {
       id: over.id ?? 0, title: 't', notes: null, status: 'backlog', parentId: null,
       scheduledDate: null, plannedDate: null, dueDate: null, priority: false,
-      waitingFor: null, order: over.order ?? 0, completedAt: null, ...over,
+      waitingFor: null, acceptanceCriteria: null, discussWith: null, order: over.order ?? 0, completedAt: null, ...over,
     };
   }
 
@@ -81,5 +82,39 @@ describe('sortGtdItems', () => {
     const r = sortGtdItems(input);
     expect(r.map((i) => i.id)).toEqual([2, 1]);
     expect(input.map((i) => i.id)).toEqual([1, 2]);
+  });
+});
+
+describe('nextActionId', () => {
+  function step(over: Partial<GtdItem>): GtdItem {
+    return {
+      id: over.id ?? 0, title: 't', notes: null, status: over.status ?? 'backlog', parentId: 1,
+      scheduledDate: null, scheduledTime: null, plannedDate: null, dueDate: null, priority: false,
+      waitingFor: null, acceptanceCriteria: null, discussWith: null,
+      order: over.order ?? 0, completedAt: null, ...over,
+    };
+  }
+
+  it('returns null for an empty list', () => {
+    expect(nextActionId([])).toBeNull();
+  });
+
+  it('returns null when no step is in backlog', () => {
+    const children = [step({ id: 1, status: 'waiting' }), step({ id: 2, status: 'calendar' })];
+    expect(nextActionId(children)).toBeNull();
+  });
+
+  it('returns the id of the first backlog step by order', () => {
+    const children = [
+      step({ id: 1, status: 'waiting', order: 0 }),
+      step({ id: 2, status: 'backlog', order: 2 }),
+      step({ id: 3, status: 'backlog', order: 1 }),
+    ];
+    expect(nextActionId(children)).toBe(3);
+  });
+
+  it('ignores done steps', () => {
+    const children = [step({ id: 1, status: 'done', order: 0 }), step({ id: 2, status: 'backlog', order: 1 })];
+    expect(nextActionId(children)).toBe(2);
   });
 });

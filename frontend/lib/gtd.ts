@@ -97,3 +97,8 @@ export function sortGtdItems(items: GtdItem[]): GtdItem[] {
     return a.order - b.order;
   });
 }
+
+export function nextActionId(children: GtdItem[]): number | null {
+  const backlog = children.filter((c) => c.status === 'backlog').sort((a, b) => a.order - b.order);
+  return backlog[0]?.id ?? null;
+}

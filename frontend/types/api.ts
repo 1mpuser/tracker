@@ -77,6 +77,8 @@ export interface GtdItem {
   scheduledDate: string | null;
   scheduledTime: string | null;
   waitingFor: string | null;
+  acceptanceCriteria: string | null;
+  discussWith: string | null;
   plannedDate: string | null;
   dueDate: string | null;
   priority: boolean;

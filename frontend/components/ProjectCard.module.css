@@ -34,10 +34,46 @@
   color: var(--accent);
 }
 
-.notes {
-  font-size: 12.5px;
+.fieldLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--text-muted);
-  white-space: pre-wrap;
+}
+
+.fieldInput {
+  font-family: inherit;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  resize: vertical;
+  min-height: 44px;
+}
+
+.fieldInputSingle {
+  font-family: inherit;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.fieldInput:focus,
+.fieldInputSingle:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .subhead {
@@ -101,6 +137,23 @@
   font-family: var(--font-mono);
   font-size: 10.5px;
   color: var(--text-dim);
+}
+
+.stepNext {
+  background: var(--accent-soft);
+  border-radius: 6px;
+  margin: 0 -8px;
+  padding: 7px 8px;
+}
+
+.nextBadge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 1px 6px;
 }
 
 .empty {

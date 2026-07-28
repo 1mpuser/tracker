@@ -364,6 +364,55 @@ describe('GtdService.update scheduledTime', () => {
   });
 });
 
+describe('GtdService.update acceptanceCriteria/discussWith', () => {
+  let service: GtdService;
+  let prisma: any;
+
+  beforeEach(() => {
+    prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn() } };
+    const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
+    const icloud = { syncReminder: jest.fn(), completeReminder: jest.fn(), removeReminder: jest.fn(), syncAllOnStartup: jest.fn() };
+    service = new GtdService(prisma, obsidian as any, icloud as any);
+  });
+
+  it('sets acceptanceCriteria and discussWith', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue({ id: 1, status: 'project' });
+    prisma.gtdItem.update.mockResolvedValue({
+      id: 1, title: 't', notes: null, status: 'project', parentId: null,
+      scheduledDate: null, plannedDate: null, dueDate: null, priority: false,
+      waitingFor: null, acceptanceCriteria: 'Готово, когда деплой на проде', discussWith: 'Маша',
+      order: 0, completedAt: null,
+    });
+
+    const result = await service.update(1, {
+      acceptanceCriteria: 'Готово, когда деплой на проде',
+      discussWith: 'Маша',
+    });
+
+    const data = prisma.gtdItem.update.mock.calls[0][0].data;
+    expect(data.acceptanceCriteria).toBe('Готово, когда деплой на проде');
+    expect(data.discussWith).toBe('Маша');
+    expect(result.acceptanceCriteria).toBe('Готово, когда деплой на проде');
+    expect(result.discussWith).toBe('Маша');
+  });
+
+  it('clears both fields on null', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue({ id: 1, status: 'project' });
+    prisma.gtdItem.update.mockResolvedValue({
+      id: 1, title: 't', notes: null, status: 'project', parentId: null,
+      scheduledDate: null, plannedDate: null, dueDate: null, priority: false,
+      waitingFor: null, acceptanceCriteria: null, discussWith: null,
+      order: 0, completedAt: null,
+    });
+
+    await service.update(1, { acceptanceCriteria: null, discussWith: null });
+
+    const data = prisma.gtdItem.update.mock.calls[0][0].data;
+    expect(data.acceptanceCriteria).toBeNull();
+    expect(data.discussWith).toBeNull();
+  });
+});
+
 describe('GtdService reference -> obsidian', () => {
   let service: GtdService;
   let prisma: any;
