@@ -64,6 +64,10 @@ describe('buildDaySummary', () => {
     expect(buildDaySummary({ ...base, rating: null })).not.toContain('Оценка');
   });
 
+  it('omits the rating line when rating is undefined (loose null check, not strict)', () => {
+    expect(buildDaySummary({ ...base, rating: undefined as unknown as null })).not.toContain('Оценка');
+  });
+
   it('omits the comment line when comment is null or blank', () => {
     expect(buildDaySummary({ ...base, comment: null })).not.toContain('💬');
     expect(buildDaySummary({ ...base, comment: '   ' })).not.toContain('💬');

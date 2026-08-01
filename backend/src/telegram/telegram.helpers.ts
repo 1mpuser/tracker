@@ -31,7 +31,7 @@ export function formatRuDate(dateStr: string): string {
 export function buildDaySummary(day: DaySummaryInput): string {
   const lines: string[] = [`📅 ${formatRuDate(day.date)}`, '', `🍅 Помидорок: ${day.pomodoros}`];
 
-  if (day.rating !== null) {
+  if (day.rating != null) {
     lines.push(`⭐ Оценка: ${day.rating}/10`);
   }
 

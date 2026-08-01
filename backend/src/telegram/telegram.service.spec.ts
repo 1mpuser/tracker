@@ -91,4 +91,18 @@ describe('TelegramService.postDaySummary', () => {
 
     await expect(service.postDaySummary(day)).resolves.toBeNull();
   });
+
+  it('redacts the bot token from the logged error message', async () => {
+    const warnSpy = service['logger'].warn as jest.Mock;
+    fetchMock.mockRejectedValue(
+      new TypeError('Failed to parse URL from https://api.telegram.org/bot123:ABC/sendMessage'),
+    );
+
+    await service.postDaySummary(day);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const loggedMessage = warnSpy.mock.calls[0][0];
+    expect(loggedMessage).not.toContain('123:ABC');
+    expect(loggedMessage).toContain('<redacted>');
+  });
 });

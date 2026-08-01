@@ -35,7 +35,11 @@ export class TelegramService {
 
       return body.result.message_id;
     } catch (e) {
-      this.logger.warn(`Telegram sendMessage(${day.date}) failed: ${e}`);
+      // fetch() иногда включает саму запрошенную строку URL в текст ошибки
+      // (например TypeError при "плохом" URL) — вырезаем токен, чтобы он не
+      // осел в логах, если TELEGRAM_BOT_TOKEN вставлен с лишним пробелом/переносом.
+      const message = String(e).split(token).join('<redacted>');
+      this.logger.warn(`Telegram sendMessage(${day.date}) failed: ${message}`);
       return null;
     }
   }
