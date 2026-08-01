@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CategoriesService } from '../categories/categories.service';
 import { GtdService, GtdItemView } from '../gtd/gtd.service';
+import { TelegramService } from '../telegram/telegram.service';
 import { addDays, formatDate, parseDateParam, todayDate } from '../common/date.util';
 
 export interface DayCategoryView {
@@ -42,6 +43,7 @@ export class DaysService {
     private prisma: PrismaService,
     private categoriesService: CategoriesService,
     private gtdService: GtdService,
+    private telegram: TelegramService,
   ) {}
 
   async getOrCreateDayId(dateStr: string): Promise<number> {
@@ -117,8 +119,20 @@ export class DaysService {
 
   async updateDay(dateStr: string, data: UpdateDayData): Promise<DayView> {
     const dayId = await this.getOrCreateDayId(dateStr);
+    const before = await this.prisma.day.findUnique({ where: { id: dayId } });
     await this.prisma.day.update({ where: { id: dayId }, data });
-    return this.getDay(dateStr);
+    const view = await this.getDay(dateStr);
+
+    // Ключ идемпотентности — сам telegramMessageId, а не предыдущее значение
+    // eveningClosed: так «один пост на дату» переживает переоткрытие дня.
+    if (data.eveningClosed === true && before?.telegramMessageId == null) {
+      const messageId = await this.telegram.postDaySummary(view);
+      if (messageId != null) {
+        await this.prisma.day.update({ where: { id: dayId }, data: { telegramMessageId: messageId } });
+      }
+    }
+
+    return view;
   }
 
   async getHistory(limit: number, endDateStr?: string): Promise<HistoryEntry[]> {

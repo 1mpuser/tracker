@@ -10,7 +10,7 @@ describe('DaysService.getDay', () => {
     prisma = { day: { findUnique: jest.fn(), create: jest.fn() } };
     categoriesService = { findActive: jest.fn().mockResolvedValue([]) };
     gtdService = { getForDate: jest.fn().mockResolvedValue([]) };
-    service = new DaysService(prisma, categoriesService, gtdService);
+    service = new DaysService(prisma, categoriesService, gtdService, {} as any);
   });
 
   it('exposes the pomodoro count from the day row', async () => {
@@ -58,7 +58,7 @@ describe('DaysService.getHistory', () => {
       category: { findMany: jest.fn() },
       settings: { findUnique: jest.fn() },
     };
-    service = new DaysService(prisma, {} as any, {} as any);
+    service = new DaysService(prisma, {} as any, {} as any, {} as any);
   });
 
   afterEach(() => {
@@ -179,6 +179,91 @@ describe('DaysService.getHistory', () => {
   });
 });
 
+describe('DaysService.updateDay telegram posting', () => {
+  let service: DaysService;
+  let prisma: any;
+  let telegram: any;
+
+  beforeEach(() => {
+    prisma = {
+      day: {
+        findUnique: jest.fn(),
+        update: jest.fn().mockResolvedValue({}),
+        create: jest.fn(),
+      },
+    };
+    telegram = { postDaySummary: jest.fn().mockResolvedValue(555) };
+    service = new DaysService(
+      prisma,
+      { findActive: jest.fn().mockResolvedValue([]) } as any,
+      { getForDate: jest.fn().mockResolvedValue([]) } as any,
+      telegram,
+    );
+  });
+
+  // getOrCreateDayId() и getDay() внутри updateDay() тоже ходят в findUnique —
+  // возвращаем одну и ту же строку дня на все вызовы.
+  function dayRow(overrides: any = {}) {
+    return {
+      id: 1,
+      date: new Date('2026-08-01T00:00:00.000Z'),
+      youtubeMinutes: 0,
+      pomodoros: 7,
+      eveningClosed: false,
+      rating: 8,
+      comment: null,
+      telegramMessageId: null,
+      categories: [],
+      ...overrides,
+    };
+  }
+
+  it('posts the summary and stores the returned message id when the day is closed', async () => {
+    prisma.day.findUnique.mockResolvedValue(dayRow());
+
+    await service.updateDay('2026-08-01', { eveningClosed: true });
+
+    expect(telegram.postDaySummary).toHaveBeenCalledTimes(1);
+    expect(telegram.postDaySummary.mock.calls[0][0]).toMatchObject({ date: '2026-08-01', pomodoros: 7 });
+    expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { telegramMessageId: 555 } });
+  });
+
+  it('does not post again for a day that was already posted', async () => {
+    prisma.day.findUnique.mockResolvedValue(dayRow({ telegramMessageId: 555 }));
+
+    await service.updateDay('2026-08-01', { eveningClosed: true });
+
+    expect(telegram.postDaySummary).not.toHaveBeenCalled();
+  });
+
+  it('does not store anything when the post failed', async () => {
+    prisma.day.findUnique.mockResolvedValue(dayRow());
+    telegram.postDaySummary.mockResolvedValue(null);
+
+    await expect(service.updateDay('2026-08-01', { eveningClosed: true })).resolves.toMatchObject({
+      date: '2026-08-01',
+    });
+
+    expect(prisma.day.update).toHaveBeenCalledTimes(1); // только сам апдейт дня
+  });
+
+  it('does not post when only rating or comment changed', async () => {
+    prisma.day.findUnique.mockResolvedValue(dayRow());
+
+    await service.updateDay('2026-08-01', { rating: 9 });
+
+    expect(telegram.postDaySummary).not.toHaveBeenCalled();
+  });
+
+  it('does not post when the day is being reopened', async () => {
+    prisma.day.findUnique.mockResolvedValue(dayRow({ eveningClosed: true }));
+
+    await service.updateDay('2026-08-01', { eveningClosed: false });
+
+    expect(telegram.postDaySummary).not.toHaveBeenCalled();
+  });
+});
+
 describe('DaysService.updateDay', () => {
   let service: DaysService;
   let prisma: any;
@@ -190,7 +275,7 @@ describe('DaysService.updateDay', () => {
         update: jest.fn().mockResolvedValue({}),
       },
     };
-    service = new DaysService(prisma, {} as any, {} as any);
+    service = new DaysService(prisma, {} as any, {} as any, { postDaySummary: jest.fn().mockResolvedValue(null) } as any);
   });
 
   it('forwards only the provided fields to the Prisma update, not a merged full-day object', async () => {
@@ -226,7 +311,7 @@ describe('DaysService.updatePomodoros', () => {
         update: jest.fn().mockResolvedValue({}),
       },
     };
-    service = new DaysService(prisma, {} as any, {} as any);
+    service = new DaysService(prisma, {} as any, {} as any, {} as any);
     jest.spyOn(service, 'getDay').mockResolvedValue({} as any);
   });
 

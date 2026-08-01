@@ -23,6 +23,7 @@ model Day {
   eveningClosed  Boolean  @default(false)
   rating         Int?
   comment        String?
+  telegramMessageId Int?
   categories     DayCategoryStatus[]
   dailies        DailyTask[]
   createdAt      DateTime @default(now())
