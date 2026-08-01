@@ -48,6 +48,7 @@ export default function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>('home');
+  const [closingDay, setClosingDay] = useState(false);
 
   const loadCore = useCallback(async () => {
     const [d, h, s] = await Promise.all([getDay(date), getHistory(HISTORY_LIMIT, date), getSettings()]);
@@ -130,8 +131,13 @@ export default function Dashboard() {
   }
 
   async function toggleEveningClosed() {
-    if (!day) return;
-    setDay(await updateDay(date, { eveningClosed: !day.eveningClosed }));
+    if (!day || closingDay) return;
+    setClosingDay(true);
+    try {
+      setDay(await updateDay(date, { eveningClosed: !day.eveningClosed }));
+    } finally {
+      setClosingDay(false);
+    }
   }
 
   async function changeRating(rating: number) {

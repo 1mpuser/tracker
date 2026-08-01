@@ -18,6 +18,7 @@ interface DayDetailModalProps {
 export default function DayDetailModal({ date, onClose, onDataChanged }: DayDetailModalProps) {
   const [day, setDay] = useState<DayView | null>(null);
   const [stage, setStage] = useState<Stage>('loading');
+  const [closingDay, setClosingDay] = useState(false);
 
   useEffect(() => {
     getDay(date).then((d) => {
@@ -48,9 +49,14 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
   }
 
   async function toggleEveningClosed() {
-    if (!day) return;
-    await updateDay(date, { eveningClosed: !day.eveningClosed });
-    await refresh();
+    if (!day || closingDay) return;
+    setClosingDay(true);
+    try {
+      await updateDay(date, { eveningClosed: !day.eveningClosed });
+      await refresh();
+    } finally {
+      setClosingDay(false);
+    }
   }
 
   async function changeRating(rating: number) {
