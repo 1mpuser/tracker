@@ -189,6 +189,7 @@ describe('DaysService.updateDay telegram posting', () => {
       day: {
         findUnique: jest.fn(),
         update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         create: jest.fn(),
       },
     };
@@ -223,20 +224,40 @@ describe('DaysService.updateDay telegram posting', () => {
 
     await service.updateDay('2026-08-01', { eveningClosed: true });
 
+    expect(prisma.day.updateMany).toHaveBeenCalledWith({
+      where: { id: 1, telegramMessageId: null },
+      data: { telegramMessageId: 0 },
+    });
     expect(telegram.postDaySummary).toHaveBeenCalledTimes(1);
     expect(telegram.postDaySummary.mock.calls[0][0]).toMatchObject({ date: '2026-08-01', pomodoros: 7 });
     expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { telegramMessageId: 555 } });
   });
 
-  it('does not post again for a day that was already posted', async () => {
+  it('does not post again for a day that was already posted (updateMany claims nothing)', async () => {
     prisma.day.findUnique.mockResolvedValue(dayRow({ telegramMessageId: 555 }));
+    prisma.day.updateMany.mockResolvedValue({ count: 0 });
 
     await service.updateDay('2026-08-01', { eveningClosed: true });
 
     expect(telegram.postDaySummary).not.toHaveBeenCalled();
   });
 
-  it('does not store anything when the post failed', async () => {
+  it('does not post and does not write when a concurrent close already claimed the row', async () => {
+    // Двойной клик: обе заявки видят один и тот же день, но updateMany
+    // атомарно достаётся только одному конкурентному запросу.
+    prisma.day.findUnique.mockResolvedValue(dayRow());
+    prisma.day.updateMany.mockResolvedValue({ count: 0 });
+
+    await service.updateDay('2026-08-01', { eveningClosed: true });
+
+    expect(telegram.postDaySummary).not.toHaveBeenCalled();
+    // Единственный update() в этом сценарии — сам апдейт дня в начале updateDay();
+    // никакой записи telegramMessageId после проигранной заявки быть не должно.
+    expect(prisma.day.update).toHaveBeenCalledTimes(1);
+    expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { eveningClosed: true } });
+  });
+
+  it('does not store anything when the post failed, but resets the claim to null for retry', async () => {
     prisma.day.findUnique.mockResolvedValue(dayRow());
     telegram.postDaySummary.mockResolvedValue(null);
 
@@ -244,7 +265,7 @@ describe('DaysService.updateDay telegram posting', () => {
       date: '2026-08-01',
     });
 
-    expect(prisma.day.update).toHaveBeenCalledTimes(1); // только сам апдейт дня
+    expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { telegramMessageId: null } });
   });
 
   it('does not post when only rating or comment changed', async () => {
@@ -252,6 +273,7 @@ describe('DaysService.updateDay telegram posting', () => {
 
     await service.updateDay('2026-08-01', { rating: 9 });
 
+    expect(prisma.day.updateMany).not.toHaveBeenCalled();
     expect(telegram.postDaySummary).not.toHaveBeenCalled();
   });
 
@@ -260,6 +282,7 @@ describe('DaysService.updateDay telegram posting', () => {
 
     await service.updateDay('2026-08-01', { eveningClosed: false });
 
+    expect(prisma.day.updateMany).not.toHaveBeenCalled();
     expect(telegram.postDaySummary).not.toHaveBeenCalled();
   });
 });
@@ -273,6 +296,7 @@ describe('DaysService.updateDay', () => {
       day: {
         findUnique: jest.fn().mockResolvedValue({ id: 7 }),
         update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
     service = new DaysService(prisma, {} as any, {} as any, { postDaySummary: jest.fn().mockResolvedValue(null) } as any);

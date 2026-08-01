@@ -37,6 +37,10 @@ export interface UpdateDayData {
   comment?: string;
 }
 
+// Telegram message_id всегда положителен, поэтому 0 безопасен как временная
+// заявка «пост в процессе отправки», занимающая слот перед реальным запросом.
+const TELEGRAM_CLAIMED = 0;
+
 @Injectable()
 export class DaysService {
   constructor(
@@ -119,15 +123,26 @@ export class DaysService {
 
   async updateDay(dateStr: string, data: UpdateDayData): Promise<DayView> {
     const dayId = await this.getOrCreateDayId(dateStr);
-    const before = await this.prisma.day.findUnique({ where: { id: dayId } });
     await this.prisma.day.update({ where: { id: dayId }, data });
     const view = await this.getDay(dateStr);
 
-    // Ключ идемпотентности — сам telegramMessageId, а не предыдущее значение
-    // eveningClosed: так «один пост на дату» переживает переоткрытие дня.
-    if (data.eveningClosed === true && before?.telegramMessageId == null) {
-      const messageId = await this.telegram.postDaySummary(view);
-      if (messageId != null) {
+    if (data.eveningClosed === true) {
+      // Атомарная заявка на публикацию: строку захватывает ровно один
+      // конкурентный запрос (updateMany с условием в where — не read-then-write),
+      // остальные получают count 0 и молчат. Ключ идемпотентности — сам
+      // telegramMessageId, а не предыдущее значение eveningClosed: так
+      // «один пост на дату» переживает переоткрытие дня.
+      const claim = await this.prisma.day.updateMany({
+        where: { id: dayId, telegramMessageId: null },
+        data: { telegramMessageId: TELEGRAM_CLAIMED },
+      });
+      if (claim.count === 1) {
+        const messageId = await this.telegram.postDaySummary(view);
+        // Если процесс упадёт между заявкой и этой записью, строка так и
+        // останется на сентинеле и эта дата больше никогда не запостится —
+        // приемлемо для однопользовательского локального инструмента.
+        // Отправка не удалась -> messageId null, сбрасываем обратно на null,
+        // чтобы следующее закрытие этого дня попробовало снова.
         await this.prisma.day.update({ where: { id: dayId }, data: { telegramMessageId: messageId } });
       }
     }
