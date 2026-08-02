@@ -16,16 +16,17 @@ model Category {
 }
 
 model Day {
-  id             Int      @id @default(autoincrement())
-  date           DateTime @unique @db.Date
-  youtubeMinutes Int      @default(0)
-  pomodoros      Int      @default(0)
-  eveningClosed  Boolean  @default(false)
-  rating         Int?
-  comment        String?
-  categories     DayCategoryStatus[]
-  dailies        DailyTask[]
-  createdAt      DateTime @default(now())
+  id                Int      @id @default(autoincrement())
+  date              DateTime @unique @db.Date
+  youtubeMinutes    Int      @default(0)
+  pomodoros         Int      @default(0)
+  eveningClosed     Boolean  @default(false)
+  rating            Int?
+  comment           String?
+  telegramMessageId Int?
+  categories        DayCategoryStatus[]
+  dailies           DailyTask[]
+  createdAt         DateTime @default(now())
 }
 
 model DayCategoryStatus {
