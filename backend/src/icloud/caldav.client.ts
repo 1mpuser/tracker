@@ -1,11 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DAVClient, DAVCalendar } from 'tsdav';
+import { redactSecret } from '../common/redact.util';
 
 @Injectable()
 export class CalDavClient {
   private readonly logger = new Logger(CalDavClient.name);
   private client: DAVClient | null = null;
   private calendars = new Map<string, DAVCalendar>();
+
+  // Текст ошибки от tsdav/fetch может содержать пароль приложения — вырезаем
+  // его перед логированием, тем же способом, что и SessionService.
+  private redact(message: string): string {
+    return redactSecret(message, process.env.ICLOUD_APP_PASSWORD);
+  }
 
   hasCredentials(): boolean {
     return Boolean(process.env.ICLOUD_APPLE_ID && process.env.ICLOUD_APP_PASSWORD);
@@ -35,7 +42,7 @@ export class CalDavClient {
       this.client = client;
       return client;
     } catch (e) {
-      this.logger.warn(`iCloud login failed: ${e}`);
+      this.logger.warn(`iCloud login failed: ${this.redact(String(e))}`);
       return null;
     }
   }
@@ -55,7 +62,7 @@ export class CalDavClient {
       this.calendars.set(name, found);
       return found;
     } catch (e) {
-      this.logger.warn(`iCloud calendar discovery failed: ${e}`);
+      this.logger.warn(`iCloud calendar discovery failed: ${this.redact(String(e))}`);
       return null;
     }
   }

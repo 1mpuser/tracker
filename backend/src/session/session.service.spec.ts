@@ -81,6 +81,21 @@ describe('SessionService', () => {
     );
   });
 
+  it('falls back to UTC and warns when TZ is misspelled instead of failing the sync', async () => {
+    process.env.TZ = 'Europe/Moskow';
+    const warn = jest.spyOn((service as any).logger, 'warn').mockImplementation(() => undefined);
+    client.fetchCalendarObjects.mockResolvedValue([
+      { data: icsEvent('2026-08-04T09:00:00Z', '2026-08-04T09:25:00Z') },
+    ]);
+    expect(await service.syncDate('2026-08-04')).toBe(1);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Europe/Moskow'));
+    expect(client.fetchCalendarObjects).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeRange: { start: '2026-08-04T00:00:00.000Z', end: '2026-08-05T00:00:00.000Z' },
+      }),
+    );
+  });
+
   it('never leaks the app password into the log message', async () => {
     const warn = jest.spyOn((service as any).logger, 'warn').mockImplementation(() => undefined);
     client.fetchCalendarObjects.mockRejectedValue(new Error('failed for app-specific-password'));

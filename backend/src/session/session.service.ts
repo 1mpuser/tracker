@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CalDavClient } from '../icloud/caldav.client';
+import { redactSecret } from '../common/redact.util';
 import { countPomodoros, dayWindow, parseEvents } from './session.helpers';
 
 const DEFAULT_MIN_MINUTES = 20;
@@ -20,7 +21,17 @@ export class SessionService {
   }
 
   private timeZone(): string {
-    return process.env.TZ || 'UTC';
+    const tz = process.env.TZ || 'UTC';
+    try {
+      // Единственный дешёвый способ проверить имя пояса до того, как оно
+      // взорвётся посреди разбора календаря: если Intl его не знает
+      // (опечатка вроде "Europe/Moskow"), он бросает RangeError.
+      new Intl.DateTimeFormat('en-US', { timeZone: tz });
+      return tz;
+    } catch {
+      this.logger.warn(`Session: TZ="${tz}" не распознан, откат на UTC`);
+      return 'UTC';
+    }
   }
 
   isEnabled(): boolean {
@@ -44,6 +55,17 @@ export class SessionService {
       });
 
       const events = objects.flatMap((o) => parseEvents(o.data ?? '', timeZone));
+      // session.helpers.ts — чистый модуль без NestJS/Logger, поэтому не может
+      // сам сообщить о пропущенных VEVENT. Считаем разницу снаружи: сколько
+      // VEVENT было в ответе календаря против скольких распарсились.
+      const totalVevents = objects.reduce(
+        (sum, o) => sum + ((o.data ?? '').match(/BEGIN:VEVENT/g)?.length ?? 0),
+        0,
+      );
+      const skipped = totalVevents - events.length;
+      if (skipped > 0) {
+        this.logger.debug(`Session syncDate(${date}): пропущено ${skipped} нераспознанных VEVENT`);
+      }
       return countPomodoros(events, window, this.minMinutes());
     } catch (e) {
       this.logger.warn(`Session syncDate(${date}) failed: ${this.redact(String(e))}`);
@@ -54,7 +76,6 @@ export class SessionService {
   // Текст ошибки от tsdav/fetch может содержать URL с учётными данными —
   // вырезаем пароль приложения, чтобы он не осел в логах.
   private redact(message: string): string {
-    const password = process.env.ICLOUD_APP_PASSWORD;
-    return password ? message.split(password).join('<redacted>') : message;
+    return redactSecret(message, process.env.ICLOUD_APP_PASSWORD);
   }
 }
