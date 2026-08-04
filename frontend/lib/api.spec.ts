@@ -1,4 +1,4 @@
-import { createGtdItem, getDay, getGtdItems, planForToday, updateGtdItem, updatePomodoros } from './api';
+import { createGtdItem, getDay, getGtdItems, planForToday, syncSessionPomodoros, updateGtdItem, updatePomodoros } from './api';
 
 describe('api request helper', () => {
   const originalFetch = global.fetch;
@@ -90,5 +90,21 @@ describe('api request helper', () => {
       'http://localhost:3001/gtd/items/1',
       expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'calendar', scheduledDate: '2026-07-30' }) }),
     );
+  });
+
+  it('posts to the session sync endpoint and returns the updated day', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ date: '2026-08-04', pomodoros: 5 }),
+    }) as unknown as typeof fetch;
+
+    const result = await syncSessionPomodoros('2026-08-04');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/days/2026-08-04/pomodoros/sync-session',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(result).toEqual({ date: '2026-08-04', pomodoros: 5 });
   });
 });

@@ -8,6 +8,7 @@ import {
   getSettings,
   planForToday,
   setCategoryDone,
+  syncSessionPomodoros,
   updateDay,
   updateGtdItem,
   updatePomodoros,
@@ -49,6 +50,8 @@ export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [closingDay, setClosingDay] = useState(false);
+  const [syncingSession, setSyncingSession] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   const loadCore = useCallback(async () => {
     const [d, h, s] = await Promise.all([getDay(date), getHistory(HISTORY_LIMIT, date), getSettings()]);
@@ -63,6 +66,12 @@ export default function Dashboard() {
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
   }, [loadCore]);
+
+  useEffect(() => {
+    // Ошибка синка Session привязана к дате, на которой она произошла —
+    // при переключении даты она не должна висеть под чужим счётчиком.
+    setSessionError(null);
+  }, [date]);
 
   useEffect(() => {
     function checkDateRollover() {
@@ -188,6 +197,19 @@ export default function Dashboard() {
     refreshHistory();
   }
 
+  async function syncSession() {
+    setSyncingSession(true);
+    setSessionError(null);
+    try {
+      setDay(await syncSessionPomodoros(date));
+      refreshHistory();
+    } catch {
+      setSessionError('Не удалось прочитать календарь Session');
+    } finally {
+      setSyncingSession(false);
+    }
+  }
+
   async function changeYoutubeBudget(value: number) {
     setSettings(await updateSettings({ youtubeBudget: value }));
   }
@@ -260,7 +282,14 @@ export default function Dashboard() {
               onReset={resetYoutube}
               onBudgetChange={changeYoutubeBudget}
             />
-            <PomodoroPanel count={day.pomodoros} onAdd={addPomodoro} onReset={resetPomodoro} />
+            <PomodoroPanel
+              count={day.pomodoros}
+              onAdd={addPomodoro}
+              onReset={resetPomodoro}
+              onSyncSession={settings.sessionSyncEnabled ? syncSession : undefined}
+              syncing={syncingSession}
+              syncError={sessionError}
+            />
           </div>
           <StatsPanel history={history} onSelectDate={setSelectedDate} />
         </>

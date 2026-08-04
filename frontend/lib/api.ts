@@ -79,6 +79,10 @@ export function updatePomodoros(date: string, data: { delta?: number; reset?: bo
   return request(`/days/${date}/pomodoros`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
+export function syncSessionPomodoros(date: string): Promise<DayView> {
+  return request(`/days/${date}/pomodoros/sync-session`, { method: 'POST' });
+}
+
 export function updateDay(
   date: string,
   data: { eveningClosed?: boolean; rating?: number; comment?: string },
