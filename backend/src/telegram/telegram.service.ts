@@ -73,7 +73,20 @@ export class TelegramService {
       if (photoId === null) return null;
       if (asCaption) return photoId;
 
-      await this.sendText(token, chatId, text);
+      // Фото уже опубликовано в канале — если добивочный текст не дойдёт,
+      // это нельзя превратить в null: вызывающий код трактует null как
+      // «ничего не отправлено» и повторит попытку, задвоив фото в канале.
+      // Поэтому неудачу текста только логируем и всё равно отдаём photoId.
+      try {
+        const textId = await this.sendText(token, chatId, text);
+        if (textId === null) {
+          this.logger.warn('Telegram postWeeklySummary: photo sent, follow-up caption text was rejected');
+        }
+      } catch (e) {
+        this.logger.warn(
+          `Telegram postWeeklySummary: photo sent, follow-up caption text failed: ${String(e).split(token).join('<redacted>')}`,
+        );
+      }
       return photoId;
     } catch (e) {
       this.logger.warn(`Telegram postWeeklySummary failed: ${String(e).split(token).join('<redacted>')}`);

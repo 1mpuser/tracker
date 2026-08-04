@@ -178,4 +178,26 @@ describe('TelegramService.postWeeklySummary', () => {
     expect(warn).toHaveBeenCalled();
     expect(String(warn.mock.calls[0][0])).not.toContain('123:ABC');
   });
+
+  it('still returns the photo id when the follow-up caption text fails to send', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, result: { message_id: 77 } }) })
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => 'Internal Server Error' });
+    const warn = service['logger'].warn as jest.Mock;
+
+    const result = await service.postWeeklySummary('x'.repeat(1025), pngBase64);
+
+    expect(result).toBe(77);
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it('still returns the photo id when the follow-up caption text throws', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, result: { message_id: 77 } }) })
+      .mockRejectedValueOnce(new Error('ECONNRESET'));
+
+    const result = await service.postWeeklySummary('x'.repeat(1025), pngBase64);
+
+    expect(result).toBe(77);
+  });
 });
