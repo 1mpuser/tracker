@@ -29,7 +29,7 @@ const WeeklyChart = forwardRef<HTMLDivElement, WeeklyChartProps>(function Weekly
         width={WEEKLY_CHART_WIDTH}
         height={WEEKLY_CHART_HEIGHT}
         data={data}
-        margin={{ top: 48, right: 32, left: 8, bottom: 16 }}
+        margin={{ top: 48, right: 90, left: 8, bottom: 16 }}
       >
         <text x={32} y={32} fill={TEXT} fontSize={18} fontFamily="sans-serif">
           {title}
@@ -51,12 +51,18 @@ const WeeklyChart = forwardRef<HTMLDivElement, WeeklyChartProps>(function Weekly
           y={POMODORO_MIN}
           stroke={TEXT}
           strokeDasharray="4 4"
-          label={{ value: `минимум ${POMODORO_MIN}`, position: 'right', fill: TEXT, fontSize: 12 }}
+          label={{
+            value: `минимум ${POMODORO_MIN}`,
+            position: 'right',
+            fill: TEXT,
+            fontSize: 12,
+            fontFamily: 'sans-serif',
+          }}
         />
         {/* Анимацию обязательно выключить: снимок поймал бы промежуточный кадр
             и в канал уехал бы график с недорисованными столбиками. */}
         <Bar dataKey="pomodoros" isAnimationActive={false} radius={[4, 4, 0, 0]}>
-          <LabelList dataKey="pomodoros" position="top" fill={TEXT} fontSize={13} />
+          <LabelList dataKey="pomodoros" position="top" fill={TEXT} fontSize={13} fontFamily="sans-serif" />
           {data.map((point) => (
             <Cell key={point.weekday} fill={point.best ? BAR_BEST : BAR} />
           ))}
