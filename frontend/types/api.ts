@@ -42,6 +42,7 @@ export interface Settings {
   id: number;
   youtubeBudget: number;
   notificationsEnabled: boolean;
+  sessionSyncEnabled: boolean;
 }
 
 export interface CategoryStat {
