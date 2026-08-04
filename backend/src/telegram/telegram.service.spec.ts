@@ -106,3 +106,76 @@ describe('TelegramService.postDaySummary', () => {
     expect(loggedMessage).toContain('<redacted>');
   });
 });
+
+describe('TelegramService.postWeeklySummary', () => {
+  let service: TelegramService;
+  let fetchMock: jest.Mock;
+  // 1x1 прозрачный PNG — достаточно, чтобы проверить путь с картинкой.
+  const pngBase64 =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+  beforeEach(() => {
+    service = new TelegramService();
+    fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, result: { message_id: 77 } }),
+    });
+    (global as any).fetch = fetchMock;
+    process.env.TELEGRAM_BOT_TOKEN = '123:ABC';
+    process.env.TELEGRAM_CHAT_ID = '@my_channel';
+    jest.spyOn(service['logger'], 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    delete process.env.TELEGRAM_BOT_TOKEN;
+    delete process.env.TELEGRAM_CHAT_ID;
+    jest.restoreAllMocks();
+  });
+
+  it('does nothing without telegram configured', async () => {
+    delete process.env.TELEGRAM_CHAT_ID;
+
+    await expect(service.postWeeklySummary('текст', pngBase64)).resolves.toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('sends a photo with the text as caption when a chart is given', async () => {
+    const result = await service.postWeeklySummary('текст сводки', pngBase64);
+
+    expect(result).toBe(77);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toContain('/sendPhoto');
+  });
+
+  it('falls back to a text message when no chart is given', async () => {
+    const result = await service.postWeeklySummary('текст сводки', null);
+
+    expect(result).toBe(77);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toContain('/sendMessage');
+  });
+
+  it('sends photo and text separately when the caption is too long', async () => {
+    await service.postWeeklySummary('x'.repeat(1025), pngBase64);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toContain('/sendPhoto');
+    expect(fetchMock.mock.calls[1][0]).toContain('/sendMessage');
+  });
+
+  it('returns null when telegram rejects the post', async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 400, text: async () => 'Bad Request' });
+
+    await expect(service.postWeeklySummary('текст', pngBase64)).resolves.toBeNull();
+  });
+
+  it('never leaks the bot token into the log message', async () => {
+    fetchMock.mockRejectedValue(new Error('failed for token 123:ABC'));
+    const warn = service['logger'].warn as jest.Mock;
+
+    await service.postWeeklySummary('текст', pngBase64);
+
+    expect(warn).toHaveBeenCalled();
+    expect(String(warn.mock.calls[0][0])).not.toContain('123:ABC');
+  });
+});
