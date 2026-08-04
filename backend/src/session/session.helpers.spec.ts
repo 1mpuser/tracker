@@ -22,6 +22,12 @@ describe('dayWindow', () => {
     expect(start.toISOString()).toBe('2026-08-31T00:00:00.000Z');
     expect(end.toISOString()).toBe('2026-09-01T00:00:00.000Z');
   });
+
+  it('produces a 23-hour window across the US spring-forward DST transition', () => {
+    const { start, end } = dayWindow('2026-03-08', 'America/New_York');
+    expect(start.toISOString()).toBe('2026-03-08T05:00:00.000Z');
+    expect(end.toISOString()).toBe('2026-03-09T04:00:00.000Z');
+  });
 });
 
 describe('parseEvents', () => {
@@ -109,6 +115,84 @@ describe('parseEvents', () => {
 
   it('returns an empty list for garbage input', () => {
     expect(parseEvents('not an ics at all', 'UTC')).toEqual([]);
+  });
+
+  it('skips a VEVENT with an unrecognized TZID but still counts its neighbor', () => {
+    const events = parseEvents(
+      ics(
+        [
+          'BEGIN:VEVENT',
+          'DTSTART;TZID=Russian Standard Time:20260804T123000',
+          'DTEND;TZID=Russian Standard Time:20260804T130000',
+          'END:VEVENT',
+          'BEGIN:VEVENT',
+          'DTSTART:20260804T093000Z',
+          'DTEND:20260804T095500Z',
+          'END:VEVENT',
+        ].join('\r\n'),
+      ),
+      'UTC',
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0].start.toISOString()).toBe('2026-08-04T09:30:00.000Z');
+  });
+
+  it('resolves a quoted TZID param value', () => {
+    const events = parseEvents(
+      ics(
+        [
+          'BEGIN:VEVENT',
+          'DTSTART;TZID="Europe/Moscow":20260804T123000',
+          'DTEND;TZID="Europe/Moscow":20260804T130000',
+          'END:VEVENT',
+        ].join('\r\n'),
+      ),
+      'UTC',
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0].start.toISOString()).toBe('2026-08-04T09:30:00.000Z');
+  });
+
+  it('ignores a DURATION inside a nested VALARM, keeping the event undated when DTEND is missing', () => {
+    const events = parseEvents(
+      ics(
+        [
+          'BEGIN:VEVENT',
+          'DTSTART:20260804T093000Z',
+          'BEGIN:VALARM',
+          'TRIGGER:-PT5M',
+          'DURATION:PT15M',
+          'REPEAT:1',
+          'END:VALARM',
+          'END:VEVENT',
+        ].join('\r\n'),
+      ),
+      'UTC',
+    );
+    // Ни DTEND, ни DURATION самого события — событие пропускается, а не
+    // получает длительность аларма (15 минут вместо реальной).
+    expect(events).toEqual([]);
+  });
+
+  it('uses the event-level DURATION and ignores a nested VALARM DURATION', () => {
+    const events = parseEvents(
+      ics(
+        [
+          'BEGIN:VEVENT',
+          'DTSTART:20260804T093000Z',
+          'DURATION:PT25M',
+          'BEGIN:VALARM',
+          'TRIGGER:-PT5M',
+          'DURATION:PT15M',
+          'REPEAT:1',
+          'END:VALARM',
+          'END:VEVENT',
+        ].join('\r\n'),
+      ),
+      'UTC',
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0].end.toISOString()).toBe('2026-08-04T09:55:00.000Z');
   });
 });
 

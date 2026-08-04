@@ -76,7 +76,13 @@ function parseIcsTime(value: string, params: Record<string, string>, timeZone: s
   if (!m) return null;
   const [, y, mo, d, h, mi, s, z] = m;
   if (z === 'Z') return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
-  return zonedTimeToUtc(+y, +mo, +d, +h, +mi, +s, params.TZID || timeZone);
+  // RFC 5545 разрешает закавычивать значение параметра (TZID="Europe/Moscow") —
+  // снимаем обрамляющие кавычки, иначе Intl не узнает пояс.
+  const tzid = (params.TZID || timeZone).replace(/^"(.*)"$/, '$1');
+  // Неизвестный/битый пояс (опечатка, Windows-имя вроде "Russian Standard Time")
+  // валит Intl исключением — пусть вызывающий поймает его и пропустит это
+  // событие, а не роняет разбор всего календаря.
+  return zonedTimeToUtc(+y, +mo, +d, +h, +mi, +s, tzid);
 }
 
 function parseDurationMs(value: string): number | null {
@@ -93,29 +99,49 @@ export function parseEvents(ics: string, timeZone: string): CalendarEvent[] {
   let end: Date | null = null;
   let durationMs: number | null = null;
   let inEvent = false;
+  // Глубина вложенных компонентов внутри VEVENT (например VALARM) — их
+  // свойства (в т.ч. DURATION у аларма) не должны перетирать поля события.
+  let nestDepth = 0;
 
   for (const line of unfold(ics)) {
     if (line.startsWith('BEGIN:VEVENT')) {
       inEvent = true;
       start = end = durationMs = null;
+      nestDepth = 0;
       continue;
     }
     if (!inEvent) continue;
-    if (line.startsWith('END:VEVENT')) {
+    if (nestDepth === 0 && line.startsWith('END:VEVENT')) {
       const finish = end ?? (start && durationMs ? new Date(start.getTime() + durationMs) : null);
       // Ни DTEND, ни DURATION — считать нечего, событие пропускаем.
       if (start && finish) events.push({ start, end: finish });
       inEvent = false;
       continue;
     }
+    if (line.startsWith('BEGIN:')) {
+      nestDepth++;
+      continue;
+    }
+    if (line.startsWith('END:')) {
+      if (nestDepth > 0) nestDepth--;
+      continue;
+    }
+    // Свойства вложенного компонента (VALARM и т.п.) к самому событию не относятся.
+    if (nestDepth > 0) continue;
     const colon = line.indexOf(':');
     if (colon < 0) continue;
     const name = line.slice(0, colon);
     const value = line.slice(colon + 1);
     const key = name.split(';')[0].toUpperCase();
-    if (key === 'DTSTART') start = parseIcsTime(value, parseParams(name), timeZone);
-    else if (key === 'DTEND') end = parseIcsTime(value, parseParams(name), timeZone);
-    else if (key === 'DURATION') durationMs = parseDurationMs(value);
+    try {
+      if (key === 'DTSTART') start = parseIcsTime(value, parseParams(name), timeZone);
+      else if (key === 'DTEND') end = parseIcsTime(value, parseParams(name), timeZone);
+      else if (key === 'DURATION') durationMs = parseDurationMs(value);
+    } catch {
+      // Битый TZID (опечатка, неизвестный/Windows-пояс) не должен ронять
+      // разбор всего календаря — просто не проставляем это поле, событие
+      // без валидных start/end будет отфильтровано ниже как обычно.
+    }
   }
 
   return events;
