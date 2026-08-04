@@ -201,3 +201,37 @@ describe('TelegramService.postWeeklySummary', () => {
     expect(result).toBe(77);
   });
 });
+
+describe('TelegramService.isConfigured', () => {
+  let service: TelegramService;
+
+  beforeEach(() => {
+    service = new TelegramService();
+  });
+
+  afterEach(() => {
+    delete process.env.TELEGRAM_BOT_TOKEN;
+    delete process.env.TELEGRAM_CHAT_ID;
+  });
+
+  it('is false without a bot token', () => {
+    delete process.env.TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_CHAT_ID = '@my_channel';
+
+    expect(service.isConfigured()).toBe(false);
+  });
+
+  it('is false without a chat id', () => {
+    process.env.TELEGRAM_BOT_TOKEN = '123:ABC';
+    delete process.env.TELEGRAM_CHAT_ID;
+
+    expect(service.isConfigured()).toBe(false);
+  });
+
+  it('is true when both are set', () => {
+    process.env.TELEGRAM_BOT_TOKEN = '123:ABC';
+    process.env.TELEGRAM_CHAT_ID = '@my_channel';
+
+    expect(service.isConfigured()).toBe(true);
+  });
+});

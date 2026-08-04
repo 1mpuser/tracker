@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CategoriesService } from '../categories/categories.service';
 import { GtdService, GtdItemView } from '../gtd/gtd.service';
@@ -169,8 +169,27 @@ export class DaysService {
     dateStr: string,
     chartPngBase64?: string | null,
   ): Promise<{ posted: boolean; withChart: boolean; reason?: 'already-posted' | 'send-failed' }> {
-    const dayId = await this.getOrCreateDayId(dateStr);
+    // Не создаём строку через getOrCreateDayId: эндпоинт самосогласован и
+    // публикует сводку только для уже закрытого дня, иначе прямой вызов на
+    // будущее воскресенье завёл бы пустую строку и навсегда занял неделю
+    // сводкой из одних нулей.
+    const date = parseDateParam(dateStr);
+    const day = await this.prisma.day.findUnique({ where: { date } });
+    if (!day || day.eveningClosed !== true) {
+      throw new BadRequestException('Недельная сводка публикуется только для закрытого дня');
+    }
+    const dayId = day.id;
     const withChart = Boolean(chartPngBase64);
+
+    // Чтение и сборка текста — до захвата, а не внутри него: weekStats() это
+    // четыре параллельных запроса в БД, каждый из которых может бросить.
+    // Если бы это было внутри захваченного окна, брошенное исключение
+    // оставило бы строку на сентинеле TELEGRAM_CLAIMED навсегда — «уже
+    // опубликовано» на все последующие попытки без единого реального поста.
+    // Внутри захвата остаётся только отправка в Telegram — она обёрнута в
+    // собственный try/catch и не бросает.
+    const stats = await this.stats.weekStats(dateStr);
+    const text = buildWeekSummary(stats);
 
     // Тот же атомарный захват, что у дневной сводки: строку занимает ровно
     // один конкурентный запрос, остальные получают count 0 и молчат.
@@ -182,8 +201,7 @@ export class DaysService {
       return { posted: false, withChart: false, reason: 'already-posted' };
     }
 
-    const stats = await this.stats.weekStats(dateStr);
-    const messageId = await this.telegram.postWeeklySummary(buildWeekSummary(stats), chartPngBase64 ?? null);
+    const messageId = await this.telegram.postWeeklySummary(text, chartPngBase64 ?? null);
 
     // Не отправилось -> сбрасываем захват обратно в null, чтобы следующее
     // закрытие этого воскресенья попробовало снова.

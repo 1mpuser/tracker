@@ -9,7 +9,7 @@ describe('DaysController.syncSessionPomodoros', () => {
   beforeEach(() => {
     daysService = { setPomodoros: jest.fn().mockResolvedValue({ date: '2026-08-04', pomodoros: 3 }) };
     session = { isEnabled: jest.fn().mockReturnValue(true), syncDate: jest.fn().mockResolvedValue(3) };
-    controller = new DaysController(daysService, session);
+    controller = new DaysController(daysService, session, { isConfigured: jest.fn().mockReturnValue(true) } as any);
   });
 
   it('rejects with 409 when the Session integration is disabled, without touching syncDate or the counter', async () => {
@@ -48,11 +48,13 @@ describe('DaysController.syncSessionPomodoros', () => {
 
 describe('DaysController.postWeeklySummary', () => {
   let daysService: any;
+  let telegram: any;
   let controller: DaysController;
 
   beforeEach(() => {
     daysService = { postWeeklySummary: jest.fn().mockResolvedValue({ posted: true, withChart: true }) };
-    controller = new DaysController(daysService, { isEnabled: jest.fn(), syncDate: jest.fn() } as any);
+    telegram = { isConfigured: jest.fn().mockReturnValue(true) };
+    controller = new DaysController(daysService, { isEnabled: jest.fn(), syncDate: jest.fn() } as any, telegram);
   });
 
   it('rejects a date that is not a sunday', async () => {
@@ -86,5 +88,13 @@ describe('DaysController.postWeeklySummary', () => {
     daysService.postWeeklySummary.mockResolvedValue({ posted: false, withChart: true, reason: 'send-failed' });
 
     await expect(controller.postWeeklySummary('2026-08-02', {})).rejects.toThrow(BadGatewayException);
+  });
+
+  it('rejects with 409 when Telegram is not configured, without touching daysService', async () => {
+    telegram.isConfigured.mockReturnValue(false);
+
+    await expect(controller.postWeeklySummary('2026-08-02', {})).rejects.toThrow(ConflictException);
+
+    expect(daysService.postWeeklySummary).not.toHaveBeenCalled();
   });
 });

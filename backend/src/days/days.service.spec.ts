@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { DaysService } from './days.service';
 
 describe('DaysService.getDay', () => {
@@ -421,7 +422,7 @@ describe('DaysService.postWeeklySummary', () => {
   beforeEach(() => {
     prisma = {
       day: {
-        findUnique: jest.fn().mockResolvedValue({ id: 1 }),
+        findUnique: jest.fn().mockResolvedValue({ id: 1, eveningClosed: true }),
         create: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -479,5 +480,48 @@ describe('DaysService.postWeeklySummary', () => {
 
     expect(telegram.postWeeklySummary).toHaveBeenCalledWith(expect.any(String), null);
     expect(result).toEqual({ posted: true, withChart: false });
+  });
+
+  it('rejects a day that was never closed, without creating a row or claiming it', async () => {
+    prisma.day.findUnique.mockResolvedValue(null);
+
+    await expect(service.postWeeklySummary('2026-08-02', 'AAAA')).rejects.toThrow(BadRequestException);
+
+    expect(prisma.day.create).not.toHaveBeenCalled();
+    expect(prisma.day.updateMany).not.toHaveBeenCalled();
+    expect(telegram.postWeeklySummary).not.toHaveBeenCalled();
+  });
+
+  it('rejects a day that exists but is not evening-closed', async () => {
+    prisma.day.findUnique.mockResolvedValue({ id: 1, eveningClosed: false });
+
+    await expect(service.postWeeklySummary('2026-08-02', 'AAAA')).rejects.toThrow(BadRequestException);
+
+    expect(prisma.day.updateMany).not.toHaveBeenCalled();
+    expect(telegram.postWeeklySummary).not.toHaveBeenCalled();
+  });
+
+  it('reads week stats before claiming the row, so a thrown aggregate never leaves the claim stuck', async () => {
+    const calls: string[] = [];
+    stats.weekStats.mockImplementation(async () => {
+      calls.push('weekStats');
+      return weekStats;
+    });
+    prisma.day.updateMany.mockImplementation(async () => {
+      calls.push('updateMany');
+      return { count: 1 };
+    });
+
+    await service.postWeeklySummary('2026-08-02', 'AAAA');
+
+    expect(calls).toEqual(['weekStats', 'updateMany']);
+  });
+
+  it('never claims the row when weekStats throws, so the week is not stuck as already-posted', async () => {
+    stats.weekStats.mockRejectedValue(new Error('db is down'));
+
+    await expect(service.postWeeklySummary('2026-08-02', 'AAAA')).rejects.toThrow('db is down');
+
+    expect(prisma.day.updateMany).not.toHaveBeenCalled();
   });
 });

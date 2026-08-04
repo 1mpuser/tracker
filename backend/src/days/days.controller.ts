@@ -6,6 +6,7 @@ import { UpdatePomodorosDto } from './dto/update-pomodoros.dto';
 import { UpdateDayDto } from './dto/update-day.dto';
 import { WeeklySummaryDto } from './dto/weekly-summary.dto';
 import { SessionService } from '../session/session.service';
+import { TelegramService } from '../telegram/telegram.service';
 import { parseDateParam } from '../common/date.util';
 
 @Controller()
@@ -13,6 +14,7 @@ export class DaysController {
   constructor(
     private readonly daysService: DaysService,
     private readonly session: SessionService,
+    private readonly telegram: TelegramService,
   ) {}
 
   @Get('days/:date')
@@ -59,6 +61,12 @@ export class DaysController {
     // сюда любую дату значило бы плодить посты за одну и ту же неделю.
     if (parseDateParam(date).getUTCDay() !== 0) {
       throw new BadRequestException('Недельная сводка публикуется только за воскресенье');
+    }
+    // Проверяем до сервиса и до любого захвата: иначе инсталляция без
+    // Telegram каждое воскресенье получала бы ложный 502 и лишний цикл
+    // захват-освобождение вместо честного «фича не настроена».
+    if (!this.telegram.isConfigured()) {
+      throw new ConflictException('Telegram не настроен: заполните TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID');
     }
 
     const result = await this.daysService.postWeeklySummary(date, dto.chartPng ?? null);

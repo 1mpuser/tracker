@@ -12,6 +12,8 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors({ origin: ['http://localhost:4887', 'https://tracker.performance:4888'] });
   // PNG графика приезжает base64-строкой в JSON; дефолтные 100 КБ его не пускают.
+  // Обязательно до app.listen(): иначе дефолтный json-парсер на 100 КБ успеет
+  // зарегистрироваться первым, и запросы с картинкой будут отбиваться 413.
   app.useBodyParser('json', { limit: '2mb' });
   await app.listen(process.env.PORT ?? 3001);
 

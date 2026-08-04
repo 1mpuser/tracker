@@ -24,6 +24,11 @@ interface WeeklyChartProps {
 // forwardRef, чтобы владелец мог достать смонтированный SVG и снять с него PNG.
 const WeeklyChart = forwardRef<HTMLDivElement, WeeklyChartProps>(function WeeklyChart({ data, title }, ref) {
   return (
+    // background здесь только для превью на экране (если этот div вдруг
+    // окажется видимым) — на экспортированную картинку он не влияет: PNG
+    // непрозрачным делает заливка холста в chart-export.ts, а не этот div.
+    // Не убирать эту заливку холста как "дублирующую" — SVG сам по себе
+    // прозрачен, и без неё фон картинки в Telegram превратится в дыру.
     <div ref={ref} style={{ width: WEEKLY_CHART_WIDTH, height: WEEKLY_CHART_HEIGHT, background: BG }}>
       <BarChart
         width={WEEKLY_CHART_WIDTH}

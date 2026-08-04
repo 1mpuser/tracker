@@ -6,6 +6,13 @@ import { fitsInCaption } from './weekly.helpers';
 export class TelegramService {
   private readonly logger = new Logger(TelegramService.name);
 
+  // Оба значения нужны для любого поста в Telegram — вынесено отдельно,
+  // чтобы контроллер мог ответить 409 до захвата строки, не путая
+  // «не настроено» с «Telegram отклонил запрос» (это разные коды ответа).
+  isConfigured(): boolean {
+    return Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
+  }
+
   async postDaySummary(day: DaySummaryInput): Promise<number | null> {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
