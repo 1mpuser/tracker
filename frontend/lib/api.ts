@@ -7,6 +7,7 @@ import type {
   HistoryEntry,
   Settings,
   TaskTemplate,
+  WeekStats,
   YoutubeDayStat,
   YoutubeWeekStat,
 } from '@/types/api';
@@ -26,6 +27,7 @@ const API_URL = resolveApiUrl();
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
+    method: init?.method,
     ...init,
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
@@ -143,4 +145,18 @@ export function getYoutubeWeeklyStats(weeks: number): Promise<YoutubeWeekStat[]>
 
 export function getYoutubeDailyStats(days: number): Promise<YoutubeDayStat[]> {
   return request(`/stats/youtube-daily?days=${days}`);
+}
+
+export function getWeekStats(end: string): Promise<WeekStats> {
+  return request(`/stats/week?end=${end}`);
+}
+
+export function postWeeklySummary(
+  date: string,
+  chartPng: string | null,
+): Promise<{ posted: boolean; withChart?: boolean; reason?: string }> {
+  return request(`/days/${date}/weekly-summary`, {
+    method: 'POST',
+    body: JSON.stringify(chartPng ? { chartPng } : {}),
+  });
 }

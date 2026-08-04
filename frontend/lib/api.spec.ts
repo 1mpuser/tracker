@@ -1,4 +1,4 @@
-import { createGtdItem, getDay, getGtdItems, planForToday, syncSessionPomodoros, updateGtdItem, updatePomodoros } from './api';
+import { createGtdItem, getDay, getGtdItems, getWeekStats, planForToday, postWeeklySummary, syncSessionPomodoros, updateGtdItem, updatePomodoros } from './api';
 
 describe('api request helper', () => {
   const originalFetch = global.fetch;
@@ -106,5 +106,51 @@ describe('api request helper', () => {
       expect.objectContaining({ method: 'POST' }),
     );
     expect(result).toEqual({ date: '2026-08-04', pomodoros: 5 });
+  });
+
+  it('requests week stats for the given end date', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ weekStart: '2026-07-27' }),
+    }) as unknown as typeof fetch;
+
+    await getWeekStats('2026-08-02');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/stats/week?end=2026-08-02',
+      expect.objectContaining({ method: undefined }),
+    );
+  });
+
+  it('posts the weekly summary with the chart payload', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ posted: true, withChart: true }),
+    }) as unknown as typeof fetch;
+
+    const result = await postWeeklySummary('2026-08-02', 'AAAA');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/days/2026-08-02/weekly-summary',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ chartPng: 'AAAA' }) }),
+    );
+    expect(result).toEqual({ posted: true, withChart: true });
+  });
+
+  it('omits the chart field entirely when there is no image', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ posted: true, withChart: false }),
+    }) as unknown as typeof fetch;
+
+    await postWeeklySummary('2026-08-02', null);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/days/2026-08-02/weekly-summary',
+      expect.objectContaining({ body: JSON.stringify({}) }),
+    );
   });
 });
