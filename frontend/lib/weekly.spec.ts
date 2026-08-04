@@ -1,5 +1,5 @@
 import type { WeekStats } from '@/types/api';
-import { isSunday, toChartSeries } from './weekly';
+import { formatWeekRangeShort, isSunday, toChartSeries } from './weekly';
 
 function makeStats(overrides: Partial<WeekStats> = {}): WeekStats {
   return {
@@ -56,5 +56,11 @@ describe('toChartSeries', () => {
 
   it('passes zero days through as zeros', () => {
     expect(toChartSeries(makeStats())[1]).toEqual({ weekday: 'Вт', pomodoros: 0, best: false });
+  });
+});
+
+describe('formatWeekRangeShort', () => {
+  it('renders both ends without a year', () => {
+    expect(formatWeekRangeShort('2026-07-27', '2026-08-02')).toBe('27 июля — 2 августа');
   });
 });

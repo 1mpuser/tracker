@@ -19,6 +19,7 @@ import { formatDisplayDate, todayLocal } from '@/lib/date';
 import { isEveningWindow, isMorningWindow, isWeeklyReviewWindow } from '@/lib/notifications';
 import { computeStreak } from '@/lib/streak';
 import { computePomodoroStreak, POMODORO_MIN, POMODORO_OPT } from '@/lib/pomodoro';
+import { useWeeklySummary } from '@/lib/useWeeklySummary';
 import Header from './Header';
 import SpheresPanel from './SpheresPanel';
 import TodayPanel from './TodayPanel';
@@ -52,6 +53,7 @@ export default function Dashboard() {
   const [closingDay, setClosingDay] = useState(false);
   const [syncingSession, setSyncingSession] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const { sendIfSunday, chartNode } = useWeeklySummary();
 
   const loadCore = useCallback(async () => {
     const [d, h, s] = await Promise.all([getDay(date), getHistory(HISTORY_LIMIT, date), getSettings()]);
@@ -143,7 +145,10 @@ export default function Dashboard() {
     if (!day || closingDay) return;
     setClosingDay(true);
     try {
+      const wasClosing = !day.eveningClosed;
       setDay(await updateDay(date, { eveningClosed: !day.eveningClosed }));
+      // Сводка идёт фоном: интерфейс уже показал закрытый день.
+      if (wasClosing) void sendIfSunday(date);
     } finally {
       setClosingDay(false);
     }
@@ -300,6 +305,7 @@ export default function Dashboard() {
       {selectedDate && (
         <DayDetailModal date={selectedDate} onClose={() => setSelectedDate(null)} onDataChanged={refreshHistory} />
       )}
+      {chartNode}
     </div>
   );
 }
