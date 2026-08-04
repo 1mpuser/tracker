@@ -68,6 +68,12 @@ export default function Dashboard() {
   }, [loadCore]);
 
   useEffect(() => {
+    // Ошибка синка Session привязана к дате, на которой она произошла —
+    // при переключении даты она не должна висеть под чужим счётчиком.
+    setSessionError(null);
+  }, [date]);
+
+  useEffect(() => {
     function checkDateRollover() {
       const current = todayLocal();
       if (current !== date) setDate(current);
@@ -196,6 +202,7 @@ export default function Dashboard() {
     setSessionError(null);
     try {
       setDay(await syncSessionPomodoros(date));
+      refreshHistory();
     } catch {
       setSessionError('Не удалось прочитать календарь Session');
     } finally {
@@ -279,7 +286,7 @@ export default function Dashboard() {
               count={day.pomodoros}
               onAdd={addPomodoro}
               onReset={resetPomodoro}
-              onSyncSession={settings?.sessionSyncEnabled ? syncSession : undefined}
+              onSyncSession={settings.sessionSyncEnabled ? syncSession : undefined}
               syncing={syncingSession}
               syncError={sessionError}
             />
