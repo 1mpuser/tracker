@@ -10,7 +10,7 @@ describe('DaysService.getDay', () => {
     prisma = { day: { findUnique: jest.fn(), create: jest.fn() } };
     categoriesService = { findActive: jest.fn().mockResolvedValue([]) };
     gtdService = { getForDate: jest.fn().mockResolvedValue([]) };
-    service = new DaysService(prisma, categoriesService, gtdService, {} as any);
+    service = new DaysService(prisma, categoriesService, gtdService, {} as any, {} as any);
   });
 
   it('exposes the pomodoro count from the day row', async () => {
@@ -58,7 +58,7 @@ describe('DaysService.getHistory', () => {
       category: { findMany: jest.fn() },
       settings: { findUnique: jest.fn() },
     };
-    service = new DaysService(prisma, {} as any, {} as any, {} as any);
+    service = new DaysService(prisma, {} as any, {} as any, {} as any, {} as any);
   });
 
   afterEach(() => {
@@ -199,6 +199,7 @@ describe('DaysService.updateDay telegram posting', () => {
       { findActive: jest.fn().mockResolvedValue([]) } as any,
       { getForDate: jest.fn().mockResolvedValue([]) } as any,
       telegram,
+      {} as any,
     );
   });
 
@@ -299,7 +300,7 @@ describe('DaysService.updateDay', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
-    service = new DaysService(prisma, {} as any, {} as any, { postDaySummary: jest.fn().mockResolvedValue(null) } as any);
+    service = new DaysService(prisma, {} as any, {} as any, { postDaySummary: jest.fn().mockResolvedValue(null) } as any, {} as any);
   });
 
   it('forwards only the provided fields to the Prisma update, not a merged full-day object', async () => {
@@ -335,7 +336,7 @@ describe('DaysService.updatePomodoros', () => {
         update: jest.fn().mockResolvedValue({}),
       },
     };
-    service = new DaysService(prisma, {} as any, {} as any, {} as any);
+    service = new DaysService(prisma, {} as any, {} as any, {} as any, {} as any);
     jest.spyOn(service, 'getDay').mockResolvedValue({} as any);
   });
 
@@ -382,6 +383,7 @@ describe('DaysService.setPomodoros', () => {
       { findActive: jest.fn().mockResolvedValue([]) } as any,
       { getForDate: jest.fn().mockResolvedValue([]) } as any,
       {} as any,
+      {} as any,
     );
   });
 
@@ -393,5 +395,89 @@ describe('DaysService.setPomodoros', () => {
   it('clamps a negative count to zero', async () => {
     await service.setPomodoros('2026-08-04', -1);
     expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { pomodoros: 0 } });
+  });
+});
+
+describe('DaysService.postWeeklySummary', () => {
+  let prisma: any;
+  let telegram: any;
+  let stats: any;
+  let service: DaysService;
+
+  const weekStats = {
+    weekStart: '2026-07-27',
+    weekEnd: '2026-08-02',
+    days: [],
+    totalPomodoros: 10,
+    avgPomodoros: 1.4,
+    bestDay: null,
+    avgRating: null,
+    ratedDays: 0,
+    categories: [],
+    youtubeAvgMinutes: 0,
+    youtubeBudget: 60,
+  };
+
+  beforeEach(() => {
+    prisma = {
+      day: {
+        findUnique: jest.fn().mockResolvedValue({ id: 1 }),
+        create: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    telegram = { postWeeklySummary: jest.fn().mockResolvedValue(42) };
+    stats = { weekStats: jest.fn().mockResolvedValue(weekStats) };
+    service = new DaysService(
+      prisma,
+      { findActive: jest.fn().mockResolvedValue([]) } as any,
+      { getForDate: jest.fn().mockResolvedValue([]) } as any,
+      telegram,
+      stats,
+    );
+  });
+
+  it('claims the row and posts once', async () => {
+    const result = await service.postWeeklySummary('2026-08-02', 'AAAA');
+
+    expect(prisma.day.updateMany).toHaveBeenCalledWith({
+      where: { id: 1, weeklyTelegramMessageId: null },
+      data: { weeklyTelegramMessageId: 0 },
+    });
+    expect(telegram.postWeeklySummary).toHaveBeenCalledTimes(1);
+    expect(prisma.day.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { weeklyTelegramMessageId: 42 },
+    });
+    expect(result).toEqual({ posted: true, withChart: true });
+  });
+
+  it('does not post twice for the same week', async () => {
+    prisma.day.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await service.postWeeklySummary('2026-08-02', 'AAAA');
+
+    expect(telegram.postWeeklySummary).not.toHaveBeenCalled();
+    expect(result).toEqual({ posted: false, withChart: false, reason: 'already-posted' });
+  });
+
+  it('releases the claim when sending fails', async () => {
+    telegram.postWeeklySummary.mockResolvedValue(null);
+
+    const result = await service.postWeeklySummary('2026-08-02', 'AAAA');
+
+    expect(prisma.day.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { weeklyTelegramMessageId: null },
+    });
+    expect(result).toEqual({ posted: false, withChart: true, reason: 'send-failed' });
+  });
+
+  it('reports withChart false when no image was supplied', async () => {
+    const result = await service.postWeeklySummary('2026-08-02', null);
+
+    expect(telegram.postWeeklySummary).toHaveBeenCalledWith(expect.any(String), null);
+    expect(result).toEqual({ posted: true, withChart: false });
   });
 });

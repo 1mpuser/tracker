@@ -1,10 +1,12 @@
-import { BadGatewayException, Body, ConflictException, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, Body, ConflictException, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { DaysService } from './days.service';
 import { UpdateCategoryStatusDto } from './dto/update-category-status.dto';
 import { UpdateYoutubeDto } from './dto/update-youtube.dto';
 import { UpdatePomodorosDto } from './dto/update-pomodoros.dto';
 import { UpdateDayDto } from './dto/update-day.dto';
+import { WeeklySummaryDto } from './dto/weekly-summary.dto';
 import { SessionService } from '../session/session.service';
+import { parseDateParam } from '../common/date.util';
 
 @Controller()
 export class DaysController {
@@ -49,6 +51,25 @@ export class DaysController {
       throw new BadGatewayException('Не удалось прочитать календарь Session');
     }
     return this.daysService.setPomodoros(date, count);
+  }
+
+  @Post('days/:date/weekly-summary')
+  async postWeeklySummary(@Param('date') date: string, @Body() dto: WeeklySummaryDto) {
+    // Сводка привязана к неделе, а неделя заканчивается воскресеньем: пускать
+    // сюда любую дату значило бы плодить посты за одну и ту же неделю.
+    if (parseDateParam(date).getUTCDay() !== 0) {
+      throw new BadRequestException('Недельная сводка публикуется только за воскресенье');
+    }
+
+    const result = await this.daysService.postWeeklySummary(date, dto.chartPng ?? null);
+
+    if (result.reason === 'already-posted') {
+      return { posted: false, reason: 'already-posted' };
+    }
+    if (result.reason === 'send-failed') {
+      throw new BadGatewayException('Не удалось опубликовать недельную сводку');
+    }
+    return { posted: true, withChart: result.withChart };
   }
 
   @Patch('days/:date')

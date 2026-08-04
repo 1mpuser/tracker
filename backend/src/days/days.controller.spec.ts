@@ -1,4 +1,4 @@
-import { BadGatewayException, ConflictException } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, ConflictException } from '@nestjs/common';
 import { DaysController } from './days.controller';
 
 describe('DaysController.syncSessionPomodoros', () => {
@@ -43,5 +43,48 @@ describe('DaysController.syncSessionPomodoros', () => {
     await controller.syncSessionPomodoros('2026-08-04');
 
     expect(daysService.setPomodoros).toHaveBeenCalledWith('2026-08-04', 0);
+  });
+});
+
+describe('DaysController.postWeeklySummary', () => {
+  let daysService: any;
+  let controller: DaysController;
+
+  beforeEach(() => {
+    daysService = { postWeeklySummary: jest.fn().mockResolvedValue({ posted: true, withChart: true }) };
+    controller = new DaysController(daysService, { isEnabled: jest.fn(), syncDate: jest.fn() } as any);
+  });
+
+  it('rejects a date that is not a sunday', async () => {
+    // 2026-08-03 — понедельник
+    await expect(controller.postWeeklySummary('2026-08-03', {})).rejects.toThrow(BadRequestException);
+    expect(daysService.postWeeklySummary).not.toHaveBeenCalled();
+  });
+
+  it('posts for a sunday and passes the chart through', async () => {
+    const result = await controller.postWeeklySummary('2026-08-02', { chartPng: 'AAAA' });
+
+    expect(daysService.postWeeklySummary).toHaveBeenCalledWith('2026-08-02', 'AAAA');
+    expect(result).toEqual({ posted: true, withChart: true });
+  });
+
+  it('passes null when no chart was supplied', async () => {
+    await controller.postWeeklySummary('2026-08-02', {});
+
+    expect(daysService.postWeeklySummary).toHaveBeenCalledWith('2026-08-02', null);
+  });
+
+  it('reports an already-posted week without throwing', async () => {
+    daysService.postWeeklySummary.mockResolvedValue({ posted: false, withChart: false, reason: 'already-posted' });
+
+    const result = await controller.postWeeklySummary('2026-08-02', {});
+
+    expect(result).toEqual({ posted: false, reason: 'already-posted' });
+  });
+
+  it('turns a send failure into 502', async () => {
+    daysService.postWeeklySummary.mockResolvedValue({ posted: false, withChart: true, reason: 'send-failed' });
+
+    await expect(controller.postWeeklySummary('2026-08-02', {})).rejects.toThrow(BadGatewayException);
   });
 });
