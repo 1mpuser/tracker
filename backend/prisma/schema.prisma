@@ -24,6 +24,7 @@ model Day {
   rating            Int?
   comment           String?
   telegramMessageId Int?
+  weeklyTelegramMessageId Int?
   categories        DayCategoryStatus[]
   dailies           DailyTask[]
   createdAt         DateTime @default(now())
