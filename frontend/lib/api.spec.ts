@@ -117,10 +117,10 @@ describe('api request helper', () => {
 
     await getWeekStats('2026-08-02');
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      'http://localhost:3001/stats/week?end=2026-08-02',
-      expect.objectContaining({ method: undefined }),
-    );
+    const [url, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(url).toBe('http://localhost:3001/stats/week?end=2026-08-02');
+    expect(init?.method).toBeUndefined();
+    expect(init?.body).toBeUndefined();
   });
 
   it('posts the weekly summary with the chart payload', async () => {
