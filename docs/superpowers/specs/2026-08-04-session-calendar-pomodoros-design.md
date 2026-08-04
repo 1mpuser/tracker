@@ -155,7 +155,7 @@ async setPomodoros(dateStr: string, count: number): Promise<DayView>
 
 **`days.controller`**: `409` при выключенной интеграции, `502` при `null` от сервиса, `DayView` при успехе.
 
-**Фронт** (`PomodoroPanel`): ссылка не рендерится без `onSyncSession`; клик зовёт колбэк; при `syncing` ссылка задизейблена.
+**Фронт** (`frontend/lib/api.spec.ts`): `syncSessionPomodoros` шлёт `POST` на верный путь и отдаёт разобранный `DayView`. Тестов на сам компонент не будет: в проекте нет `@testing-library/react`, а `jest.config.js` матчит только `.spec.ts` — рендер-тесты потребовали бы новых зависимостей и отдельного окружения, что несоразмерно одной ссылке в панели.
 
 ## Что не входит
 
