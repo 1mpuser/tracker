@@ -355,3 +355,43 @@ describe('DaysService.updatePomodoros', () => {
     expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 5 }, data: { pomodoros: 0 } });
   });
 });
+
+describe('DaysService.setPomodoros', () => {
+  let service: DaysService;
+  let prisma: any;
+
+  beforeEach(() => {
+    prisma = {
+      day: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 1,
+          date: new Date('2026-08-04T00:00:00.000Z'),
+          youtubeMinutes: 0,
+          pomodoros: 7,
+          eveningClosed: false,
+          rating: null,
+          comment: null,
+          categories: [],
+        }),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+    };
+    service = new DaysService(
+      prisma,
+      { findActive: jest.fn().mockResolvedValue([]) } as any,
+      { getForDate: jest.fn().mockResolvedValue([]) } as any,
+      {} as any,
+    );
+  });
+
+  it('writes an absolute value regardless of the previous count', async () => {
+    await service.setPomodoros('2026-08-04', 3);
+    expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { pomodoros: 3 } });
+  });
+
+  it('clamps a negative count to zero', async () => {
+    await service.setPomodoros('2026-08-04', -1);
+    expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { pomodoros: 0 } });
+  });
+});

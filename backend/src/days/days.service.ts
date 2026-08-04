@@ -121,6 +121,14 @@ export class DaysService {
     return this.getDay(dateStr);
   }
 
+  // Абсолютная запись — в отличие от updatePomodoros с его delta/reset.
+  // Нужна синхронизации с календарём, где источник правды — число событий.
+  async setPomodoros(dateStr: string, count: number): Promise<DayView> {
+    const dayId = await this.getOrCreateDayId(dateStr);
+    await this.prisma.day.update({ where: { id: dayId }, data: { pomodoros: Math.max(0, count) } });
+    return this.getDay(dateStr);
+  }
+
   async updateDay(dateStr: string, data: UpdateDayData): Promise<DayView> {
     const dayId = await this.getOrCreateDayId(dateStr);
     await this.prisma.day.update({ where: { id: dayId }, data });
