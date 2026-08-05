@@ -1,5 +1,14 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import type { WeekStats } from '../stats/stats.service';
-import { buildWeekSummary, categoryIcon, fitsInCaption, formatWeekRange, pluralDays } from './weekly.helpers';
+import {
+  buildWeekSummary,
+  categoryIcon,
+  fitsInCaption,
+  formatWeekRange,
+  pluralDays,
+  POMODORO_MIN,
+} from './weekly.helpers';
 
 function makeStats(overrides: Partial<WeekStats> = {}): WeekStats {
   return {
@@ -144,7 +153,13 @@ describe('buildWeekSummary spheres', () => {
 
     expect(text).toContain('Сферы за неделю');
     expect(text).toContain('Не тронуты: Спорт, Финансы');
-    expect(text).not.toContain('0/7');
+    // toContain('0/7') прошло бы и если сфера отрендерилась как
+    // "⚠️ Спорт 0/7" — здесь важно доказать, что строки со счётчиком сферы
+    // нет вообще, а не просто что в тексте нет конкретной подстроки.
+    // Строка сферы со счётчиком имеет вид "✅ Название N/7" — в отличие от
+    // "✅ В зачёте: N из 7 дней", она заканчивается на "N/7".
+    const sphereCountLines = text.split('\n').filter((line) => /^[✅⚠️].*\d+\/7$/.test(line));
+    expect(sphereCountLines).toEqual([]);
   });
 
   it('escapes html in the untouched line too', () => {
@@ -200,6 +215,52 @@ describe('buildWeekSummary', () => {
     const text = buildWeekSummary(makeStats({ categories: [] }));
 
     expect(text).not.toContain('Сферы за неделю');
+  });
+
+  it('keeps "В зачёте" strictly between the pomodoro line and the best-day line', () => {
+    // toContain по отдельности пропустит перестановку строк — здесь важен
+    // именно порядок: «В зачёте» объясняет раскраску графика и должна
+    // читаться сразу после итога по помидоркам, до «Лучшего дня».
+    const text = buildWeekSummary(makeStats());
+    const lines = text.split('\n');
+
+    const pomodoroIndex = lines.findIndex((l) => l.startsWith('🍅 Помидорок'));
+    const qualifiedIndex = lines.findIndex((l) => l.startsWith('✅ В зачёте'));
+    const bestDayIndex = lines.findIndex((l) => l.startsWith('🔥 Лучший день'));
+
+    expect(pomodoroIndex).toBeGreaterThanOrEqual(0);
+    expect(qualifiedIndex).toBeGreaterThan(pomodoroIndex);
+    expect(bestDayIndex).toBeGreaterThan(qualifiedIndex);
+  });
+});
+
+describe('POMODORO_MIN stays in sync with the frontend copy', () => {
+  it('matches the value in frontend/lib/pomodoro.ts', () => {
+    // Порог продублирован (см. комментарии в обоих файлах), потому что
+    // фронт и бэкенд собираются раздельными Docker-образами и общего
+    // модуля быть не может. Этот тест — единственная страховка от
+    // расхождения; молча пройти он не должен ни при отсутствии файла,
+    // ни при несматчившейся регулярке.
+    const frontendPath = join(__dirname, '../../../frontend/lib/pomodoro.ts');
+    let source: string;
+    try {
+      source = readFileSync(frontendPath, 'utf8');
+    } catch (e) {
+      throw new Error(
+        `Не удалось прочитать ${frontendPath}, чтобы сверить POMODORO_MIN с бэкендом: ${String(e)}`,
+      );
+    }
+
+    const match = source.match(/export const POMODORO_MIN = (\d+);/);
+    if (!match) {
+      throw new Error(
+        `Не нашёл "export const POMODORO_MIN = <число>;" в ${frontendPath} — ` +
+          'копии POMODORO_MIN больше не удаётся сверить автоматически. ' +
+          'Проверь константу руками и поправь регулярку в этом тесте.',
+      );
+    }
+
+    expect(Number(match[1])).toBe(POMODORO_MIN);
   });
 });
 
