@@ -6,6 +6,7 @@ import { getWeekStats, postWeeklySummary } from '@/lib/api';
 import { formatWeekRangeShort, isSunday, toChartSeries } from '@/lib/weekly';
 import { svgToPngBase64 } from '@/lib/chart-export';
 import WeeklyChart, { WEEKLY_CHART_HEIGHT, WEEKLY_CHART_WIDTH } from '@/components/WeeklyChart';
+import { POMODORO_MIN } from '@/lib/pomodoro';
 
 export function useWeeklySummary() {
   const [stats, setStats] = useState<WeekStats | null>(null);
@@ -44,7 +45,9 @@ export function useWeeklySummary() {
       <WeeklyChart
         ref={holderRef}
         data={toChartSeries(stats)}
-        title={`Помидорки · ${formatWeekRangeShort(stats.weekStart, stats.weekEnd)}`}
+        title={`Помидорки · ${formatWeekRangeShort(stats.weekStart, stats.weekEnd)} · ${
+          stats.days.filter((d) => d.pomodoros >= POMODORO_MIN).length
+        } из ${stats.days.length} в зачёте`}
       />
     </div>
   ) : null;

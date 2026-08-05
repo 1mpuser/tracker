@@ -1,9 +1,10 @@
 import type { WeekStats } from '@/types/api';
+import { POMODORO_MIN } from '@/lib/pomodoro';
 
 export interface ChartPoint {
   weekday: string;
   pomodoros: number;
-  best: boolean;
+  qualified: boolean;
 }
 
 export function isSunday(dateStr: string): boolean {
@@ -14,7 +15,7 @@ export function toChartSeries(stats: WeekStats): ChartPoint[] {
   return stats.days.map((d) => ({
     weekday: d.weekday,
     pomodoros: d.pomodoros,
-    best: stats.bestDay != null && d.date === stats.bestDay.date,
+    qualified: d.pomodoros >= POMODORO_MIN,
   }));
 }
 
