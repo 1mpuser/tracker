@@ -47,13 +47,13 @@ describe('buildDaySummary', () => {
       [
         '📅 1 августа 2026, суббота',
         '',
-        '🍅 Помидорок: 7',
+        '🍅 Помидорок: 7 — день в зачёте',
         '⭐ Оценка: 8/10',
         '',
         'Сферы — 2 / 3',
         '✅ Спорт',
         '✅ Английский',
-        '❌ Медитация',
+        'Не тронуты: Медитация',
         '',
         '💬 Тяжёлое утро, но вытянул вечер',
       ].join('\n'),
@@ -107,5 +107,130 @@ describe('buildDaySummary', () => {
     });
     expect(result).toContain('✅ Код &lt;всё&gt;');
     expect(result).toContain('💬 a &amp; b');
+  });
+});
+
+function makeDay(overrides: Partial<Parameters<typeof buildDaySummary>[0]> = {}) {
+  return {
+    date: '2026-08-05',
+    pomodoros: 0,
+    rating: null,
+    comment: null,
+    categories: [] as { label: string; done: boolean }[],
+    ...overrides,
+  };
+}
+
+describe('buildDaySummary pomodoro line', () => {
+  it('marks a day that reached the minimum', () => {
+    expect(buildDaySummary(makeDay({ pomodoros: 6 }))).toContain('🍅 Помидорок: 6 — день в зачёте');
+  });
+
+  it('marks exactly the minimum as qualified', () => {
+    expect(buildDaySummary(makeDay({ pomodoros: 4 }))).toContain('🍅 Помидорок: 4 — день в зачёте');
+  });
+
+  it('says how many are missing below the minimum', () => {
+    expect(buildDaySummary(makeDay({ pomodoros: 3 }))).toContain('🍅 Помидорок: 3 — до зачёта не хватило 1');
+    expect(buildDaySummary(makeDay({ pomodoros: 1 }))).toContain('🍅 Помидорок: 1 — до зачёта не хватило 3');
+  });
+
+  it('does not nag on a day with nothing at all', () => {
+    const text = buildDaySummary(makeDay({ pomodoros: 0 }));
+
+    expect(text).toContain('🍅 Помидорок: 0');
+    expect(text).not.toContain('не хватило');
+    expect(text).not.toContain('зачёт');
+  });
+});
+
+describe('buildDaySummary spheres', () => {
+  it('lists only the closed spheres with a counter', () => {
+    const text = buildDaySummary(
+      makeDay({
+        categories: [
+          { label: 'Спорт', done: true },
+          { label: 'Финансы', done: false },
+          { label: 'Обучение', done: true },
+        ],
+      }),
+    );
+
+    expect(text).toContain('Сферы — 2 / 3');
+    expect(text).toContain('✅ Спорт');
+    expect(text).toContain('✅ Обучение');
+    expect(text).not.toContain('❌');
+  });
+
+  it('collapses untouched spheres into one line', () => {
+    const text = buildDaySummary(
+      makeDay({
+        categories: [
+          { label: 'Спорт', done: true },
+          { label: 'Финансы', done: false },
+          { label: 'Проекты', done: false },
+        ],
+      }),
+    );
+
+    expect(text).toContain('Не тронуты: Финансы, Проекты');
+  });
+
+  it('omits the untouched line when everything is closed', () => {
+    const text = buildDaySummary(makeDay({ categories: [{ label: 'Спорт', done: true }] }));
+
+    expect(text).not.toContain('Не тронуты');
+  });
+
+  it('collapses the whole block when nothing is closed', () => {
+    const text = buildDaySummary(
+      makeDay({
+        categories: [
+          { label: 'Спорт', done: false },
+          { label: 'Финансы', done: false },
+        ],
+      }),
+    );
+
+    expect(text).toContain('Сферы не тронуты');
+    expect(text).not.toContain('Не тронуты:');
+    expect(text).not.toContain('Сферы —');
+    expect(text).not.toContain('❌');
+  });
+
+  it('omits the block entirely when there are no categories', () => {
+    expect(buildDaySummary(makeDay({ categories: [] }))).not.toContain('Сферы');
+  });
+
+  it('escapes html in both the closed list and the untouched line', () => {
+    const text = buildDaySummary(
+      makeDay({
+        categories: [
+          { label: 'Спорт <b>', done: true },
+          { label: 'Финансы <i>', done: false },
+        ],
+      }),
+    );
+
+    expect(text).toContain('Спорт &lt;b&gt;');
+    expect(text).toContain('Финансы &lt;i&gt;');
+    expect(text).not.toContain('<b>');
+    expect(text).not.toContain('<i>');
+  });
+});
+
+describe('buildDaySummary rating and comment', () => {
+  it('keeps printing the rating and the comment when set', () => {
+    const text = buildDaySummary(makeDay({ rating: 8, comment: 'Разобрал бэклог' }));
+
+    expect(text).toContain('⭐ Оценка: 8/10');
+    expect(text).toContain('💬 Разобрал бэклог');
+  });
+
+  it('omits both when unset', () => {
+    const text = buildDaySummary(makeDay());
+
+    expect(text).not.toContain('Оценка');
+    expect(text).not.toContain('💬');
   });
 });
