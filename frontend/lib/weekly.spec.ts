@@ -42,20 +42,21 @@ describe('toChartSeries', () => {
     expect(toChartSeries(makeStats()).map((p) => p.weekday)).toEqual(['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']);
   });
 
-  it('marks only the best day', () => {
+  it('marks days at or above the pomodoro minimum as qualified', () => {
     const series = toChartSeries(makeStats());
 
-    expect(series.filter((p) => p.best).map((p) => p.weekday)).toEqual(['Ср']);
+    expect(series.filter((p) => p.qualified).map((p) => p.weekday)).toEqual(['Пн', 'Ср', 'Пт']);
   });
 
-  it('marks nothing when the week had no best day', () => {
-    const series = toChartSeries(makeStats({ bestDay: null }));
+  it('marks nothing when no day reached the minimum', () => {
+    const stats = makeStats();
+    const series = toChartSeries({ ...stats, days: stats.days.map((d) => ({ ...d, pomodoros: 1 })) });
 
-    expect(series.some((p) => p.best)).toBe(false);
+    expect(series.some((p) => p.qualified)).toBe(false);
   });
 
   it('passes zero days through as zeros', () => {
-    expect(toChartSeries(makeStats())[1]).toEqual({ weekday: 'Вт', pomodoros: 0, best: false });
+    expect(toChartSeries(makeStats())[1]).toEqual({ weekday: 'Вт', pomodoros: 0, qualified: false });
   });
 });
 

@@ -11,8 +11,11 @@ export const WEEKLY_CHART_HEIGHT = 400;
 // Литеральные hex вместо var(--…): при сериализации SVG в отрыве от документа
 // CSS-переменные не разрешаются, и график уехал бы чёрно-белым.
 const BG = '#1a1d24';
-const BAR = '#e0574e';
-const BAR_BEST = '#ff6f5c';
+// Цвет столбика значит «день в зачёте», а не «сколько помидорок»: яркий —
+// набрал минимум, приглушённый — нет. Так сводка подсвечивает засчитанное,
+// а не орёт красным на каждый провал.
+const BAR_QUALIFIED = '#ff6f5c';
+const BAR_MISSED = '#2f343d';
 const TEXT = '#888d98';
 const GRID = '#2a2e37';
 
@@ -69,7 +72,7 @@ const WeeklyChart = forwardRef<HTMLDivElement, WeeklyChartProps>(function Weekly
         <Bar dataKey="pomodoros" isAnimationActive={false} radius={[4, 4, 0, 0]}>
           <LabelList dataKey="pomodoros" position="top" fill={TEXT} fontSize={13} fontFamily="sans-serif" />
           {data.map((point) => (
-            <Cell key={point.weekday} fill={point.best ? BAR_BEST : BAR} />
+            <Cell key={point.weekday} fill={point.qualified ? BAR_QUALIFIED : BAR_MISSED} />
           ))}
         </Bar>
       </BarChart>

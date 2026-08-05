@@ -39,12 +39,24 @@ export function useWeeklySummary() {
     }
   }, []);
 
-  const chartNode = stats ? (
+  // Считаем зачёт один раз через toChartSeries и берём qualified оттуда —
+  // не переизобретаем то же правило фильтром по POMODORO_MIN здесь, иначе
+  // при правке toChartSeries счётчик в заголовке молча разъедется с
+  // раскраской столбиков.
+  const chartSeries = stats ? toChartSeries(stats) : null;
+
+  const chartNode = stats && chartSeries ? (
     <div style={{ position: 'absolute', left: -10000, top: 0 }} aria-hidden>
       <WeeklyChart
         ref={holderRef}
-        data={toChartSeries(stats)}
-        title={`Помидорки · ${formatWeekRangeShort(stats.weekStart, stats.weekEnd)}`}
+        data={chartSeries}
+        // stats.days.length здесь всегда 7 — недельный агрегат бэкенда
+        // всегда набивает ровно семь дней (см. DAYS_IN_WEEK в
+        // backend/src/telegram/weekly.helpers.ts), так что это то же число,
+        // что подставляется в знаменатель строки «В зачёте» в тексте поста.
+        title={`Помидорки · ${formatWeekRangeShort(stats.weekStart, stats.weekEnd)} · ${
+          chartSeries.filter((p) => p.qualified).length
+        } из ${stats.days.length} в зачёте`}
       />
     </div>
   ) : null;
