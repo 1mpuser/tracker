@@ -5,6 +5,7 @@ import styles from './DayDetailModal.module.css';
 import type { DayView } from '@/types/api';
 import { getDay, setCategoryDone, updateDay, updatePomodoros, updateYoutube } from '@/lib/api';
 import { formatDisplayDate } from '@/lib/date';
+import { useWeeklySummary } from '@/lib/useWeeklySummary';
 import SpheresPanel from './SpheresPanel';
 
 type Stage = 'loading' | 'view' | 'confirm' | 'edit';
@@ -19,6 +20,7 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
   const [day, setDay] = useState<DayView | null>(null);
   const [stage, setStage] = useState<Stage>('loading');
   const [closingDay, setClosingDay] = useState(false);
+  const { sendIfSunday, chartNode } = useWeeklySummary();
 
   useEffect(() => {
     getDay(date).then((d) => {
@@ -52,8 +54,10 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
     if (!day || closingDay) return;
     setClosingDay(true);
     try {
+      const wasClosing = !day.eveningClosed;
       await updateDay(date, { eveningClosed: !day.eveningClosed });
       await refresh();
+      if (wasClosing) void sendIfSunday(date);
     } finally {
       setClosingDay(false);
     }
@@ -211,6 +215,7 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
           </div>
         )}
       </div>
+      {chartNode}
     </div>
   );
 }

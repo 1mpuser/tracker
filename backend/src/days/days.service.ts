@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CategoriesService } from '../categories/categories.service';
 import { GtdService, GtdItemView } from '../gtd/gtd.service';
 import { TelegramService } from '../telegram/telegram.service';
+import { StatsService } from '../stats/stats.service';
+import { buildWeekSummary } from '../telegram/weekly.helpers';
 import { addDays, formatDate, parseDateParam, todayDate } from '../common/date.util';
 
 export interface DayCategoryView {
@@ -48,6 +50,7 @@ export class DaysService {
     private categoriesService: CategoriesService,
     private gtdService: GtdService,
     private telegram: TelegramService,
+    private stats: StatsService,
   ) {}
 
   async getOrCreateDayId(dateStr: string): Promise<number> {
@@ -156,6 +159,57 @@ export class DaysService {
     }
 
     return view;
+  }
+
+  // Публикует недельную сводку за неделю, заканчивающуюся этой (воскресной)
+  // датой. Картинку рисует фронт и присылает готовым PNG — в контейнере
+  // рисовать нечем; текст собираем здесь из базы, чтобы пост не разошёлся
+  // с реальными числами, даже если клиент прислал что-то своё.
+  async postWeeklySummary(
+    dateStr: string,
+    chartPngBase64?: string | null,
+  ): Promise<{ posted: boolean; withChart: boolean; reason?: 'already-posted' | 'send-failed' }> {
+    // Не создаём строку через getOrCreateDayId: эндпоинт самосогласован и
+    // публикует сводку только для уже закрытого дня, иначе прямой вызов на
+    // будущее воскресенье завёл бы пустую строку и навсегда занял неделю
+    // сводкой из одних нулей.
+    const date = parseDateParam(dateStr);
+    const day = await this.prisma.day.findUnique({ where: { date } });
+    if (!day || day.eveningClosed !== true) {
+      throw new BadRequestException('Недельная сводка публикуется только для закрытого дня');
+    }
+    const dayId = day.id;
+    const withChart = Boolean(chartPngBase64);
+
+    // Чтение и сборка текста — до захвата, а не внутри него: weekStats() это
+    // четыре параллельных запроса в БД, каждый из которых может бросить.
+    // Если бы это было внутри захваченного окна, брошенное исключение
+    // оставило бы строку на сентинеле TELEGRAM_CLAIMED навсегда — «уже
+    // опубликовано» на все последующие попытки без единого реального поста.
+    // Внутри захвата остаётся только отправка в Telegram — она обёрнута в
+    // собственный try/catch и не бросает.
+    const stats = await this.stats.weekStats(dateStr);
+    const text = buildWeekSummary(stats);
+
+    // Тот же атомарный захват, что у дневной сводки: строку занимает ровно
+    // один конкурентный запрос, остальные получают count 0 и молчат.
+    const claim = await this.prisma.day.updateMany({
+      where: { id: dayId, weeklyTelegramMessageId: null },
+      data: { weeklyTelegramMessageId: TELEGRAM_CLAIMED },
+    });
+    if (claim.count !== 1) {
+      return { posted: false, withChart: false, reason: 'already-posted' };
+    }
+
+    const messageId = await this.telegram.postWeeklySummary(text, chartPngBase64 ?? null);
+
+    // Не отправилось -> сбрасываем захват обратно в null, чтобы следующее
+    // закрытие этого воскресенья попробовало снова.
+    await this.prisma.day.update({ where: { id: dayId }, data: { weeklyTelegramMessageId: messageId } });
+
+    return messageId === null
+      ? { posted: false, withChart, reason: 'send-failed' }
+      : { posted: true, withChart };
   }
 
   async getHistory(limit: number, endDateStr?: string): Promise<HistoryEntry[]> {

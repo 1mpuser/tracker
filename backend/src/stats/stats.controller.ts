@@ -22,4 +22,9 @@ export class StatsController {
     const parsed = days ? parseInt(days, 10) : 30;
     return this.statsService.youtubeDailyStats(Number.isNaN(parsed) ? 30 : parsed);
   }
+
+  @Get('week')
+  weekStats(@Query('end') end?: string) {
+    return this.statsService.weekStats(end ?? new Date().toISOString().slice(0, 10));
+  }
 }

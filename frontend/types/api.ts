@@ -66,6 +66,28 @@ export interface YoutubeDayStat {
   pct: number;
 }
 
+export interface WeekDayStat {
+  date: string;
+  weekday: string;
+  pomodoros: number;
+  rating: number | null;
+  closed: boolean;
+}
+
+export interface WeekStats {
+  weekStart: string;
+  weekEnd: string;
+  days: WeekDayStat[];
+  totalPomodoros: number;
+  avgPomodoros: number;
+  bestDay: { date: string; weekday: string; pomodoros: number } | null;
+  avgRating: number | null;
+  ratedDays: number;
+  categories: { label: string; doneCount: number }[];
+  youtubeAvgMinutes: number;
+  youtubeBudget: number;
+}
+
 export type GtdStatus =
   | 'inbox' | 'backlog' | 'calendar' | 'someday' | 'waiting' | 'project' | 'reference' | 'done' | 'archived';
 
