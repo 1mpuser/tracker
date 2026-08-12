@@ -50,10 +50,20 @@ export default function RoutinesScreen() {
     setBusy(routineId);
     setError(null);
     try {
-      setWeek(done ? await removeRoutineLog(routineId, date) : await addRoutineLog(routineId, date));
-      setHistory(await getRoutinesHistory(8, today));
-    } catch {
-      setError(done ? 'Не удалось снять отметку' : 'Не удалось отметить день');
+      try {
+        setWeek(done ? await removeRoutineLog(routineId, date) : await addRoutineLog(routineId, date));
+      } catch {
+        setError(done ? 'Не удалось снять отметку' : 'Не удалось отметить день');
+        return;
+      }
+      // Отдельный catch: отсюда лог уже записан и неделя перерисована. Общий
+      // try на оба запроса врал бы «Не удалось отметить день» ровно в тот
+      // момент, когда день отмечен и виден на экране.
+      try {
+        setHistory(await getRoutinesHistory(8, today));
+      } catch {
+        setError(done ? 'Отметка снята, но история недель не обновилась' : 'День отмечен, но история недель не обновилась');
+      }
     } finally {
       setBusy(null);
     }
