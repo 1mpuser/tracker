@@ -29,13 +29,20 @@ export default function RoutinesScreen() {
     // UTC-дату, и ночью (когда в UTC ещё вчерашняя неделя) экран рисовал бы
     // прошлую неделю, в которой сегодняшнего дня просто нет.
     const anchor = todayLocal();
-    Promise.all([getRoutines(anchor), getCategories(), getRoutinesHistory(8, anchor)])
-      .then(([w, cats, hist]) => {
-        setWeek(w);
-        setCategories(cats);
-        setHistory(hist);
-      })
+    // Неделя — единственный блокирующий запрос: без неё экран нечего рисовать.
+    getRoutines(anchor)
+      .then(setWeek)
       .catch(() => setError('Не удалось загрузить рутины'));
+    // История и список сфер второстепенны. Общий Promise.all с ними отбирал
+    // отметку дня из-за отказа любого из них, поэтому они грузятся отдельно и
+    // лишь дописывают сообщение в то же поле ошибки (`prev ?? …`), не затирая
+    // блокирующее: экран рисуется и днями можно отмечаться.
+    getRoutinesHistory(8, anchor)
+      .then(setHistory)
+      .catch(() => setError((prev) => prev ?? 'Не удалось загрузить историю недель'));
+    getCategories()
+      .then(setCategories)
+      .catch(() => setError((prev) => prev ?? 'Не удалось загрузить список сфер'));
   }, []);
 
   async function toggle(routineId: number, date: string, done: boolean) {
