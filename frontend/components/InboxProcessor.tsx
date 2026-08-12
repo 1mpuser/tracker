@@ -30,6 +30,11 @@ export default function InboxProcessor({ items, allItems, today, onChanged, onOp
   // id просроченной задачи, для которой открыт выбор новой даты
   const [rescheduleId, setRescheduleId] = useState<number | null>(null);
   const [rescheduleValue, setRescheduleValue] = useState<Record<number, string>>({});
+  // id просроченной задачи, по которой прямо сейчас летит запрос. Список не
+  // перерисовывается до возврата onChanged, а второй PATCH прилетел бы, когда в
+  // базе уже backlog, и разбор просрочки засчитался бы как повторное обещание
+  // (backlog → backlog инкрементирует deferCount, который не сбрасывается).
+  const [busyOverdueId, setBusyOverdueId] = useState<number | null>(null);
 
   async function capture() {
     const trimmed = title.trim();
@@ -118,26 +123,37 @@ export default function InboxProcessor({ items, allItems, today, onChanged, onOp
   }
 
   async function resolveOverdue(item: GtdItem, action: 'backlog' | 'archive') {
-    await updateGtdItem(
-      item.id,
-      action === 'backlog'
-        ? { status: 'backlog', scheduledDate: null, scheduledTime: null }
-        : { status: 'archived' },
-    );
-    await onChanged();
+    if (busyOverdueId !== null) return;
+    setBusyOverdueId(item.id);
+    try {
+      await updateGtdItem(
+        item.id,
+        action === 'backlog'
+          ? { status: 'backlog', scheduledDate: null, scheduledTime: null }
+          : { status: 'archived' },
+      );
+      await onChanged();
+    } finally {
+      setBusyOverdueId(null);
+    }
   }
 
   async function confirmReschedule(item: GtdItem) {
     const value = rescheduleValue[item.id];
-    if (!value) return;
-    await updateGtdItem(item.id, { status: 'calendar', scheduledDate: value });
-    setRescheduleId(null);
-    setRescheduleValue((s) => {
-      const next = { ...s };
-      delete next[item.id];
-      return next;
-    });
-    await onChanged();
+    if (!value || busyOverdueId !== null) return;
+    setBusyOverdueId(item.id);
+    try {
+      await updateGtdItem(item.id, { status: 'calendar', scheduledDate: value });
+      setRescheduleId((cur) => (cur === item.id ? null : cur));
+      setRescheduleValue((s) => {
+        const next = { ...s };
+        delete next[item.id];
+        return next;
+      });
+      await onChanged();
+    } finally {
+      setBusyOverdueId(null);
+    }
   }
 
   const similar = findSimilar(title, allItems);
@@ -254,14 +270,25 @@ export default function InboxProcessor({ items, allItems, today, onChanged, onOp
                 <button
                   type="button"
                   className={styles.optBtn}
+                  disabled={busyOverdueId === item.id}
                   onClick={() => setRescheduleId(rescheduleId === item.id ? null : item.id)}
                 >
                   Новая дата
                 </button>
-                <button type="button" className={styles.optBtn} onClick={() => resolveOverdue(item, 'backlog')}>
+                <button
+                  type="button"
+                  className={styles.optBtn}
+                  disabled={busyOverdueId === item.id}
+                  onClick={() => resolveOverdue(item, 'backlog')}
+                >
                   В бэклог недели
                 </button>
-                <button type="button" className={styles.optBtn} onClick={() => resolveOverdue(item, 'archive')}>
+                <button
+                  type="button"
+                  className={styles.optBtn}
+                  disabled={busyOverdueId === item.id}
+                  onClick={() => resolveOverdue(item, 'archive')}
+                >
                   Архив
                 </button>
               </div>
@@ -274,7 +301,7 @@ export default function InboxProcessor({ items, allItems, today, onChanged, onOp
                   <button
                     type="button"
                     className={styles.addBtn}
-                    disabled={!rescheduleValue[item.id]}
+                    disabled={!rescheduleValue[item.id] || busyOverdueId === item.id}
                     onClick={() => confirmReschedule(item)}
                   >
                     OK

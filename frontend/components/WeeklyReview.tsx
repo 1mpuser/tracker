@@ -35,18 +35,30 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
   const [done, setDone] = useState<Set<ReviewBucket>>(new Set());
   const [dateForId, setDateForId] = useState<number | null>(null);
   const [dateValue, setDateValue] = useState<Record<number, string>>({});
+  // id задачи, по которой прямо сейчас летит запрос. Список не перерисовывается
+  // до возврата onChanged, поэтому без этого второй клик по «Беру» ушёл бы
+  // вторым PATCH-ом и накрутил бы deferCount, который не сбрасывается никогда.
+  const [busy, setBusy] = useState<number | null>(null);
 
   const stale = staleItems(items, today);
 
   async function decide(id: number, patch: Parameters<typeof updateGtdItem>[1]) {
-    await updateGtdItem(id, patch);
-    setDateForId(null);
-    setDateValue((v) => {
-      const next = { ...v };
-      delete next[id];
-      return next;
-    });
-    await onChanged();
+    if (busy !== null) return;
+    setBusy(id);
+    try {
+      await updateGtdItem(id, patch);
+      // Закрываем пикер только если он открыт у этой же задачи — решение по одной
+      // задаче не должно захлопывать пикер, открытый у другой.
+      setDateForId((cur) => (cur === id ? null : cur));
+      setDateValue((v) => {
+        const next = { ...v };
+        delete next[id];
+        return next;
+      });
+      await onChanged();
+    } finally {
+      setBusy(null);
+    }
   }
 
   useEffect(() => {
@@ -112,28 +124,54 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
                               Откладываешь {item.deferCount + 1}-й раз. Это слишком крупно или ты этого не сделаешь?
                             </div>
                             <div className={styles.queueActions}>
-                              <button type="button" className={styles.queueBtn} onClick={() => decide(item.id, { status: 'project' })}>
+                              <button
+                                type="button"
+                                className={styles.queueBtn}
+                                disabled={busy === item.id}
+                                onClick={() => decide(item.id, { status: 'project' })}
+                              >
                                 Разбить на проект
                               </button>
-                              <button type="button" className={styles.queueBtn} onClick={() => decide(item.id, { status: 'archived' })}>
+                              <button
+                                type="button"
+                                className={styles.queueBtn}
+                                disabled={busy === item.id}
+                                onClick={() => decide(item.id, { status: 'archived' })}
+                              >
                                 В архив
                               </button>
                             </div>
                           </>
                         ) : (
                           <div className={styles.queueActions}>
-                            <button type="button" className={styles.queueBtn} onClick={() => decide(item.id, { status: 'backlog' })}>
+                            <button
+                              type="button"
+                              className={styles.queueBtn}
+                              disabled={busy === item.id}
+                              onClick={() => decide(item.id, { status: 'backlog' })}
+                            >
                               Беру
                             </button>
-                            <button type="button" className={styles.queueBtn} onClick={() => decide(item.id, { status: 'someday' })}>
+                            <button
+                              type="button"
+                              className={styles.queueBtn}
+                              disabled={busy === item.id}
+                              onClick={() => decide(item.id, { status: 'someday' })}
+                            >
                               Потом
                             </button>
-                            <button type="button" className={styles.queueBtn} onClick={() => decide(item.id, { status: 'archived' })}>
+                            <button
+                              type="button"
+                              className={styles.queueBtn}
+                              disabled={busy === item.id}
+                              onClick={() => decide(item.id, { status: 'archived' })}
+                            >
                               Архив
                             </button>
                             <button
                               type="button"
                               className={styles.queueBtn}
+                              disabled={busy === item.id}
                               onClick={() => setDateForId(dateForId === item.id ? null : item.id)}
                             >
                               На дату
@@ -149,7 +187,7 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
                             <button
                               type="button"
                               className={styles.queueBtn}
-                              disabled={!dateValue[item.id]}
+                              disabled={!dateValue[item.id] || busy === item.id}
                               onClick={() => decide(item.id, { status: 'calendar', scheduledDate: dateValue[item.id] })}
                             >
                               OK
