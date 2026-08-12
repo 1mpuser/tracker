@@ -205,6 +205,14 @@ export default function RoutinesScreen() {
                 onChange={(e) => patch(r.id, { categoryId: e.target.value ? Number(e.target.value) : null })}
               >
                 <option value="">без сферы</option>
+                {/* Сферу могли убрать в архив: getCategories отдаёт только
+                    активные, а categoryId рутины при архивации не обнуляется —
+                    и отметка продолжает ставить галочку этой сферы. Без своего
+                    варианта селект показал бы «без сферы», а первое же
+                    прикосновение к нему молча стёрло бы живую привязку. */}
+                {r.categoryId !== null && !categories.some((c) => c.id === r.categoryId) && (
+                  <option value={r.categoryId}>сфера в архиве</option>
+                )}
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.label}</option>
                 ))}
