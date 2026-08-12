@@ -23,6 +23,18 @@ describe('effectiveDue', () => {
     ).toBeNull();
   });
 
+  it('returns null for an archived item even when dueDate is set', () => {
+    expect(
+      effectiveDue({ dueDate: '2026-08-01', status: 'archived', scheduledDate: null, scheduledTime: null }),
+    ).toBeNull();
+  });
+
+  it('returns null for an archived item that still carries a scheduledDate', () => {
+    expect(
+      effectiveDue({ dueDate: null, status: 'archived', scheduledDate: '2026-08-02', scheduledTime: '14:30' }),
+    ).toBeNull();
+  });
+
   it('prefers dueDate over scheduledDate when both are present', () => {
     expect(
       effectiveDue({ dueDate: '2026-08-01', status: 'calendar', scheduledDate: '2026-08-02', scheduledTime: '09:00' }),

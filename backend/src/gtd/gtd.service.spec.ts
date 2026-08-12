@@ -564,6 +564,35 @@ describe('GtdService reminders (effectiveDue-driven)', () => {
     expect(icloud.completeReminder).not.toHaveBeenCalled();
   });
 
+  it('removes (not rewrites) the reminder when a due item is archived', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(
+      row({ status: 'backlog', dueDate: new Date('2026-08-01T00:00:00.000Z') }),
+    );
+    prisma.gtdItem.update.mockResolvedValue(
+      row({ status: 'archived', dueDate: new Date('2026-08-01T00:00:00.000Z') }),
+    );
+
+    await service.update(1, { status: 'archived' });
+
+    expect(icloud.removeReminder).toHaveBeenCalledWith(1);
+    expect(icloud.syncReminder).not.toHaveBeenCalled();
+    expect(icloud.completeReminder).not.toHaveBeenCalled();
+  });
+
+  it('removes the reminder when an overdue calendar item is archived from the daily triage', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(
+      row({ status: 'calendar', scheduledDate: new Date('2026-08-06T00:00:00.000Z') }),
+    );
+    prisma.gtdItem.update.mockResolvedValue(
+      row({ status: 'archived', scheduledDate: new Date('2026-08-06T00:00:00.000Z') }),
+    );
+
+    await service.update(1, { status: 'archived' });
+
+    expect(icloud.removeReminder).toHaveBeenCalledWith(1);
+    expect(icloud.syncReminder).not.toHaveBeenCalled();
+  });
+
   it('removes the reminder on delete when the item had an effective due date', async () => {
     prisma.gtdItem.findUnique.mockResolvedValue(
       row({ status: 'backlog', dueDate: new Date('2026-08-01T00:00:00.000Z') }),

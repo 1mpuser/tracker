@@ -9,6 +9,10 @@ export function effectiveDue(item: {
   scheduledDate: string | null;
   scheduledTime: string | null;
 }): EffectiveDue | null {
+  // У архивной задачи эффективной даты нет — даже если dueDate остался в базе.
+  // Иначе архивирование задачи с дедлайном переписывало бы напоминание со
+  // STATUS:NEEDS-ACTION вместо того, чтобы удалить его.
+  if (item.status === 'archived') return null;
   if (item.dueDate) return { date: item.dueDate, time: null };
   if (item.status === 'calendar' && item.scheduledDate) {
     return { date: item.scheduledDate, time: item.scheduledTime };
