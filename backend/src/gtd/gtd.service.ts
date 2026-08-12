@@ -21,6 +21,8 @@ export interface GtdItemView {
   discussWith: string | null;
   order: number;
   completedAt: string | null;
+  decidedAt: string | null;
+  deferCount: number;
 }
 
 const ACTIVE_EXCLUDED = ['done', 'archived'];
@@ -50,6 +52,8 @@ export class GtdService {
       discussWith: item.discussWith,
       order: item.order,
       completedAt: item.completedAt ? item.completedAt.toISOString() : null,
+      decidedAt: item.decidedAt ? item.decidedAt.toISOString() : null,
+      deferCount: item.deferCount,
     };
   }
 
@@ -94,6 +98,12 @@ export class GtdService {
     if (patch.priority !== undefined) data.priority = patch.priority;
     if (patch.status !== undefined) {
       data.status = patch.status;
+      // Любое решение о судьбе задачи продлевает ей жизнь — даже если статус тот же.
+      // Кнопка «Беру» в разборе шлёт backlog → backlog и попадает сюда.
+      data.decidedAt = new Date();
+      if (patch.status === 'backlog' && existing.status === 'backlog') {
+        data.deferCount = existing.deferCount + 1;
+      }
       if (patch.status === 'done' && existing.status !== 'done') {
         data.completedAt = new Date();
       } else if (patch.status !== 'done' && existing.status === 'done') {

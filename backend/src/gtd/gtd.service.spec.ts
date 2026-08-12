@@ -62,7 +62,7 @@ describe('GtdService.getItems', () => {
       {
         id: 3, title: 'Встреча', notes: null, status: 'calendar', parentId: null,
         scheduledDate: new Date('2026-07-25T00:00:00.000Z'), plannedDate: null, dueDate: null, priority: false,
-        waitingFor: null, order: 0, completedAt: null,
+        waitingFor: null, order: 0, completedAt: null, decidedAt: null, deferCount: 0,
       },
     ]);
 
@@ -76,7 +76,7 @@ describe('GtdService.getItems', () => {
       {
         id: 3, title: 'Встреча', notes: null, status: 'calendar', parentId: null,
         scheduledDate: '2026-07-25', plannedDate: null, dueDate: null, priority: false,
-        waitingFor: null, order: 0, completedAt: null,
+        waitingFor: null, order: 0, completedAt: null, decidedAt: null, deferCount: 0,
       },
     ]);
   });
@@ -572,5 +572,88 @@ describe('GtdService reminders (effectiveDue-driven)', () => {
     await service.remove(1);
 
     expect(icloud.removeReminder).not.toHaveBeenCalled();
+  });
+});
+
+describe('GtdService.update — decidedAt и deferCount', () => {
+  let service: GtdService;
+  let prisma: any;
+
+  function existing(over: any = {}) {
+    return {
+      id: 1, title: 'Прибраться в квартире', notes: null, status: 'backlog', parentId: null,
+      scheduledDate: null, scheduledTime: null, plannedDate: null, dueDate: null, priority: false,
+      waitingFor: null, acceptanceCriteria: null, discussWith: null, order: 0, completedAt: null,
+      decidedAt: new Date('2026-07-20T10:00:00Z'), deferCount: 0, ...over,
+    };
+  }
+
+  beforeEach(() => {
+    prisma = { gtdItem: { findUnique: jest.fn(), update: jest.fn() } };
+    const obsidian = { syncNote: jest.fn(), removeNote: jest.fn(), syncAllReference: jest.fn() };
+    const icloud = {
+      syncReminder: jest.fn(), completeReminder: jest.fn(),
+      removeReminder: jest.fn(), syncAllOnStartup: jest.fn(),
+    };
+    service = new GtdService(prisma, obsidian as any, icloud as any);
+  });
+
+  it('ставит decidedAt, когда в патче есть status', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(existing({ status: 'inbox' }));
+    prisma.gtdItem.update.mockResolvedValue(existing({ status: 'backlog' }));
+
+    await service.update(1, { status: 'backlog' });
+
+    expect(prisma.gtdItem.update.mock.calls[0][0].data.decidedAt).toBeInstanceOf(Date);
+  });
+
+  it('не трогает decidedAt и deferCount при правке заголовка', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(existing());
+    prisma.gtdItem.update.mockResolvedValue(existing({ title: 'Новое' }));
+
+    await service.update(1, { title: 'Новое' });
+
+    const data = prisma.gtdItem.update.mock.calls[0][0].data;
+    expect(data.decidedAt).toBeUndefined();
+    expect(data.deferCount).toBeUndefined();
+  });
+
+  it('инкрементирует deferCount при повторном обещании backlog → backlog', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(existing({ status: 'backlog', deferCount: 2 }));
+    prisma.gtdItem.update.mockResolvedValue(existing({ status: 'backlog', deferCount: 3 }));
+
+    await service.update(1, { status: 'backlog' });
+
+    expect(prisma.gtdItem.update.mock.calls[0][0].data.deferCount).toBe(3);
+  });
+
+  it('не инкрементирует deferCount при переходе someday → backlog', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(existing({ status: 'someday', deferCount: 2 }));
+    prisma.gtdItem.update.mockResolvedValue(existing({ status: 'backlog', deferCount: 2 }));
+
+    await service.update(1, { status: 'backlog' });
+
+    expect(prisma.gtdItem.update.mock.calls[0][0].data.deferCount).toBeUndefined();
+  });
+
+  it('отдаёт decidedAt строкой ISO и deferCount числом', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(existing());
+    prisma.gtdItem.update.mockResolvedValue(
+      existing({ deferCount: 3, decidedAt: new Date('2026-08-01T09:00:00Z') }),
+    );
+
+    const view = await service.update(1, { title: 'x' });
+
+    expect(view.decidedAt).toBe('2026-08-01T09:00:00.000Z');
+    expect(view.deferCount).toBe(3);
+  });
+
+  it('отдаёт decidedAt как null, когда поле пустое', async () => {
+    prisma.gtdItem.findUnique.mockResolvedValue(existing());
+    prisma.gtdItem.update.mockResolvedValue(existing({ decidedAt: null }));
+
+    const view = await service.update(1, { title: 'x' });
+
+    expect(view.decidedAt).toBeNull();
   });
 });
