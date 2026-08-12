@@ -126,6 +126,10 @@ export class RoutinesService {
   // причине (пробежка вместо качалки), и снятие отметки рутины не даёт
   // системе права стирать этот факт.
   async removeLog(id: number, dateStr: string): Promise<RoutinesWeekView> {
+    const routine = await this.prisma.routine.findUnique({ where: { id } });
+    if (!routine || routine.archived) {
+      throw new NotFoundException(`Routine ${id} not found`);
+    }
     const date = parseDateParam(dateStr);
     await this.prisma.routineLog.deleteMany({ where: { routineId: id, date } });
     return this.getWeek(dateStr);
@@ -142,8 +146,11 @@ export class RoutinesService {
    * сервера, и в ночные часы история разъезжалась бы с показанной неделей.
    */
   async getHistory(weeks = 8, anchor?: string): Promise<RoutineHistoryWeek[]> {
+    // Число недель приходит из строки запроса: дробное или мусорное значение
+    // ушло бы в границы диапазона дат и уронило бы запрос к базе.
+    const count = Math.min(52, Math.max(1, Math.trunc(Number(weeks)) || 8));
     const lastMonday = anchor ? mondayOf(parseDateParam(anchor)) : this.currentMonday();
-    const firstMonday = addDays(lastMonday, -(weeks - 1) * 7);
+    const firstMonday = addDays(lastMonday, -(count - 1) * 7);
 
     const routines = await this.prisma.routine.findMany({
       where: { archived: false },
@@ -163,7 +170,7 @@ export class RoutinesService {
     }
 
     const result: RoutineHistoryWeek[] = [];
-    for (let w = 0; w < weeks; w++) {
+    for (let w = 0; w < count; w++) {
       const weekStart = formatDate(addDays(firstMonday, w * 7));
       result.push({
         weekStart,

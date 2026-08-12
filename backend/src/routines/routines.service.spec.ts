@@ -185,6 +185,7 @@ describe('RoutinesService.addLog', () => {
 describe('RoutinesService.removeLog', () => {
   it('снимает отметку за конкретную дату', async () => {
     const { service, prisma } = makeService();
+    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null });
     prisma.routine.findMany.mockResolvedValue([]);
 
     await service.removeLog(1, '2026-08-12');
@@ -196,6 +197,7 @@ describe('RoutinesService.removeLog', () => {
 
   it('не снимает галочку сферы — сферу могли закрыть по другой причине', async () => {
     const { service, prisma } = makeService();
+    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: 5 });
     prisma.routine.findMany.mockResolvedValue([]);
 
     await service.removeLog(1, '2026-08-12');
@@ -205,10 +207,27 @@ describe('RoutinesService.removeLog', () => {
 
   it('не падает, когда отметки не было', async () => {
     const { service, prisma } = makeService();
+    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null });
     prisma.routine.findMany.mockResolvedValue([]);
     prisma.routineLog.deleteMany.mockResolvedValue({ count: 0 });
 
     await expect(service.removeLog(1, '2026-08-12')).resolves.toBeDefined();
+  });
+
+  it('падает NotFound на несуществующей рутине — как и addLog', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findUnique.mockResolvedValue(null);
+
+    await expect(service.removeLog(1, '2026-08-12')).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.routineLog.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('падает NotFound на архивной рутине', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: true, categoryId: null });
+
+    await expect(service.removeLog(1, '2026-08-12')).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.routineLog.deleteMany).not.toHaveBeenCalled();
   });
 });
 
@@ -282,6 +301,58 @@ describe('RoutinesService.getHistory', () => {
     const history = await service.getHistory(2);
 
     expect(history.map((w) => w.weekStart)).toEqual(['2026-07-27', '2026-08-03']);
+  });
+
+  it('не путает рутины между собой внутри одной недели', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([
+      { id: 1, weeklyGoal: 3 },
+      { id: 2, weeklyGoal: 2 },
+    ]);
+    prisma.routineLog.findMany.mockResolvedValue([
+      { routineId: 1, date: new Date('2026-08-10T00:00:00.000Z') },
+      { routineId: 1, date: new Date('2026-08-12T00:00:00.000Z') },
+      { routineId: 2, date: new Date('2026-08-12T00:00:00.000Z') },
+      { routineId: 2, date: new Date('2026-08-05T00:00:00.000Z') },
+    ]);
+
+    const history = await service.getHistory(2, '2026-08-12');
+
+    expect(history[1]).toEqual({
+      weekStart: '2026-08-10',
+      items: [
+        { routineId: 1, done: 2, weeklyGoal: 3 },
+        { routineId: 2, done: 1, weeklyGoal: 2 },
+      ],
+    });
+    expect(history[0]).toEqual({
+      weekStart: '2026-08-03',
+      items: [
+        { routineId: 1, done: 0, weeklyGoal: 3 },
+        { routineId: 2, done: 1, weeklyGoal: 2 },
+      ],
+    });
+  });
+
+  it('приводит мусорное число недель к значению по умолчанию', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([]);
+    prisma.routineLog.findMany.mockResolvedValue([]);
+
+    const history = await service.getHistory(Number('abc'), '2026-08-12');
+
+    expect(history).toHaveLength(8);
+    expect(history[7].weekStart).toBe('2026-08-10');
+  });
+
+  it('ограничивает число недель сверху и снизу', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([]);
+    prisma.routineLog.findMany.mockResolvedValue([]);
+
+    expect(await service.getHistory(1000, '2026-08-12')).toHaveLength(52);
+    expect(await service.getHistory(-5, '2026-08-12')).toHaveLength(1);
+    expect(await service.getHistory(2.7, '2026-08-12')).toHaveLength(2);
   });
 
   it('отклоняет якорь, который не является датой', async () => {
