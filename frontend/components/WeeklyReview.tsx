@@ -44,11 +44,18 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
   const [routines, setRoutines] = useState<RoutineView[]>([]);
   const [routineBusy, setRoutineBusy] = useState<number | null>(null);
   const [routineError, setRoutineError] = useState<string | null>(null);
+  // Пока рутины не загружены, пустая очередь не значит «всё закрыто».
+  const [routinesLoaded, setRoutinesLoaded] = useState(false);
 
   useEffect(() => {
     // `today` уже локальная дата — якорим неделю на неё, иначе обзор спросит
     // про прошлую неделю в те часы, когда в UTC ещё вчера.
-    getRoutines(today).then((w) => setRoutines(w.routines));
+    getRoutines(today)
+      .then((w) => {
+        setRoutines(w.routines);
+        setRoutinesLoaded(true);
+      })
+      .catch(() => setRoutineError('Не удалось загрузить рутины'));
   }, [today]);
 
   const missed = routines.filter((r) => r.done < r.weeklyGoal);
@@ -242,10 +249,13 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
                     ))}
                   </div>
                 )}
-                {step.key === 'routines' && (missed.length > 0 || routineError) && (
+                {step.key === 'routines' && (missed.length > 0 || routinesLoaded || routineError) && (
                   <div className={styles.queue}>
                     {missed.length > 0 && (
                       <div className={styles.queueTitle}>не добрали норму: {missed.length}</div>
+                    )}
+                    {missed.length === 0 && routinesLoaded && (
+                      <div className={styles.queueQuestion}>все нормы закрыты</div>
                     )}
                     {missed.map((r) => (
                       <div key={r.id} className={styles.queueItem}>

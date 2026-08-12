@@ -602,6 +602,10 @@ Expected: FAIL — `service.addLog is not a function`.
   // причине (пробежка вместо качалки), и снятие отметки рутины не даёт
   // системе права стирать этот факт.
   async removeLog(id: number, dateStr: string): Promise<RoutinesWeekView> {
+    const routine = await this.prisma.routine.findUnique({ where: { id } });
+    if (!routine || routine.archived) {
+      throw new NotFoundException(`Routine ${id} not found`);
+    }
     const date = parseDateParam(dateStr);
     await this.prisma.routineLog.deleteMany({ where: { routineId: id, date } });
     return this.getWeek(dateStr);
@@ -636,7 +640,7 @@ git commit -m "feat(backend): отметка рутины закрывает с�
     weekStart: string;
     items: { routineId: number; done: number; weeklyGoal: number }[];
   }
-  getHistory(weeks?: number): Promise<RoutineHistoryWeek[]>  // по умолчанию 8
+  getHistory(weeks?: number, anchor?: string): Promise<RoutineHistoryWeek[]>  // по умолчанию 8 недель, якорь — «сегодня» вызывающего
   ```
   Недели идут от старых к новым; последняя — текущая.
 
@@ -721,9 +725,14 @@ export interface RoutineHistoryWeek {
     return mondayOf(todayDate());
   }
 
-  async getHistory(weeks = 8): Promise<RoutineHistoryWeek[]> {
-    const lastMonday = this.currentMonday();
-    const firstMonday = addDays(lastMonday, -(weeks - 1) * 7);
+  async getHistory(weeks = 8, anchor?: string): Promise<RoutineHistoryWeek[]> {
+    // Число недель приходит из строки запроса: дробное или мусорное значение
+    // ушло бы в границы диапазона дат и уронило бы запрос к базе.
+    const count = Math.min(52, Math.max(1, Math.trunc(Number(weeks)) || 8));
+    // anchor — локальное «сегодня» фронта. Без него последняя неделя истории
+    // считалась бы от UTC-даты сервера и разъезжалась бы с показанной неделей.
+    const lastMonday = anchor ? mondayOf(parseDateParam(anchor)) : this.currentMonday();
+    const firstMonday = addDays(lastMonday, -(count - 1) * 7);
 
     const routines = await this.prisma.routine.findMany({
       where: { archived: false },
@@ -743,7 +752,7 @@ export interface RoutineHistoryWeek {
     }
 
     const result: RoutineHistoryWeek[] = [];
-    for (let w = 0; w < weeks; w++) {
+    for (let w = 0; w < count; w++) {
       const weekStart = formatDate(addDays(firstMonday, w * 7));
       result.push({
         weekStart,
@@ -786,7 +795,7 @@ git commit -m "feat(backend): история выполнения рутин п�
 - Consumes: все методы `RoutinesService` из задач 3-5.
 - Produces: эндпоинты, которыми пользуется фронт в задачах 7-11:
   - `GET /routines?week=YYYY-MM-DD` → `RoutinesWeekView`
-  - `GET /routines/history?weeks=8` → `RoutineHistoryWeek[]`
+  - `GET /routines/history?weeks=8&anchor=YYYY-MM-DD` → `RoutineHistoryWeek[]`
   - `POST /routines` → созданная рутина
   - `PATCH /routines/:id` → обновлённая рутина
   - `DELETE /routines/:id` → `{ id }`
@@ -873,10 +882,12 @@ import { RoutineLogDto } from './dto/routine-log.dto';
 export class RoutinesController {
   constructor(private readonly routinesService: RoutinesService) {}
 
-  // Объявлен до `:id`-маршрутов: иначе 'history' уедет в параметр.
+  // Объявлен до остальных `@Get`: статический сегмент должен стоять раньше
+  // любого `:param`-маршрута, иначе 'history' уедет в параметр.
   @Get('history')
-  getHistory(@Query('weeks') weeks?: string) {
-    return this.routinesService.getHistory(weeks ? Number(weeks) : undefined);
+  getHistory(@Query('weeks') weeks?: string, @Query('anchor') anchor?: string) {
+    const parsed = weeks ? parseInt(weeks, 10) : NaN;
+    return this.routinesService.getHistory(Number.isNaN(parsed) ? undefined : parsed, anchor);
   }
 
   @Get()
@@ -1574,7 +1585,7 @@ import { addRoutineLog, archiveRoutine, createRoutine, getCategories, getRoutine
       )}
 ```
 
-Архивирование не спрашивает подтверждения: история выполнения сохраняется, и это не разрушительное действие.
+Архивирование спрашивает подтверждение через `window.confirm`: история выполнения сохраняется, но кнопка стоит вплотную к полю названия, а пути назад из архива в интерфейсе нет.
 
 - [ ] **Step 3: Добавить стили**
 
@@ -1815,7 +1826,6 @@ git commit -m "feat(frontend): история рутин и вкладка «Р�
 
 **Files:**
 - Modify: `frontend/components/WeeklyReview.tsx`
-- Modify: `frontend/components/WeeklyReview.module.css`
 
 **Interfaces:**
 - Consumes: `getRoutines`, `updateRoutine`, `archiveRoutine` из Task 7; `RoutineView`.

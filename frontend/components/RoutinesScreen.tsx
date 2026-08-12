@@ -83,7 +83,10 @@ export default function RoutinesScreen() {
     }
   }
 
-  async function archive(id: number) {
+  async function archive(id: number, title: string) {
+    // Кнопка стоит вплотную к полю названия, а пути назад из архива в
+    // интерфейсе нет — промах мышью не должен уносить рутину молча.
+    if (!window.confirm(`Убрать «${title}» в архив? Вернуть её через интерфейс будет нельзя.`)) return;
     setError(null);
     try {
       await archiveRoutine(id);
@@ -217,7 +220,7 @@ export default function RoutinesScreen() {
                   <option key={c.id} value={c.id}>{c.label}</option>
                 ))}
               </select>
-              <button type="button" className={styles.archiveBtn} onClick={() => archive(r.id)}>
+              <button type="button" className={styles.archiveBtn} onClick={() => archive(r.id, r.title)}>
                 в архив
               </button>
             </div>
