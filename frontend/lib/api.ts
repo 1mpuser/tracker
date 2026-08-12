@@ -5,6 +5,9 @@ import type {
   GtdItem,
   GtdStatus,
   HistoryEntry,
+  RoutineHistoryWeek,
+  RoutinesWeek,
+  RoutineView,
   Settings,
   TaskTemplate,
   WeekStats,
@@ -158,4 +161,35 @@ export function postWeeklySummary(
     method: 'POST',
     body: JSON.stringify(chartPng ? { chartPng } : {}),
   });
+}
+
+export function getRoutines(week?: string): Promise<RoutinesWeek> {
+  return request(week ? `/routines?week=${week}` : `/routines`);
+}
+
+export function getRoutinesHistory(weeks = 8): Promise<RoutineHistoryWeek[]> {
+  return request(`/routines/history?weeks=${weeks}`);
+}
+
+export function createRoutine(title: string, weeklyGoal: number, categoryId: number | null): Promise<RoutineView> {
+  return request(`/routines`, { method: 'POST', body: JSON.stringify({ title, weeklyGoal, categoryId }) });
+}
+
+export function updateRoutine(
+  id: number,
+  patch: { title?: string; weeklyGoal?: number; categoryId?: number | null },
+): Promise<RoutineView> {
+  return request(`/routines/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+}
+
+export function archiveRoutine(id: number): Promise<{ id: number }> {
+  return request(`/routines/${id}`, { method: 'DELETE' });
+}
+
+export function addRoutineLog(id: number, date: string): Promise<RoutinesWeek> {
+  return request(`/routines/${id}/log`, { method: 'POST', body: JSON.stringify({ date }) });
+}
+
+export function removeRoutineLog(id: number, date: string): Promise<RoutinesWeek> {
+  return request(`/routines/${id}/log/${date}`, { method: 'DELETE' });
 }

@@ -110,3 +110,24 @@ export interface GtdItem {
   decidedAt: string | null;
   deferCount: number;
 }
+
+export interface RoutineView {
+  id: number;
+  title: string;
+  weeklyGoal: number;
+  categoryId: number | null;
+  done: number;
+  days: string[];
+  order: number;
+}
+
+export interface RoutinesWeek {
+  weekStart: string;
+  weekEnd: string;
+  routines: RoutineView[];
+}
+
+export interface RoutineHistoryWeek {
+  weekStart: string;
+  items: { routineId: number; done: number; weeklyGoal: number }[];
+}
