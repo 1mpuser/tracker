@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GtdItem, GtdStatus } from '@/types/api';
 import { formatRuDate } from '@/lib/date';
+import { isOverdue as isCalendarOverdue, isStale, staleDays } from '@/lib/gtd';
 import DatePicker from './DatePicker';
 import styles from './GtdItemRow.module.css';
 
@@ -25,9 +26,9 @@ interface GtdItemRowProps {
 }
 
 const MOVE_TARGETS: { status: GtdStatus; label: string }[] = [
-  { status: 'backlog', label: 'Бэклог' },
+  { status: 'backlog', label: 'Бэклог недели' },
   { status: 'calendar', label: 'Календарь' },
-  { status: 'someday', label: 'Когда-нибудь' },
+  { status: 'someday', label: 'Потом' },
   { status: 'waiting', label: 'Ожидание' },
   { status: 'project', label: 'Проект' },
   { status: 'reference', label: 'Заметки' },
@@ -134,6 +135,8 @@ export default function GtdItemRow({
   }
 
   const isOverdue = !!item.dueDate && item.dueDate < today && item.status !== 'done';
+  const stale = isStale(item, today);
+  const calendarOverdue = isCalendarOverdue(item, today);
   const canPlanToday = item.status === 'backlog' || item.status === 'someday' || item.status === 'calendar';
   const isToday = item.plannedDate === today;
 
@@ -184,13 +187,17 @@ export default function GtdItemRow({
       )}
 
       {item.status === 'calendar' && item.scheduledDate && (
-        <span className={styles.meta}>📅 {formatRuDate(item.scheduledDate, item.scheduledTime)}</span>
+        <span className={`${styles.meta} ${calendarOverdue ? styles.overdue : ''}`}>
+          📅 {formatRuDate(item.scheduledDate, item.scheduledTime)}
+        </span>
       )}
       {item.status === 'waiting' && item.waitingFor && <span className={styles.meta}>→ {item.waitingFor}</span>}
       {item.priority && <span className={styles.prio}>❗</span>}
       {item.dueDate && (
         <span className={`${styles.due} ${isOverdue ? styles.overdue : ''}`}>⏰ {formatRuDate(item.dueDate)}</span>
       )}
+      {stale && <span className={styles.stale}>{staleDays(item, today)}д</span>}
+      {item.deferCount > 0 && <span className={styles.stale}>отложено {item.deferCount}×</span>}
 
       <span className={styles.actions}>
         <button
