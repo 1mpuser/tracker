@@ -136,6 +136,7 @@ export default function GtdItemRow({
 
   const isOverdue = !!item.dueDate && item.dueDate < today && item.status !== 'done';
   const stale = isStale(item, today);
+  const staleAge = staleDays(item, today);
   const calendarOverdue = isCalendarOverdue(item, today);
   const canPlanToday = item.status === 'backlog' || item.status === 'someday' || item.status === 'calendar';
   const isToday = item.plannedDate === today;
@@ -196,7 +197,9 @@ export default function GtdItemRow({
       {item.dueDate && (
         <span className={`${styles.due} ${isOverdue ? styles.overdue : ''}`}>⏰ {formatRuDate(item.dueDate)}</span>
       )}
-      {stale && <span className={styles.stale}>{staleDays(item, today)}д</span>}
+      {/* Возраст показываем только когда он конечен: у задачи без единой даты
+          решения staleDays равен Infinity, и бейдж напечатал бы «Infinityд». */}
+      {stale && Number.isFinite(staleAge) && <span className={styles.stale}>{staleAge}д</span>}
       {item.deferCount > 0 && <span className={styles.stale}>отложено {item.deferCount}×</span>}
 
       <span className={styles.actions}>

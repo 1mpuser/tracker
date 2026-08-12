@@ -60,7 +60,10 @@ export class GtdService {
   async create(title: string, parentId?: number) {
     const maxOrder = await this.prisma.gtdItem.aggregate({ _max: { order: true } });
     return this.prisma.gtdItem.create({
-      data: { title, status: 'inbox', order: (maxOrder._max.order ?? -1) + 1, parentId },
+      // Создание — тоже решение о судьбе задачи, поэтому decidedAt проставляется
+      // сразу. Для inbox это не наблюдаемо (входящие не протухают), но так поле
+      // никогда не остаётся NULL и staleDays не может вернуть Infinity.
+      data: { title, status: 'inbox', order: (maxOrder._max.order ?? -1) + 1, parentId, decidedAt: new Date() },
     });
   }
 
@@ -167,7 +170,15 @@ export class GtdService {
     const date = parseDateParam(dateStr);
     const maxOrder = await this.prisma.gtdItem.aggregate({ _max: { order: true } });
     return this.prisma.gtdItem.create({
-      data: { title, status: 'backlog', order: (maxOrder._max.order ?? -1) + 1, plannedDate: date },
+      // Постановка задачи на дату — решение о её судьбе. Без decidedAt задача,
+      // у которой потом снимут plannedDate, осталась бы вообще без даты решения.
+      data: {
+        title,
+        status: 'backlog',
+        order: (maxOrder._max.order ?? -1) + 1,
+        plannedDate: date,
+        decidedAt: new Date(),
+      },
     });
   }
 }

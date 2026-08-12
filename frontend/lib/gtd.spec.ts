@@ -223,6 +223,19 @@ describe('протухание и просрочка', () => {
       expect(staleItems(items, '2026-08-12').map((i) => i.id)).toEqual([2, 3]);
     });
 
+    it('не роняет сортировку, когда у задач нет ни одной даты решения', () => {
+      const items = [
+        task({ id: 1, decidedAt: '2026-07-24T10:00:00.000Z' }),
+        task({ id: 2 }),
+        task({ id: 3 }),
+        task({ id: 4, decidedAt: '2026-07-19T10:00:00.000Z' }),
+      ];
+      const sorted = staleItems(items, '2026-08-12');
+      // Бездатные (возраст Infinity) — самые старые, идут первыми; между собой
+      // порядок сохраняется исходный. Дальше — по убыванию возраста.
+      expect(sorted.map((i) => i.id)).toEqual([2, 3, 4, 1]);
+    });
+
     it('overdueItems отдаёт только просроченные, от самых старых', () => {
       const items = [
         task({ id: 1, status: 'calendar', scheduledDate: '2026-08-13' }),

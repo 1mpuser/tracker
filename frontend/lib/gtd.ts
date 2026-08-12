@@ -139,7 +139,15 @@ export function needsEscalation(item: GtdItem): boolean {
 export function staleItems(items: GtdItem[], today: string): GtdItem[] {
   return items
     .filter((i) => isStale(i, today))
-    .sort((a, b) => staleDays(b, today) - staleDays(a, today));
+    .sort((a, b) => {
+      const ageA = staleDays(a, today);
+      const ageB = staleDays(b, today);
+      // Явное сравнение вместо вычитания: у задач без единой даты решения возраст
+      // равен Infinity, и `Infinity - Infinity` дало бы NaN — компаратор,
+      // нарушающий контракт Array.prototype.sort.
+      if (ageA === ageB) return 0;
+      return ageA > ageB ? -1 : 1;
+    });
 }
 
 export function overdueItems(items: GtdItem[], today: string): GtdItem[] {

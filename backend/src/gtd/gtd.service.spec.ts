@@ -19,7 +19,7 @@ describe('GtdService.create', () => {
     await service.create('Позвонить в банк');
 
     expect(prisma.gtdItem.create).toHaveBeenCalledWith({
-      data: { title: 'Позвонить в банк', status: 'inbox', order: 5, parentId: undefined },
+      data: { title: 'Позвонить в банк', status: 'inbox', order: 5, parentId: undefined, decidedAt: expect.any(Date) },
     });
   });
 
@@ -30,8 +30,17 @@ describe('GtdService.create', () => {
     await service.create('Первый шаг', 7);
 
     expect(prisma.gtdItem.create).toHaveBeenCalledWith({
-      data: { title: 'Первый шаг', status: 'inbox', order: 0, parentId: 7 },
+      data: { title: 'Первый шаг', status: 'inbox', order: 0, parentId: 7, decidedAt: expect.any(Date) },
     });
+  });
+
+  it('проставляет decidedAt, чтобы задача никогда не оставалась без даты решения', async () => {
+    prisma.gtdItem.aggregate.mockResolvedValue({ _max: { order: 0 } });
+    prisma.gtdItem.create.mockResolvedValue({ id: 3 });
+
+    await service.create('Что-то');
+
+    expect(prisma.gtdItem.create.mock.calls[0][0].data.decidedAt).toBeInstanceOf(Date);
   });
 });
 
@@ -239,8 +248,18 @@ describe('GtdService.createForDate', () => {
         status: 'backlog',
         order: 3,
         plannedDate: new Date('2026-07-23T00:00:00.000Z'),
+        decidedAt: expect.any(Date),
       },
     });
+  });
+
+  it('проставляет decidedAt: постановка на дату — это решение о судьбе задачи', async () => {
+    prisma.gtdItem.aggregate.mockResolvedValue({ _max: { order: 2 } });
+    prisma.gtdItem.create.mockResolvedValue({ id: 1 });
+
+    await service.createForDate('Сделать презу', '2026-07-23');
+
+    expect(prisma.gtdItem.create.mock.calls[0][0].data.decidedAt).toBeInstanceOf(Date);
   });
 });
 
