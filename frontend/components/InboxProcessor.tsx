@@ -1,18 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import type { GtdItem } from '@/types/api';
+import type { GtdItem, GtdStatus } from '@/types/api';
 import { createGtdItem, updateGtdItem } from '@/lib/api';
-import { CLARIFY, CLARIFY_START, type ClarifyOption, type ClarifyRoute } from '@/lib/gtd';
+import { CLARIFY, CLARIFY_START, findSimilar, type ClarifyOption, type ClarifyRoute } from '@/lib/gtd';
 import DatePicker from './DatePicker';
 import styles from './InboxProcessor.module.css';
 
 interface InboxProcessorProps {
   items: GtdItem[];
+  allItems: GtdItem[];
+  today: string;
   onChanged: () => void | Promise<void>;
+  onOpenBucket: (status: GtdStatus) => void;
 }
 
-export default function InboxProcessor({ items, onChanged }: InboxProcessorProps) {
+export default function InboxProcessor({ items, allItems, today, onChanged, onOpenBucket }: InboxProcessorProps) {
   const [title, setTitle] = useState('');
   // per-item current question key (defaults to CLARIFY_START)
   const [step, setStep] = useState<Record<number, string>>({});
@@ -110,6 +113,8 @@ export default function InboxProcessor({ items, onChanged }: InboxProcessorProps
     await onChanged();
   }
 
+  const similar = findSimilar(title, allItems);
+
   return (
     <div className={styles.wrap}>
       <div className={styles.capture}>
@@ -126,6 +131,22 @@ export default function InboxProcessor({ items, onChanged }: InboxProcessorProps
           +
         </button>
       </div>
+
+      {similar.length > 0 && (
+        <div className={styles.similar}>
+          Похоже, уже есть:
+          {similar.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={styles.similarBtn}
+              onClick={() => onOpenBucket(s.status)}
+            >
+              {s.title}
+            </button>
+          ))}
+        </div>
+      )}
 
       {items.length === 0 && <div className={styles.empty}>Корзина пуста — красота.</div>}
 

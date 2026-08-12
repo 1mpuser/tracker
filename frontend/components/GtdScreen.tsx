@@ -146,7 +146,13 @@ export default function GtdScreen() {
           {loading && <div className={styles.empty}>загрузка…</div>}
 
           {active === 'inbox' ? (
-            <InboxProcessor items={visible} onChanged={reload} />
+            <InboxProcessor
+              items={visible}
+              allItems={items}
+              today={todayLocal()}
+              onChanged={reload}
+              onOpenBucket={setActive}
+            />
           ) : (
             <>
               <input
