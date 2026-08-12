@@ -19,6 +19,11 @@ export interface RoutinesWeekView {
   routines: RoutineView[];
 }
 
+export interface RoutineHistoryWeek {
+  weekStart: string;
+  items: { routineId: number; done: number; weeklyGoal: number }[];
+}
+
 @Injectable()
 export class RoutinesService {
   constructor(
@@ -124,5 +129,46 @@ export class RoutinesService {
     const date = parseDateParam(dateStr);
     await this.prisma.routineLog.deleteMany({ where: { routineId: id, date } });
     return this.getWeek(dateStr);
+  }
+
+  /** Вынесено отдельным методом, чтобы тесты могли зафиксировать «сегодня». */
+  private currentMonday(): Date {
+    return mondayOf(todayDate());
+  }
+
+  async getHistory(weeks = 8): Promise<RoutineHistoryWeek[]> {
+    const lastMonday = this.currentMonday();
+    const firstMonday = addDays(lastMonday, -(weeks - 1) * 7);
+
+    const routines = await this.prisma.routine.findMany({
+      where: { archived: false },
+      orderBy: { order: 'asc' },
+    });
+    const logs = await this.prisma.routineLog.findMany({
+      where: {
+        date: { gte: firstMonday, lte: addDays(lastMonday, 6) },
+        routineId: { in: routines.map((r: any) => r.id) },
+      },
+    });
+
+    const counts = new Map<string, number>();
+    for (const log of logs as any[]) {
+      const key = `${log.routineId}|${formatDate(mondayOf(log.date))}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    const result: RoutineHistoryWeek[] = [];
+    for (let w = 0; w < weeks; w++) {
+      const weekStart = formatDate(addDays(firstMonday, w * 7));
+      result.push({
+        weekStart,
+        items: routines.map((r: any) => ({
+          routineId: r.id,
+          done: counts.get(`${r.id}|${weekStart}`) ?? 0,
+          weeklyGoal: r.weeklyGoal,
+        })),
+      });
+    }
+    return result;
   }
 }

@@ -211,3 +211,54 @@ describe('RoutinesService.removeLog', () => {
     await expect(service.removeLog(1, '2026-08-12')).resolves.toBeDefined();
   });
 });
+
+describe('RoutinesService.getHistory', () => {
+  it('возвращает запрошенное число недель, последняя — текущая', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([{ id: 1, weeklyGoal: 3 }]);
+    prisma.routineLog.findMany.mockResolvedValue([]);
+    jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-10T00:00:00.000Z'));
+
+    const history = await service.getHistory(3);
+
+    expect(history.map((w) => w.weekStart)).toEqual(['2026-07-27', '2026-08-03', '2026-08-10']);
+  });
+
+  it('раскладывает логи по неделям, к которым они относятся', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([{ id: 1, weeklyGoal: 3 }]);
+    prisma.routineLog.findMany.mockResolvedValue([
+      { routineId: 1, date: new Date('2026-08-11T00:00:00.000Z') },
+      { routineId: 1, date: new Date('2026-08-13T00:00:00.000Z') },
+      { routineId: 1, date: new Date('2026-08-05T00:00:00.000Z') },
+    ]);
+    jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-10T00:00:00.000Z'));
+
+    const history = await service.getHistory(2);
+
+    expect(history[0]).toEqual({ weekStart: '2026-08-03', items: [{ routineId: 1, done: 1, weeklyGoal: 3 }] });
+    expect(history[1]).toEqual({ weekStart: '2026-08-10', items: [{ routineId: 1, done: 2, weeklyGoal: 3 }] });
+  });
+
+  it('отдаёт нули для недели без отметок, а не пропускает её', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([{ id: 1, weeklyGoal: 3 }]);
+    prisma.routineLog.findMany.mockResolvedValue([]);
+    jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-10T00:00:00.000Z'));
+
+    const history = await service.getHistory(2);
+
+    expect(history[0].items).toEqual([{ routineId: 1, done: 0, weeklyGoal: 3 }]);
+  });
+
+  it('не считает архивные рутины', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([]);
+    prisma.routineLog.findMany.mockResolvedValue([]);
+    jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-10T00:00:00.000Z'));
+
+    await service.getHistory(2);
+
+    expect(prisma.routine.findMany.mock.calls[0][0].where).toEqual({ archived: false });
+  });
+});
