@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Category, RoutinesWeek } from '@/types/api';
-import { addRoutineLog, archiveRoutine, createRoutine, getCategories, getRoutines, removeRoutineLog, updateRoutine } from '@/lib/api';
-import { isDoneOn, weekDays } from '@/lib/routines';
+import type { Category, RoutineHistoryWeek, RoutinesWeek } from '@/types/api';
+import { addRoutineLog, archiveRoutine, createRoutine, getCategories, getRoutines, getRoutinesHistory, removeRoutineLog, updateRoutine } from '@/lib/api';
+import { isDoneOn, routineRatioColor, weekDays } from '@/lib/routines';
 import { todayLocal } from '@/lib/date';
 import styles from './RoutinesScreen.module.css';
 
@@ -11,6 +11,7 @@ const DAY_LABELS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
 
 export default function RoutinesScreen() {
   const [week, setWeek] = useState<RoutinesWeek | null>(null);
+  const [history, setHistory] = useState<RoutineHistoryWeek[]>([]);
   const [busy, setBusy] = useState<number | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -23,6 +24,7 @@ export default function RoutinesScreen() {
   useEffect(() => {
     getRoutines().then(setWeek);
     getCategories().then(setCategories);
+    getRoutinesHistory().then(setHistory);
   }, []);
 
   async function toggle(routineId: number, date: string, done: boolean) {
@@ -37,6 +39,7 @@ export default function RoutinesScreen() {
 
   async function reload() {
     setWeek(await getRoutines());
+    setHistory(await getRoutinesHistory());
   }
 
   async function add() {
@@ -114,6 +117,32 @@ export default function RoutinesScreen() {
           </div>
         );
       })}
+
+      {history.length > 0 && week.routines.length > 0 && (
+        <div className={styles.history}>
+          <div className={styles.historyTitle}>Последние {history.length} недель</div>
+          {week.routines.map((r) => (
+            <div key={r.id} className={styles.historyRow}>
+              <div className={styles.historyName}>{r.title}</div>
+              <div className={styles.dots}>
+                {history.map((w) => {
+                  const item = w.items.find((i) => i.routineId === r.id);
+                  const done = item?.done ?? 0;
+                  const goal = item?.weeklyGoal ?? r.weeklyGoal;
+                  return (
+                    <span
+                      key={w.weekStart}
+                      className={styles.weekCell}
+                      style={{ background: routineRatioColor(done, goal) }}
+                      title={`неделя с ${w.weekStart}: ${done}/${goal}`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <button type="button" className={styles.settingsToggle} onClick={() => setSettingsOpen(!settingsOpen)}>
         {settingsOpen ? 'Свернуть настройку' : 'Настроить рутины'}

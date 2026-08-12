@@ -5,6 +5,7 @@ import type { DayView, GtdItem, HistoryEntry, Settings } from '@/types/api';
 import {
   getDay,
   getHistory,
+  getRoutines,
   getSettings,
   planForToday,
   setCategoryDone,
@@ -19,6 +20,7 @@ import { formatDisplayDate, todayLocal } from '@/lib/date';
 import { isEveningWindow, isMorningWindow, isWeeklyReviewWindow } from '@/lib/notifications';
 import { computeStreak } from '@/lib/streak';
 import { computePomodoroStreak, POMODORO_MIN, POMODORO_OPT } from '@/lib/pomodoro';
+import { unclosedRoutines } from '@/lib/routines';
 import { useWeeklySummary } from '@/lib/useWeeklySummary';
 import Header from './Header';
 import SpheresPanel from './SpheresPanel';
@@ -29,6 +31,7 @@ import StatsPanel from './StatsPanel';
 import SettingsModal from './SettingsModal';
 import DayDetailModal from './DayDetailModal';
 import GtdScreen from './GtdScreen';
+import RoutinesScreen from './RoutinesScreen';
 import styles from './Dashboard.module.css';
 
 const HISTORY_LIMIT = 84;
@@ -36,6 +39,7 @@ const HISTORY_LIMIT = 84;
 const TABS = [
   { key: 'home', label: 'Главный' },
   { key: 'gtd', label: 'GTD' },
+  { key: 'routines', label: 'Рутины' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -53,6 +57,7 @@ export default function Dashboard() {
   const [closingDay, setClosingDay] = useState(false);
   const [syncingSession, setSyncingSession] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [routinesLeft, setRoutinesLeft] = useState(0);
   const { sendIfSunday, chartNode } = useWeeklySummary();
 
   const loadCore = useCallback(async () => {
@@ -74,6 +79,12 @@ export default function Dashboard() {
     // при переключении даты она не должна висеть под чужим счётчиком.
     setSessionError(null);
   }, [date]);
+
+  useEffect(() => {
+    getRoutines()
+      .then((w) => setRoutinesLeft(unclosedRoutines(w.routines)))
+      .catch(() => setRoutinesLeft(0));
+  }, [activeTab]);
 
   useEffect(() => {
     function checkDateRollover() {
@@ -248,6 +259,7 @@ export default function Dashboard() {
               onClick={() => setActiveTab(t.key)}
             >
               {t.label}
+              {t.key === 'routines' && routinesLeft > 0 ? ` ${routinesLeft}` : ''}
             </button>
           ))}
         </nav>
@@ -303,6 +315,7 @@ export default function Dashboard() {
       )}
 
       {activeTab === 'gtd' && <GtdScreen />}
+      {activeTab === 'routines' && <RoutinesScreen />}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} onCategoriesChanged={refreshDay} />}
       {selectedDate && (
         <DayDetailModal date={selectedDate} onClose={() => setSelectedDate(null)} onDataChanged={refreshHistory} />

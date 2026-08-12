@@ -153,3 +153,39 @@
   color: var(--text-muted);
   cursor: pointer;
 }
+
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.historyTitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.historyRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.historyName {
+  flex: 1;
+  min-width: 120px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.weekCell {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--hair);
+}
