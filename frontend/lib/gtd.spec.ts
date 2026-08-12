@@ -6,6 +6,7 @@ function item(id: number, status: GtdItem['status']): GtdItem {
     id, title: `t${id}`, notes: null, status, parentId: null,
     scheduledDate: null, scheduledTime: null, plannedDate: null, dueDate: null, priority: false,
     waitingFor: null, acceptanceCriteria: null, discussWith: null, order: id, completedAt: null,
+    decidedAt: null, deferCount: 0,
   };
 }
 
@@ -59,7 +60,8 @@ describe('sortGtdItems', () => {
     return {
       id: over.id ?? 0, title: 't', notes: null, status: 'backlog', parentId: null,
       scheduledDate: null, plannedDate: null, dueDate: null, priority: false,
-      waitingFor: null, acceptanceCriteria: null, discussWith: null, order: over.order ?? 0, completedAt: null, ...over,
+      waitingFor: null, acceptanceCriteria: null, discussWith: null, order: over.order ?? 0, completedAt: null,
+      decidedAt: null, deferCount: 0, ...over,
     };
   }
 
@@ -91,7 +93,8 @@ describe('nextActionId', () => {
       id: over.id ?? 0, title: 't', notes: null, status: over.status ?? 'backlog', parentId: 1,
       scheduledDate: null, scheduledTime: null, plannedDate: null, dueDate: null, priority: false,
       waitingFor: null, acceptanceCriteria: null, discussWith: null,
-      order: over.order ?? 0, completedAt: null, ...over,
+      order: over.order ?? 0, completedAt: null,
+      decidedAt: null, deferCount: 0, ...over,
     };
   }
 
@@ -116,5 +119,117 @@ describe('nextActionId', () => {
   it('ignores done steps', () => {
     const children = [step({ id: 1, status: 'done', order: 0 }), step({ id: 2, status: 'backlog', order: 1 })];
     expect(nextActionId(children)).toBe(2);
+  });
+});
+
+import {
+  lastDecisionDate, staleDays, isStale, isOverdue, needsEscalation, staleItems, overdueItems,
+} from './gtd';
+
+describe('протухание и просрочка', () => {
+  function task(over: Partial<GtdItem>): GtdItem {
+    return {
+      id: over.id ?? 1, title: over.title ?? 'задача', notes: null, status: 'backlog', parentId: null,
+      scheduledDate: null, scheduledTime: null, plannedDate: null, dueDate: null, priority: false,
+      waitingFor: null, acceptanceCriteria: null, discussWith: null, order: 0, completedAt: null,
+      decidedAt: null, deferCount: 0, ...over,
+    };
+  }
+
+  describe('lastDecisionDate', () => {
+    it('возвращает null, когда нет ни decidedAt, ни plannedDate', () => {
+      expect(lastDecisionDate(task({}))).toBeNull();
+    });
+
+    it('берёт дневную часть decidedAt', () => {
+      expect(lastDecisionDate(task({ decidedAt: '2026-07-24T22:15:00.000Z' }))).toBe('2026-07-24');
+    });
+
+    it('свежий plannedDate перевешивает старый decidedAt', () => {
+      const t = task({ decidedAt: '2026-07-24T10:00:00.000Z', plannedDate: '2026-08-08' });
+      expect(lastDecisionDate(t)).toBe('2026-08-08');
+    });
+
+    it('старый plannedDate не перевешивает свежий decidedAt', () => {
+      const t = task({ decidedAt: '2026-08-10T10:00:00.000Z', plannedDate: '2026-07-20' });
+      expect(lastDecisionDate(t)).toBe('2026-08-10');
+    });
+  });
+
+  describe('staleDays', () => {
+    it('считает дни от последнего решения до сегодня', () => {
+      expect(staleDays(task({ decidedAt: '2026-08-05T10:00:00.000Z' }), '2026-08-12')).toBe(7);
+    });
+
+    it('возвращает Infinity, когда решения не было вовсе', () => {
+      expect(staleDays(task({}), '2026-08-12')).toBe(Infinity);
+    });
+  });
+
+  describe('isStale', () => {
+    it('ровно 7 дней — протухла', () => {
+      expect(isStale(task({ decidedAt: '2026-08-05T10:00:00.000Z' }), '2026-08-12')).toBe(true);
+    });
+
+    it('6 дней — ещё нет', () => {
+      expect(isStale(task({ decidedAt: '2026-08-06T10:00:00.000Z' }), '2026-08-12')).toBe(false);
+    });
+
+    it('свежий plannedDate спасает старую decidedAt', () => {
+      const t = task({ decidedAt: '2026-07-19T10:00:00.000Z', plannedDate: '2026-08-08' });
+      expect(isStale(t, '2026-08-12')).toBe(false);
+    });
+
+    it('не backlog — никогда не протухает', () => {
+      const t = task({ status: 'someday', decidedAt: '2026-07-01T10:00:00.000Z' });
+      expect(isStale(t, '2026-08-12')).toBe(false);
+    });
+  });
+
+  describe('isOverdue', () => {
+    it('вчерашняя дата в календаре — просрочка', () => {
+      const t = task({ status: 'calendar', scheduledDate: '2026-08-11' });
+      expect(isOverdue(t, '2026-08-12')).toBe(true);
+    });
+
+    it('сегодняшняя дата — не просрочка', () => {
+      const t = task({ status: 'calendar', scheduledDate: '2026-08-12' });
+      expect(isOverdue(t, '2026-08-12')).toBe(false);
+    });
+
+    it('дата у задачи не из календаря игнорируется', () => {
+      const t = task({ status: 'backlog', scheduledDate: '2026-07-27' });
+      expect(isOverdue(t, '2026-08-12')).toBe(false);
+    });
+  });
+
+  describe('needsEscalation', () => {
+    it('два откладывания — рано', () => {
+      expect(needsEscalation(task({ deferCount: 2 }))).toBe(false);
+    });
+
+    it('три откладывания — пора', () => {
+      expect(needsEscalation(task({ deferCount: 3 }))).toBe(true);
+    });
+  });
+
+  describe('staleItems и overdueItems', () => {
+    it('staleItems отдаёт только протухшие, от самых старых', () => {
+      const items = [
+        task({ id: 1, decidedAt: '2026-08-11T10:00:00.000Z' }),
+        task({ id: 2, decidedAt: '2026-07-19T10:00:00.000Z' }),
+        task({ id: 3, decidedAt: '2026-07-24T10:00:00.000Z' }),
+      ];
+      expect(staleItems(items, '2026-08-12').map((i) => i.id)).toEqual([2, 3]);
+    });
+
+    it('overdueItems отдаёт только просроченные, от самых старых', () => {
+      const items = [
+        task({ id: 1, status: 'calendar', scheduledDate: '2026-08-13' }),
+        task({ id: 2, status: 'calendar', scheduledDate: '2026-08-06' }),
+        task({ id: 3, status: 'calendar', scheduledDate: '2026-07-25' }),
+      ];
+      expect(overdueItems(items, '2026-08-12').map((i) => i.id)).toEqual([3, 2]);
+    });
   });
 });

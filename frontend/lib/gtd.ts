@@ -1,4 +1,5 @@
 import type { GtdItem, GtdStatus } from '@/types/api';
+import { parseUTC } from './date';
 
 export interface ClarifyRoute {
   status: GtdStatus;
@@ -101,4 +102,48 @@ export function sortGtdItems(items: GtdItem[]): GtdItem[] {
 export function nextActionId(children: GtdItem[]): number | null {
   const backlog = children.filter((c) => c.status === 'backlog').sort((a, b) => a.order - b.order);
   return backlog[0]?.id ?? null;
+}
+
+export const STALE_AFTER_DAYS = 7;
+export const ESCALATE_AFTER_DEFERS = 3;
+
+/** Дата последнего решения о судьбе задачи: явное решение либо вытягивание в «сегодня». */
+export function lastDecisionDate(item: GtdItem): string | null {
+  const decided = item.decidedAt ? item.decidedAt.slice(0, 10) : null;
+  const planned = item.plannedDate;
+  if (!decided) return planned;
+  if (!planned) return decided;
+  return decided > planned ? decided : planned;
+}
+
+export function staleDays(item: GtdItem, today: string): number {
+  const last = lastDecisionDate(item);
+  if (!last) return Infinity;
+  const ms = parseUTC(today).getTime() - parseUTC(last).getTime();
+  return Math.floor(ms / 86_400_000);
+}
+
+export function isStale(item: GtdItem, today: string): boolean {
+  if (item.status !== 'backlog') return false;
+  return staleDays(item, today) >= STALE_AFTER_DAYS;
+}
+
+export function isOverdue(item: GtdItem, today: string): boolean {
+  return item.status === 'calendar' && !!item.scheduledDate && item.scheduledDate < today;
+}
+
+export function needsEscalation(item: GtdItem): boolean {
+  return item.deferCount >= ESCALATE_AFTER_DEFERS;
+}
+
+export function staleItems(items: GtdItem[], today: string): GtdItem[] {
+  return items
+    .filter((i) => isStale(i, today))
+    .sort((a, b) => staleDays(b, today) - staleDays(a, today));
+}
+
+export function overdueItems(items: GtdItem[], today: string): GtdItem[] {
+  return items
+    .filter((i) => isOverdue(i, today))
+    .sort((a, b) => (a.scheduledDate! < b.scheduledDate! ? -1 : 1));
 }

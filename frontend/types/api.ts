@@ -107,4 +107,6 @@ export interface GtdItem {
   priority: boolean;
   order: number;
   completedAt: string | null;
+  decidedAt: string | null;
+  deferCount: number;
 }
