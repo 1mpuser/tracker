@@ -67,12 +67,18 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
     try {
       if (action === 'lower') await updateRoutine(id, { weeklyGoal: goal - 1 });
       if (action === 'archive') await archiveRoutine(id);
-      // Решённая рутина уходит из очереди при любом исходе. Свежий список нужен
-      // только чтобы подтянуть обновлённые значения: если вернуть его как есть,
-      // снижение нормы с 3 до 2 при одной отметке снова оставит рутину
-      // «недобравшей», и шаг предложит снижать её по кругу до единицы.
-      const fresh = action === 'keep' ? routines : (await getRoutines(today)).routines;
-      setRoutines(fresh.filter((r) => r.id !== id));
+      // Решённая рутина уходит из очереди при любом исходе. Свежий список с
+      // сервера только ОБНОВЛЯЕТ значения тех, кто ещё в очереди, и никогда не
+      // подменяет саму очередь: «Оставить» ничего не пишет в базу, поэтому в
+      // ответе сервера уже решённые рутины продолжают приходить, и подмена
+      // вернула бы их обратно на следующем «Снизить»/«Удалить». Очередь —
+      // состояние модалки, оно живёт до её закрытия.
+      const fresh = action === 'keep' ? null : (await getRoutines(today)).routines;
+      setRoutines((queue) =>
+        queue
+          .filter((r) => r.id !== id)
+          .map((r) => fresh?.find((f) => f.id === r.id) ?? r),
+      );
     } catch {
       setRoutineError('Не удалось сохранить решение');
     } finally {
