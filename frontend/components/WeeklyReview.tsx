@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { GtdItem } from '@/types/api';
-import { updateGtdItem } from '@/lib/api';
+import type { GtdItem, RoutineView } from '@/types/api';
+import { archiveRoutine, getRoutines, updateGtdItem, updateRoutine } from '@/lib/api';
 import { needsEscalation, staleDays, staleItems } from '@/lib/gtd';
 import DatePicker from './DatePicker';
 import styles from './WeeklyReview.module.css';
 
-type ReviewBucket = 'inbox' | 'backlog' | 'project' | 'waiting' | 'someday';
+type ReviewBucket = 'inbox' | 'backlog' | 'project' | 'waiting' | 'someday' | 'routines';
 
 interface ReviewStep {
   key: ReviewBucket;
@@ -21,6 +21,7 @@ const STEPS: ReviewStep[] = [
   { key: 'project', title: 'Проекты', guidance: 'У каждого проекта есть следующий шаг?' },
   { key: 'waiting', title: 'Ожидание', guidance: 'Не завис ли кто? Напомни, если нужно.' },
   { key: 'someday', title: 'Потом', guidance: 'Поднять что-то в Бэклог недели?' },
+  { key: 'routines', title: 'Рутины', guidance: 'Норма выполнена? Если нет — она реальная?' },
 ];
 
 interface WeeklyReviewProps {
@@ -28,7 +29,7 @@ interface WeeklyReviewProps {
   today: string;
   onClose: () => void;
   onChanged: () => void | Promise<void>;
-  onGoToBucket: (status: ReviewBucket) => void;
+  onGoToBucket: (status: Exclude<ReviewBucket, 'routines'>) => void;
 }
 
 export default function WeeklyReview({ items, today, onClose, onChanged, onGoToBucket }: WeeklyReviewProps) {
@@ -39,6 +40,28 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
   // до возврата onChanged, поэтому без этого второй клик по «Беру» ушёл бы
   // вторым PATCH-ом и накрутил бы deferCount, который не сбрасывается никогда.
   const [busy, setBusy] = useState<number | null>(null);
+
+  const [routines, setRoutines] = useState<RoutineView[]>([]);
+  const [routineBusy, setRoutineBusy] = useState<number | null>(null);
+
+  useEffect(() => {
+    getRoutines().then((w) => setRoutines(w.routines));
+  }, []);
+
+  const missed = routines.filter((r) => r.done < r.weeklyGoal);
+
+  async function decideRoutine(id: number, action: 'keep' | 'lower' | 'archive', goal: number) {
+    if (routineBusy !== null) return;
+    setRoutineBusy(id);
+    try {
+      if (action === 'lower') await updateRoutine(id, { weeklyGoal: goal - 1 });
+      if (action === 'archive') await archiveRoutine(id);
+      const fresh = await getRoutines();
+      setRoutines(action === 'keep' ? routines.filter((r) => r.id !== id) : fresh.routines);
+    } finally {
+      setRoutineBusy(null);
+    }
+  }
 
   // Шаги проектов исключаем из очереди протухших: у них статус backlog, но
   // разбираются они в карточке проекта, а в этом же обзоре для них есть
@@ -112,9 +135,15 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
                   <div className={`${styles.stepTitle} ${isDone ? styles.stepTitleDone : ''}`}>{step.title}</div>
                   <div className={styles.stepGuidance}>{step.guidance}</div>
                 </div>
-                <button type="button" className={styles.openBtn} onClick={() => onGoToBucket(step.key)}>
-                  Открыть
-                </button>
+                {step.key !== 'routines' && (
+                  <button
+                    type="button"
+                    className={styles.openBtn}
+                    onClick={() => onGoToBucket(step.key as Exclude<ReviewBucket, 'routines'>)}
+                  >
+                    Открыть
+                  </button>
+                )}
                 {step.key === 'backlog' && stale.length > 0 && (
                   <div className={styles.queue}>
                     <div className={styles.queueTitle}>протухло: {stale.length}</div>
@@ -199,6 +228,47 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
                             </button>
                           </div>
                         )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {step.key === 'routines' && missed.length > 0 && (
+                  <div className={styles.queue}>
+                    <div className={styles.queueTitle}>не добрали норму: {missed.length}</div>
+                    {missed.map((r) => (
+                      <div key={r.id} className={styles.queueItem}>
+                        <div className={styles.queueName}>
+                          «{r.title}» — {r.done} из {r.weeklyGoal} на этой неделе.
+                        </div>
+                        <div className={styles.queueQuestion}>Норма реальная?</div>
+                        <div className={styles.queueActions}>
+                          <button
+                            type="button"
+                            className={styles.queueBtn}
+                            disabled={routineBusy === r.id}
+                            onClick={() => decideRoutine(r.id, 'keep', r.weeklyGoal)}
+                          >
+                            Оставить
+                          </button>
+                          {r.weeklyGoal > 1 && (
+                            <button
+                              type="button"
+                              className={styles.queueBtn}
+                              disabled={routineBusy === r.id}
+                              onClick={() => decideRoutine(r.id, 'lower', r.weeklyGoal)}
+                            >
+                              Снизить до {r.weeklyGoal - 1}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className={styles.queueBtn}
+                            disabled={routineBusy === r.id}
+                            onClick={() => decideRoutine(r.id, 'archive', r.weeklyGoal)}
+                          >
+                            Удалить рутину
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
