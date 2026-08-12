@@ -22,9 +22,13 @@ export default function RoutinesScreen() {
   const today = todayLocal();
 
   useEffect(() => {
-    getRoutines().then(setWeek);
+    // Якорь — локальное «сегодня»: без него бэкенд якорит неделю на свою
+    // UTC-дату, и ночью (когда в UTC ещё вчерашняя неделя) экран рисовал бы
+    // прошлую неделю, в которой сегодняшнего дня просто нет.
+    const anchor = todayLocal();
+    getRoutines(anchor).then(setWeek);
     getCategories().then(setCategories);
-    getRoutinesHistory().then(setHistory);
+    getRoutinesHistory(8, anchor).then(setHistory);
   }, []);
 
   async function toggle(routineId: number, date: string, done: boolean) {
@@ -32,15 +36,15 @@ export default function RoutinesScreen() {
     setBusy(routineId);
     try {
       setWeek(done ? await removeRoutineLog(routineId, date) : await addRoutineLog(routineId, date));
-      setHistory(await getRoutinesHistory());
+      setHistory(await getRoutinesHistory(8, today));
     } finally {
       setBusy(null);
     }
   }
 
   async function reload() {
-    setWeek(await getRoutines());
-    setHistory(await getRoutinesHistory());
+    setWeek(await getRoutines(today));
+    setHistory(await getRoutinesHistory(8, today));
   }
 
   async function add() {

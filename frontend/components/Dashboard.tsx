@@ -81,10 +81,13 @@ export default function Dashboard() {
   }, [date]);
 
   useEffect(() => {
-    getRoutines()
+    // `date` — локальное «сегодня» (оно же переживает переход через полночь).
+    // Без него бэкенд посчитал бы неделю от своей UTC-даты, и ночью счётчик
+    // показывал бы недобор прошлой недели.
+    getRoutines(date)
       .then((w) => setRoutinesLeft(unclosedRoutines(w.routines)))
       .catch(() => setRoutinesLeft(0));
-  }, [activeTab]);
+  }, [activeTab, date]);
 
   useEffect(() => {
     function checkDateRollover() {

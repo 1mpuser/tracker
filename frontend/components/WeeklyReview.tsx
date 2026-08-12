@@ -45,8 +45,10 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
   const [routineBusy, setRoutineBusy] = useState<number | null>(null);
 
   useEffect(() => {
-    getRoutines().then((w) => setRoutines(w.routines));
-  }, []);
+    // `today` уже локальная дата — якорим неделю на неё, иначе обзор спросит
+    // про прошлую неделю в те часы, когда в UTC ещё вчера.
+    getRoutines(today).then((w) => setRoutines(w.routines));
+  }, [today]);
 
   const missed = routines.filter((r) => r.done < r.weeklyGoal);
 
@@ -56,7 +58,7 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
     try {
       if (action === 'lower') await updateRoutine(id, { weeklyGoal: goal - 1 });
       if (action === 'archive') await archiveRoutine(id);
-      const fresh = await getRoutines();
+      const fresh = await getRoutines(today);
       setRoutines(action === 'keep' ? routines.filter((r) => r.id !== id) : fresh.routines);
     } finally {
       setRoutineBusy(null);

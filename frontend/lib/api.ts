@@ -167,8 +167,11 @@ export function getRoutines(week?: string): Promise<RoutinesWeek> {
   return request(week ? `/routines?week=${week}` : `/routines`);
 }
 
-export function getRoutinesHistory(weeks = 8): Promise<RoutineHistoryWeek[]> {
-  return request(`/routines/history?weeks=${weeks}`);
+// anchor — локальное «сегодня» вызывающего. Без него бэкенд берёт последнюю
+// неделю от своей UTC-даты, и в ночные часы история уезжает на неделю назад
+// относительно показанной недели.
+export function getRoutinesHistory(weeks = 8, anchor?: string): Promise<RoutineHistoryWeek[]> {
+  return request(`/routines/history?weeks=${weeks}${anchor ? `&anchor=${anchor}` : ''}`);
 }
 
 export function createRoutine(title: string, weeklyGoal: number, categoryId: number | null): Promise<RoutineView> {
