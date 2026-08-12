@@ -18,7 +18,10 @@ export default function RoutinesScreen() {
   const [newTitle, setNewTitle] = useState('');
   const [newGoal, setNewGoal] = useState(3);
   const [newCategoryId, setNewCategoryId] = useState<number | null>(null);
-  const [addError, setAddError] = useState<string | null>(null);
+  // Одно сообщение об ошибке на весь экран: отметка — единственная ценность
+  // этой вкладки, и потерянный запрос не должен выглядеть как «ничего не
+  // произошло».
+  const [error, setError] = useState<string | null>(null);
   const today = todayLocal();
 
   useEffect(() => {
@@ -26,17 +29,24 @@ export default function RoutinesScreen() {
     // UTC-дату, и ночью (когда в UTC ещё вчерашняя неделя) экран рисовал бы
     // прошлую неделю, в которой сегодняшнего дня просто нет.
     const anchor = todayLocal();
-    getRoutines(anchor).then(setWeek);
-    getCategories().then(setCategories);
-    getRoutinesHistory(8, anchor).then(setHistory);
+    Promise.all([getRoutines(anchor), getCategories(), getRoutinesHistory(8, anchor)])
+      .then(([w, cats, hist]) => {
+        setWeek(w);
+        setCategories(cats);
+        setHistory(hist);
+      })
+      .catch(() => setError('Не удалось загрузить рутины'));
   }, []);
 
   async function toggle(routineId: number, date: string, done: boolean) {
     if (busy !== null) return;
     setBusy(routineId);
+    setError(null);
     try {
       setWeek(done ? await removeRoutineLog(routineId, date) : await addRoutineLog(routineId, date));
       setHistory(await getRoutinesHistory(8, today));
+    } catch {
+      setError(done ? 'Не удалось снять отметку' : 'Не удалось отметить день');
     } finally {
       setBusy(null);
     }
@@ -50,7 +60,7 @@ export default function RoutinesScreen() {
   async function add() {
     const trimmed = newTitle.trim();
     if (!trimmed) return;
-    setAddError(null);
+    setError(null);
     const goal = Math.min(7, Math.max(1, Math.round(newGoal) || 1));
     try {
       await createRoutine(trimmed, goal, newCategoryId);
@@ -59,21 +69,31 @@ export default function RoutinesScreen() {
       setNewCategoryId(null);
       await reload();
     } catch {
-      setAddError('Не удалось добавить рутину');
+      setError('Не удалось добавить рутину');
     }
   }
 
   async function patch(id: number, p: { title?: string; weeklyGoal?: number; categoryId?: number | null }) {
-    await updateRoutine(id, p);
-    await reload();
+    setError(null);
+    try {
+      await updateRoutine(id, p);
+      await reload();
+    } catch {
+      setError('Не удалось сохранить изменение');
+    }
   }
 
   async function archive(id: number) {
-    await archiveRoutine(id);
-    await reload();
+    setError(null);
+    try {
+      await archiveRoutine(id);
+      await reload();
+    } catch {
+      setError('Не удалось убрать рутину в архив');
+    }
   }
 
-  if (!week) return <div className={styles.empty}>загрузка…</div>;
+  if (!week) return <div className={styles.empty}>{error ?? 'загрузка…'}</div>;
 
   const days = weekDays(week.weekStart);
 
@@ -230,10 +250,12 @@ export default function RoutinesScreen() {
               добавить
             </button>
           </div>
-
-          {addError && <div className={styles.empty}>{addError}</div>}
         </div>
       )}
+
+      {/* Внизу экрана: так сообщение видно и после клика по точке, и после
+          неудачного добавления — форма добавления стоит прямо над ним. */}
+      {error && <div className={styles.empty}>{error}</div>}
     </div>
   );
 }
