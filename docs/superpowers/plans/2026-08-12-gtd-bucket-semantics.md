@@ -15,7 +15,7 @@
 - Пакетный менеджер и рантайм — **Bun** (`bun install`, `bun run`, `bunx`), не npm/yarn/pnpm.
 - Enum `GtdStatus` в базе **не меняется**. Переименования только в подписях UI.
 - Никаких новых цветов: только существующие CSS-токены из `frontend/app/globals.css` и существующие классы CSS-модулей.
-- Никаких новых HTTP-эндпоинтов: всё через существующий `PATCH /gtd/:id`.
+- Никаких новых HTTP-эндпоинтов: всё через существующий `PATCH /gtd/items/:id`.
 - Порог протухания — **7 дней**. Порог эскалации — **`deferCount >= 3`**.
 - Неделя, даты и «сегодня» на фронте — только через `todayLocal()` из `frontend/lib/date.ts`.
 - Все сообщения UI — на русском, тон существующего интерфейса.
@@ -33,7 +33,7 @@
 
 **Interfaces:**
 - Consumes: ничего из предыдущих задач.
-- Produces: `GtdItemView.decidedAt: string | null` (ISO-строка), `GtdItemView.deferCount: number`. Приходят в каждом ответе `GET /gtd` и `PATCH /gtd/:id`.
+- Produces: `GtdItemView.decidedAt: string | null` (ISO-строка), `GtdItemView.deferCount: number`. Приходят в каждом ответе `GET /gtd/items` и `PATCH /gtd/items/:id`.
 
 - [ ] **Step 1: Написать падающие тесты**
 
@@ -1226,7 +1226,7 @@ Expected: все четыре сервиса `Up`, postgres `healthy`, мигр�
 
 - [ ] **Step 4: Проверить, что бэкенд отдаёт новые поля**
 
-Run: `curl -s http://localhost:3001/gtd | head -c 400`
+Run: `curl -s http://localhost:3001/gtd/items | head -c 400`
 Expected: в JSON присутствуют `"decidedAt":"2026-..."` и `"deferCount":0`.
 
 - [ ] **Step 5: Проверить в браузере**
