@@ -120,3 +120,94 @@ describe('RoutinesService.archive', () => {
     await expect(service.archive(9)).rejects.toBeInstanceOf(NotFoundException);
   });
 });
+
+describe('RoutinesService.addLog', () => {
+  it('идемпотентен: повторная отметка той же даты не создаёт вторую запись', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null });
+    prisma.routine.findMany.mockResolvedValue([]);
+
+    await service.addLog(1, '2026-08-12');
+
+    expect(prisma.routineLog.upsert).toHaveBeenCalledWith({
+      where: { routineId_date: { routineId: 1, date: new Date('2026-08-12T00:00:00.000Z') } },
+      update: {},
+      create: { routineId: 1, date: new Date('2026-08-12T00:00:00.000Z') },
+    });
+  });
+
+  it('ставит галочку сферы, когда рутина к ней привязана', async () => {
+    const { service, prisma, days } = makeService();
+    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: 5 });
+    prisma.routine.findMany.mockResolvedValue([]);
+    days.getOrCreateDayId.mockResolvedValue(42);
+
+    await service.addLog(1, '2026-08-12');
+
+    expect(days.getOrCreateDayId).toHaveBeenCalledWith('2026-08-12');
+    expect(prisma.dayCategoryStatus.upsert).toHaveBeenCalledWith({
+      where: { dayId_categoryId: { dayId: 42, categoryId: 5 } },
+      update: { done: true },
+      create: { dayId: 42, categoryId: 5, done: true },
+    });
+  });
+
+  it('не трогает сферы, когда привязки нет', async () => {
+    const { service, prisma, days } = makeService();
+    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null });
+    prisma.routine.findMany.mockResolvedValue([]);
+
+    await service.addLog(1, '2026-08-12');
+
+    expect(days.getOrCreateDayId).not.toHaveBeenCalled();
+    expect(prisma.dayCategoryStatus.upsert).not.toHaveBeenCalled();
+  });
+
+  it('падает NotFound на архивной рутине', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: true, categoryId: null });
+
+    await expect(service.addLog(1, '2026-08-12')).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.routineLog.upsert).not.toHaveBeenCalled();
+  });
+
+  it('возвращает неделю, содержащую отмеченную дату', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null });
+    prisma.routine.findMany.mockResolvedValue([]);
+
+    const view = await service.addLog(1, '2026-08-16');
+
+    expect(view.weekStart).toBe('2026-08-10');
+  });
+});
+
+describe('RoutinesService.removeLog', () => {
+  it('снимает отметку за конкретную дату', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([]);
+
+    await service.removeLog(1, '2026-08-12');
+
+    expect(prisma.routineLog.deleteMany).toHaveBeenCalledWith({
+      where: { routineId: 1, date: new Date('2026-08-12T00:00:00.000Z') },
+    });
+  });
+
+  it('не снимает галочку сферы — сферу могли закрыть по другой причине', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([]);
+
+    await service.removeLog(1, '2026-08-12');
+
+    expect(prisma.dayCategoryStatus.upsert).not.toHaveBeenCalled();
+  });
+
+  it('не падает, когда отметки не было', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([]);
+    prisma.routineLog.deleteMany.mockResolvedValue({ count: 0 });
+
+    await expect(service.removeLog(1, '2026-08-12')).resolves.toBeDefined();
+  });
+});

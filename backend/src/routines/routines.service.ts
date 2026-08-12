@@ -92,4 +92,37 @@ export class RoutinesService {
     await this.prisma.routine.update({ where: { id }, data: { archived: true } });
     return { id };
   }
+
+  async addLog(id: number, dateStr: string): Promise<RoutinesWeekView> {
+    const routine = await this.prisma.routine.findUnique({ where: { id } });
+    if (!routine || routine.archived) {
+      throw new NotFoundException(`Routine ${id} not found`);
+    }
+    const date = parseDateParam(dateStr);
+    await this.prisma.routineLog.upsert({
+      where: { routineId_date: { routineId: id, date } },
+      update: {},
+      create: { routineId: id, date },
+    });
+
+    if (routine.categoryId !== null) {
+      const dayId = await this.days.getOrCreateDayId(dateStr);
+      await this.prisma.dayCategoryStatus.upsert({
+        where: { dayId_categoryId: { dayId, categoryId: routine.categoryId } },
+        update: { done: true },
+        create: { dayId, categoryId: routine.categoryId, done: true },
+      });
+    }
+
+    return this.getWeek(dateStr);
+  }
+
+  // Галочку сферы намеренно не снимаем: сферу могли закрыть и по другой
+  // причине (пробежка вместо качалки), и снятие отметки рутины не даёт
+  // системе права стирать этот факт.
+  async removeLog(id: number, dateStr: string): Promise<RoutinesWeekView> {
+    const date = parseDateParam(dateStr);
+    await this.prisma.routineLog.deleteMany({ where: { routineId: id, date } });
+    return this.getWeek(dateStr);
+  }
 }
