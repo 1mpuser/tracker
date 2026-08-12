@@ -147,3 +147,31 @@ export function overdueItems(items: GtdItem[], today: string): GtdItem[] {
     .filter((i) => isOverdue(i, today))
     .sort((a, b) => (a.scheduledDate! < b.scheduledDate! ? -1 : 1));
 }
+
+const SIMILAR_EXCLUDED: GtdStatus[] = ['done', 'archived'];
+const MIN_WORD_LENGTH = 4;
+
+function significantWords(title: string): string[] {
+  return title
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length >= MIN_WORD_LENGTH);
+}
+
+/**
+ * Похожие живые задачи — предупреждение при захвате, не блокировка.
+ * Ложные срабатывания допустимы: показать лишнюю строку дешевле, чем прозевать дубль.
+ */
+export function findSimilar(title: string, items: GtdItem[], limit = 3): GtdItem[] {
+  const words = significantWords(title);
+  if (words.length === 0) return [];
+  return items
+    .filter((i) => !SIMILAR_EXCLUDED.includes(i.status))
+    .filter((i) => {
+      const other = significantWords(i.title);
+      return words.some((w) => other.some((o) => o.startsWith(w) || w.startsWith(o)));
+    })
+    .slice(0, limit);
+}

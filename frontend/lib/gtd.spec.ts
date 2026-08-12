@@ -1,4 +1,4 @@
-import { BUCKET_TABS, CLARIFY, CLARIFY_START, groupByStatus, sortGtdItems, nextActionId } from './gtd';
+import { BUCKET_TABS, CLARIFY, CLARIFY_START, groupByStatus, sortGtdItems, nextActionId, findSimilar } from './gtd';
 import type { GtdItem } from '@/types/api';
 
 function item(id: number, status: GtdItem['status']): GtdItem {
@@ -231,5 +231,49 @@ describe('протухание и просрочка', () => {
       ];
       expect(overdueItems(items, '2026-08-12').map((i) => i.id)).toEqual([3, 2]);
     });
+  });
+});
+
+describe('findSimilar', () => {
+  function named(id: number, title: string, status: GtdItem['status'] = 'backlog'): GtdItem {
+    return {
+      id, title, notes: null, status, parentId: null,
+      scheduledDate: null, scheduledTime: null, plannedDate: null, dueDate: null, priority: false,
+      waitingFor: null, acceptanceCriteria: null, discussWith: null, order: id, completedAt: null,
+      decidedAt: null, deferCount: 0,
+    };
+  }
+
+  const items = [
+    named(1, 'прибраться в квартире', 'calendar'),
+    named(2, 'закончить уборку в квартире'),
+    named(3, 'Сходить в качалку'),
+    named(4, 'Прибраться в квартире', 'archived'),
+  ];
+
+  it('находит совпадение независимо от регистра и словоформы вокруг общего слова', () => {
+    const found = findSimilar('Прибраться в квартире', items);
+    expect(found.map((i) => i.id).sort()).toEqual([1, 2]);
+  });
+
+  it('не находит ничего для несвязанного текста', () => {
+    expect(findSimilar('оформить гошное резюме', items)).toEqual([]);
+  });
+
+  it('исключает архивные и выполненные', () => {
+    const found = findSimilar('прибраться в квартире', items);
+    expect(found.map((i) => i.id)).not.toContain(4);
+  });
+
+  it('игнорирует короткие слова', () => {
+    expect(findSimilar('в на из', items)).toEqual([]);
+  });
+
+  it('пустая строка ничего не находит', () => {
+    expect(findSimilar('   ', items)).toEqual([]);
+  });
+
+  it('уважает limit', () => {
+    expect(findSimilar('квартире', items, 1)).toHaveLength(1);
   });
 });
