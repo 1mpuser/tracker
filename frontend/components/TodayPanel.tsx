@@ -85,7 +85,9 @@ export default function TodayPanel({ items, onAdd, onToggleDone, onRemove }: Tod
       </div>
       <ul className={styles.list}>
         {items.length === 0 && (
-          <li className={styles.empty}>Пусто — возьми что-нибудь из Бэклога (вкладка GTD) или добавь задачу.</li>
+          <li className={styles.empty}>
+            Пусто — возьми что-нибудь из Бэклога недели (вкладка GTD) или добавь задачу.
+          </li>
         )}
         {sortGtdItems(items).map((item) => {
           const done = item.status === 'done';

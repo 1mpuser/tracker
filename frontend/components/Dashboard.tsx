@@ -106,7 +106,9 @@ export default function Dashboard() {
       if (isWeeklyReviewWindow(now)) {
         const key = todayLocal();
         if (localStorage.getItem('weeklyReviewNotified') !== key) {
-          new Notification('Воскресенье — время для Weekly Review: разбери Корзину, пройдись по Бэклогу и Проектам');
+          new Notification(
+            'Воскресенье — время для Weekly Review: разбери входящие, пройдись по Бэклогу недели и Проектам',
+          );
           localStorage.setItem('weeklyReviewNotified', key);
         }
       }
