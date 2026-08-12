@@ -131,7 +131,10 @@ export default function GtdScreen() {
 
       {reviewOpen && (
         <WeeklyReview
+          items={items}
+          today={todayLocal()}
           onClose={() => setReviewOpen(false)}
+          onChanged={reload}
           onGoToBucket={(s) => {
             setActive(s);
             setReviewOpen(false);

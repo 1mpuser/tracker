@@ -1,6 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { GtdItem } from '@/types/api';
+import { updateGtdItem } from '@/lib/api';
+import { needsEscalation, staleDays, staleItems } from '@/lib/gtd';
+import DatePicker from './DatePicker';
 import styles from './WeeklyReview.module.css';
 
 type ReviewBucket = 'inbox' | 'backlog' | 'project' | 'waiting' | 'someday';
@@ -12,20 +16,38 @@ interface ReviewStep {
 }
 
 const STEPS: ReviewStep[] = [
-  { key: 'inbox', title: 'Корзина', guidance: 'Обнули: разбери все входящие до нуля.' },
-  { key: 'backlog', title: 'Бэклог', guidance: 'Пройдись: что ещё актуально? что берёшь на неделю?' },
+  { key: 'inbox', title: 'Разбор', guidance: 'Обнули: разбери все входящие до нуля.' },
+  { key: 'backlog', title: 'Бэклог недели', guidance: 'Что берёшь на эту неделю, а что уже не актуально?' },
   { key: 'project', title: 'Проекты', guidance: 'У каждого проекта есть следующий шаг?' },
   { key: 'waiting', title: 'Ожидание', guidance: 'Не завис ли кто? Напомни, если нужно.' },
-  { key: 'someday', title: 'Когда-нибудь', guidance: 'Поднять что-то в Бэклог на эту неделю?' },
+  { key: 'someday', title: 'Потом', guidance: 'Поднять что-то в Бэклог недели?' },
 ];
 
 interface WeeklyReviewProps {
+  items: GtdItem[];
+  today: string;
   onClose: () => void;
+  onChanged: () => void | Promise<void>;
   onGoToBucket: (status: ReviewBucket) => void;
 }
 
-export default function WeeklyReview({ onClose, onGoToBucket }: WeeklyReviewProps) {
+export default function WeeklyReview({ items, today, onClose, onChanged, onGoToBucket }: WeeklyReviewProps) {
   const [done, setDone] = useState<Set<ReviewBucket>>(new Set());
+  const [dateForId, setDateForId] = useState<number | null>(null);
+  const [dateValue, setDateValue] = useState<Record<number, string>>({});
+
+  const stale = staleItems(items, today);
+
+  async function decide(id: number, patch: Parameters<typeof updateGtdItem>[1]) {
+    await updateGtdItem(id, patch);
+    setDateForId(null);
+    setDateValue((v) => {
+      const next = { ...v };
+      delete next[id];
+      return next;
+    });
+    await onChanged();
+  }
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -76,6 +98,68 @@ export default function WeeklyReview({ onClose, onGoToBucket }: WeeklyReviewProp
                 <button type="button" className={styles.openBtn} onClick={() => onGoToBucket(step.key)}>
                   Открыть
                 </button>
+                {step.key === 'backlog' && stale.length > 0 && (
+                  <div className={styles.queue}>
+                    <div className={styles.queueTitle}>протухло: {stale.length}</div>
+                    {stale.map((item) => (
+                      <div key={item.id} className={styles.queueItem}>
+                        <div className={styles.queueName}>
+                          {item.title} — лежит {staleDays(item, today)} дн.
+                        </div>
+                        {needsEscalation(item) ? (
+                          <>
+                            <div className={styles.queueQuestion}>
+                              Откладываешь {item.deferCount + 1}-й раз. Это слишком крупно или ты этого не сделаешь?
+                            </div>
+                            <div className={styles.queueActions}>
+                              <button type="button" className={styles.queueBtn} onClick={() => decide(item.id, { status: 'project' })}>
+                                Разбить на проект
+                              </button>
+                              <button type="button" className={styles.queueBtn} onClick={() => decide(item.id, { status: 'archived' })}>
+                                В архив
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className={styles.queueActions}>
+                            <button type="button" className={styles.queueBtn} onClick={() => decide(item.id, { status: 'backlog' })}>
+                              Беру
+                            </button>
+                            <button type="button" className={styles.queueBtn} onClick={() => decide(item.id, { status: 'someday' })}>
+                              Потом
+                            </button>
+                            <button type="button" className={styles.queueBtn} onClick={() => decide(item.id, { status: 'archived' })}>
+                              Архив
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.queueBtn}
+                              onClick={() => setDateForId(dateForId === item.id ? null : item.id)}
+                            >
+                              На дату
+                            </button>
+                          </div>
+                        )}
+                        {dateForId === item.id && (
+                          <div className={styles.queueActions}>
+                            <DatePicker
+                              value={dateValue[item.id] ?? null}
+                              onChange={(v) => setDateValue((s) => ({ ...s, [item.id]: v ?? '' }))}
+                            />
+                            <button
+                              type="button"
+                              className={styles.queueBtn}
+                              disabled={!dateValue[item.id]}
+                              onClick={() => decide(item.id, { status: 'calendar', scheduledDate: dateValue[item.id] })}
+                            >
+                              OK
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </li>
             );
           })}
