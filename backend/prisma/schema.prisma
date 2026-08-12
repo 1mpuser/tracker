@@ -13,6 +13,7 @@ model Category {
   order    Int    @default(0)
   archived Boolean @default(false)
   statuses DayCategoryStatus[]
+  routines Routine[]
 }
 
 model Day {
@@ -99,4 +100,25 @@ model GtdItem {
   completedAt   DateTime?
   decidedAt     DateTime?
   deferCount    Int       @default(0)
+}
+
+model Routine {
+  id         Int          @id @default(autoincrement())
+  title      String
+  weeklyGoal Int          @default(3)
+  categoryId Int?
+  category   Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  archived   Boolean      @default(false)
+  order      Int          @default(0)
+  logs       RoutineLog[]
+  createdAt  DateTime     @default(now())
+}
+
+model RoutineLog {
+  id        Int      @id @default(autoincrement())
+  routineId Int
+  routine   Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+
+  @@unique([routineId, date])
 }
