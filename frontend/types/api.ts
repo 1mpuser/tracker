@@ -111,6 +111,21 @@ export interface GtdItem {
   deferCount: number;
 }
 
+/**
+ * Сырая запись рутины — ровно то, что отдают POST /routines и PATCH /routines/:id.
+ * Прогресса за неделю (`done`, `days`) здесь нет: он считается только в
+ * `RoutineView`, который приходит из GET /routines и с эндпоинтов отметок.
+ */
+export interface Routine {
+  id: number;
+  title: string;
+  weeklyGoal: number;
+  categoryId: number | null;
+  archived: boolean;
+  order: number;
+  createdAt: string;
+}
+
 export interface RoutineView {
   id: number;
   title: string;

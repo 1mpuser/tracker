@@ -986,8 +986,8 @@ git commit -m "feat(backend): эндпоинты рутин"
   // lib/api.ts
   getRoutines(week?: string): Promise<RoutinesWeek>
   getRoutinesHistory(weeks?: number): Promise<RoutineHistoryWeek[]>
-  createRoutine(title: string, weeklyGoal: number, categoryId: number | null): Promise<RoutineView>
-  updateRoutine(id: number, patch: { title?: string; weeklyGoal?: number; categoryId?: number | null }): Promise<RoutineView>
+  createRoutine(title: string, weeklyGoal: number, categoryId: number | null): Promise<Routine>
+  updateRoutine(id: number, patch: { title?: string; weeklyGoal?: number; categoryId?: number | null }): Promise<Routine>
   archiveRoutine(id: number): Promise<{ id: number }>
   addRoutineLog(id: number, date: string): Promise<RoutinesWeek>
   removeRoutineLog(id: number, date: string): Promise<RoutinesWeek>
@@ -1024,7 +1024,20 @@ export interface RoutineHistoryWeek {
   weekStart: string;
   items: { routineId: number; done: number; weeklyGoal: number }[];
 }
+
+/** Сырая запись рутины — ровно то, что отдают POST /routines и PATCH /routines/:id. */
+export interface Routine {
+  id: number;
+  title: string;
+  weeklyGoal: number;
+  categoryId: number | null;
+  archived: boolean;
+  order: number;
+  createdAt: string;
+}
 ```
+
+`RoutineView` (с `done`/`days`) приходит только из `GET /routines` и с эндпоинтов отметок; создание и обновление отдают сырую запись без прогресса — типы обязаны это различать.
 
 - [ ] **Step 2: Написать падающие тесты чистых функций**
 
@@ -1161,14 +1174,14 @@ export function getRoutinesHistory(weeks = 8): Promise<RoutineHistoryWeek[]> {
   return request(`/routines/history?weeks=${weeks}`);
 }
 
-export function createRoutine(title: string, weeklyGoal: number, categoryId: number | null): Promise<RoutineView> {
+export function createRoutine(title: string, weeklyGoal: number, categoryId: number | null): Promise<Routine> {
   return request(`/routines`, { method: 'POST', body: JSON.stringify({ title, weeklyGoal, categoryId }) });
 }
 
 export function updateRoutine(
   id: number,
   patch: { title?: string; weeklyGoal?: number; categoryId?: number | null },
-): Promise<RoutineView> {
+): Promise<Routine> {
   return request(`/routines/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
 }
 

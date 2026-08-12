@@ -5,9 +5,9 @@ import type {
   GtdItem,
   GtdStatus,
   HistoryEntry,
+  Routine,
   RoutineHistoryWeek,
   RoutinesWeek,
-  RoutineView,
   Settings,
   TaskTemplate,
   WeekStats,
@@ -174,14 +174,16 @@ export function getRoutinesHistory(weeks = 8, anchor?: string): Promise<RoutineH
   return request(`/routines/history?weeks=${weeks}${anchor ? `&anchor=${anchor}` : ''}`);
 }
 
-export function createRoutine(title: string, weeklyGoal: number, categoryId: number | null): Promise<RoutineView> {
+// Оба эндпоинта отдают сырую запись рутины, а не недельный срез: прогресс за
+// неделю фронт всё равно перечитывает через getRoutines.
+export function createRoutine(title: string, weeklyGoal: number, categoryId: number | null): Promise<Routine> {
   return request(`/routines`, { method: 'POST', body: JSON.stringify({ title, weeklyGoal, categoryId }) });
 }
 
 export function updateRoutine(
   id: number,
   patch: { title?: string; weeklyGoal?: number; categoryId?: number | null },
-): Promise<RoutineView> {
+): Promise<Routine> {
   return request(`/routines/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
 }
 
