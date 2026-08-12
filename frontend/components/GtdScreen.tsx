@@ -125,7 +125,7 @@ export default function GtdScreen() {
           ))}
         </nav>
         <button type="button" className={styles.reviewButton} onClick={() => setReviewOpen(true)}>
-          Разбор недели
+          Недельный обзор
         </button>
       </div>
 
