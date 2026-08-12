@@ -8,10 +8,12 @@ import { RoutineLogDto } from './dto/routine-log.dto';
 export class RoutinesController {
   constructor(private readonly routinesService: RoutinesService) {}
 
-  // Объявлен до `:id`-маршрутов: иначе 'history' уедет в параметр.
+  // Объявлен до остальных `@Get`: статический сегмент должен стоять раньше
+  // любого `:param`-маршрута, иначе 'history' уедет в параметр.
   @Get('history')
-  getHistory(@Query('weeks') weeks?: string) {
-    return this.routinesService.getHistory(weeks ? Number(weeks) : undefined);
+  getHistory(@Query('weeks') weeks?: string, @Query('anchor') anchor?: string) {
+    const parsed = weeks ? parseInt(weeks, 10) : NaN;
+    return this.routinesService.getHistory(Number.isNaN(parsed) ? undefined : parsed, anchor);
   }
 
   @Get()

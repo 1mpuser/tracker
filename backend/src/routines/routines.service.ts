@@ -136,8 +136,13 @@ export class RoutinesService {
     return mondayOf(todayDate());
   }
 
-  async getHistory(weeks = 8): Promise<RoutineHistoryWeek[]> {
-    const lastMonday = this.currentMonday();
+  /**
+   * `anchor` — дата, от которой считается последняя неделя истории. Фронт шлёт
+   * своё локальное «сегодня»: без якоря последняя неделя бралась бы от UTC-даты
+   * сервера, и в ночные часы история разъезжалась бы с показанной неделей.
+   */
+  async getHistory(weeks = 8, anchor?: string): Promise<RoutineHistoryWeek[]> {
+    const lastMonday = anchor ? mondayOf(parseDateParam(anchor)) : this.currentMonday();
     const firstMonday = addDays(lastMonday, -(weeks - 1) * 7);
 
     const routines = await this.prisma.routine.findMany({

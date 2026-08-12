@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { RoutinesService } from './routines.service';
 
 function makeService() {
@@ -260,5 +260,35 @@ describe('RoutinesService.getHistory', () => {
     await service.getHistory(2);
 
     expect(prisma.routine.findMany.mock.calls[0][0].where).toEqual({ archived: false });
+  });
+
+  it('с якорем последняя неделя определяется по нему, а не по текущему понедельнику', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([{ id: 1, weeklyGoal: 3 }]);
+    prisma.routineLog.findMany.mockResolvedValue([]);
+    jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-03T00:00:00.000Z'));
+
+    const history = await service.getHistory(2, '2026-08-16'); // воскресенье недели с 10.08
+
+    expect(history.map((w) => w.weekStart)).toEqual(['2026-08-03', '2026-08-10']);
+  });
+
+  it('без якоря последняя неделя — текущий понедельник', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([{ id: 1, weeklyGoal: 3 }]);
+    prisma.routineLog.findMany.mockResolvedValue([]);
+    jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-03T00:00:00.000Z'));
+
+    const history = await service.getHistory(2);
+
+    expect(history.map((w) => w.weekStart)).toEqual(['2026-07-27', '2026-08-03']);
+  });
+
+  it('отклоняет якорь, который не является датой', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([]);
+    prisma.routineLog.findMany.mockResolvedValue([]);
+
+    await expect(service.getHistory(2, 'вчера')).rejects.toBeInstanceOf(BadRequestException);
   });
 });
