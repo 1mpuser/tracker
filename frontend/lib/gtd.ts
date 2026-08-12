@@ -38,11 +38,11 @@ export const CLARIFY: Record<string, ClarifyQuestion> = {
   },
   when: {
     key: 'when',
-    prompt: 'Когда?',
+    prompt: 'Когда будешь делать?',
     options: [
       { label: 'На дату → Календарь', route: { status: 'calendar', needs: 'date' } },
-      { label: 'Когда-нибудь', route: { status: 'someday' } },
-      { label: 'В ближайшее', next: 'single' },
+      { label: 'На этой неделе', next: 'single' },
+      { label: 'Потом', route: { status: 'someday' } },
     ],
   },
   single: {
@@ -58,18 +58,18 @@ export const CLARIFY: Record<string, ClarifyQuestion> = {
     prompt: 'За 5 минут?',
     options: [
       { label: 'Да → сделал', route: { status: 'done' } },
-      { label: 'Нет → Бэклог', route: { status: 'backlog' } },
+      { label: 'Нет → Бэклог недели', route: { status: 'backlog' } },
     ],
   },
 };
 
 export const BUCKET_TABS: { status: GtdStatus; label: string }[] = [
-  { status: 'inbox', label: 'Корзина' },
-  { status: 'backlog', label: 'Бэклог' },
+  { status: 'inbox', label: 'Разбор' },
+  { status: 'backlog', label: 'Бэклог недели' },
   { status: 'calendar', label: 'Календарь' },
   { status: 'project', label: 'Проекты' },
   { status: 'waiting', label: 'Ожидание' },
-  { status: 'someday', label: 'Когда-нибудь' },
+  { status: 'someday', label: 'Потом' },
   { status: 'reference', label: 'Заметки' },
   { status: 'done', label: 'Done' },
   { status: 'archived', label: 'Архив' },

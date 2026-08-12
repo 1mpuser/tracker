@@ -277,3 +277,29 @@ describe('findSimilar', () => {
     expect(findSimilar('квартире', items, 1)).toHaveLength(1);
   });
 });
+
+describe('подписи бакетов и воронки', () => {
+  it('бэклог называется «Бэклог недели», someday — «Потом», inbox — «Разбор»', () => {
+    const label = (s: GtdItem['status']) => BUCKET_TABS.find((b) => b.status === s)?.label;
+    expect(label('inbox')).toBe('Разбор');
+    expect(label('backlog')).toBe('Бэклог недели');
+    expect(label('someday')).toBe('Потом');
+  });
+
+  it('вопрос «когда» спрашивает про конкретный горизонт', () => {
+    expect(CLARIFY['when'].prompt).toBe('Когда будешь делать?');
+    const labels = CLARIFY['when'].options.map((o) => o.label);
+    expect(labels).toContain('На этой неделе');
+    expect(labels).toContain('Потом');
+  });
+
+  it('ветка «На этой неделе» по-прежнему ведёт к вопросу об одношаговости', () => {
+    const weekly = CLARIFY['when'].options.find((o) => o.label === 'На этой неделе');
+    expect(weekly?.next).toBe('single');
+  });
+
+  it('ветка «Потом» по-прежнему роутит в someday', () => {
+    const later = CLARIFY['when'].options.find((o) => o.label === 'Потом');
+    expect(later?.route?.status).toBe('someday');
+  });
+});
