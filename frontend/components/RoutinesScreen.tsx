@@ -32,6 +32,7 @@ export default function RoutinesScreen() {
     setBusy(routineId);
     try {
       setWeek(done ? await removeRoutineLog(routineId, date) : await addRoutineLog(routineId, date));
+      setHistory(await getRoutinesHistory());
     } finally {
       setBusy(null);
     }
