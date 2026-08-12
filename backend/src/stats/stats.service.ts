@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { addDays, formatDate, parseDateParam, todayDate } from '../common/date.util';
+import { addDays, formatDate, mondayOf, parseDateParam, todayDate } from '../common/date.util';
 
 // Индексация как у Date#getUTCDay(): 0 — воскресенье.
 const WEEKDAY_SHORT = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -66,7 +66,7 @@ export class StatsService {
     const settings = await this.prisma.settings.findUnique({ where: { id: 1 } });
     const budget = settings?.youtubeBudget ?? 60;
 
-    const todayMonday = this.mondayOf(todayDate());
+    const todayMonday = mondayOf(todayDate());
     const firstMonday = addDays(todayMonday, -(weeks - 1) * 7);
 
     const days = await this.prisma.day.findMany({
@@ -120,7 +120,7 @@ export class StatsService {
   }
 
   async weekStats(endDateStr: string): Promise<WeekStats> {
-    const monday = this.mondayOf(parseDateParam(endDateStr));
+    const monday = mondayOf(parseDateParam(endDateStr));
     const sunday = addDays(monday, 6);
 
     const [settings, categories, dayRows, statuses] = await Promise.all([
@@ -190,11 +190,5 @@ export class StatsService {
       youtubeAvgMinutes: Math.round((youtubeTotal / 7) * 10) / 10,
       youtubeBudget: settings?.youtubeBudget ?? 60,
     };
-  }
-
-  private mondayOf(date: Date): Date {
-    const day = date.getUTCDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    return addDays(date, diff);
   }
 }

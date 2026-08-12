@@ -28,3 +28,10 @@ export function todayDate(): Date {
   const now = new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
+
+/** Понедельник той недели, в которую попадает date. Неделя в проекте — пн–вс. */
+export function mondayOf(date: Date): Date {
+  const day = date.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  return addDays(date, diff);
+}
