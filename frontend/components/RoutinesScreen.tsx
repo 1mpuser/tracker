@@ -17,6 +17,7 @@ export default function RoutinesScreen() {
   const [newTitle, setNewTitle] = useState('');
   const [newGoal, setNewGoal] = useState(3);
   const [newCategoryId, setNewCategoryId] = useState<number | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
   const today = todayLocal();
 
   useEffect(() => {
@@ -41,11 +42,17 @@ export default function RoutinesScreen() {
   async function add() {
     const trimmed = newTitle.trim();
     if (!trimmed) return;
-    await createRoutine(trimmed, newGoal, newCategoryId);
-    setNewTitle('');
-    setNewGoal(3);
-    setNewCategoryId(null);
-    await reload();
+    setAddError(null);
+    const goal = Math.min(7, Math.max(1, Math.round(newGoal) || 1));
+    try {
+      await createRoutine(trimmed, goal, newCategoryId);
+      setNewTitle('');
+      setNewGoal(3);
+      setNewCategoryId(null);
+      await reload();
+    } catch {
+      setAddError('Не удалось добавить рутину');
+    }
   }
 
   async function patch(id: number, p: { title?: string; weeklyGoal?: number; categoryId?: number | null }) {
@@ -189,6 +196,8 @@ export default function RoutinesScreen() {
               добавить
             </button>
           </div>
+
+          {addError && <div className={styles.empty}>{addError}</div>}
         </div>
       )}
     </div>
