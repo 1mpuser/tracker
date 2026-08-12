@@ -40,7 +40,12 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
   // вторым PATCH-ом и накрутил бы deferCount, который не сбрасывается никогда.
   const [busy, setBusy] = useState<number | null>(null);
 
-  const stale = staleItems(items, today);
+  // Шаги проектов исключаем из очереди протухших: у них статус backlog, но
+  // разбираются они в карточке проекта, а в этом же обзоре для них есть
+  // отдельный шаг «Проекты». Иначе «Архив» или «Потом» в очереди молча сносит
+  // следующее действие живого проекта — ровно тот отказ, который шаг «Проекты»
+  // и должен ловить. Фильтр локальный: staleItems общая для всех экранов.
+  const stale = staleItems(items.filter((i) => i.parentId === null), today);
 
   async function decide(id: number, patch: Parameters<typeof updateGtdItem>[1]) {
     if (busy !== null) return;
