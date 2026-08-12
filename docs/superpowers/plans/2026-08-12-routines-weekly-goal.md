@@ -1827,28 +1827,38 @@ git commit -m "feat(frontend): история рутин и вкладка «Р�
 ```tsx
   const [routines, setRoutines] = useState<RoutineView[]>([]);
   const [routineBusy, setRoutineBusy] = useState<number | null>(null);
+  const [routineError, setRoutineError] = useState<string | null>(null);
 
   useEffect(() => {
-    getRoutines().then((w) => setRoutines(w.routines));
-  }, []);
+    getRoutines(today).then((w) => setRoutines(w.routines));
+  }, [today]);
 
   const missed = routines.filter((r) => r.done < r.weeklyGoal);
 
   async function decideRoutine(id: number, action: 'keep' | 'lower' | 'archive', goal: number) {
     if (routineBusy !== null) return;
     setRoutineBusy(id);
+    setRoutineError(null);
     try {
       if (action === 'lower') await updateRoutine(id, { weeklyGoal: goal - 1 });
       if (action === 'archive') await archiveRoutine(id);
-      const fresh = await getRoutines();
-      setRoutines(action === 'keep' ? routines.filter((r) => r.id !== id) : fresh.routines);
+      // Решённая рутина уходит из очереди при любом исходе. Свежий список нужен
+      // только чтобы подтянуть обновлённые значения: если вернуть его как есть,
+      // снижение нормы с 3 до 2 при одной отметке снова оставит рутину
+      // «недобравшей», и шаг предложит снижать её по кругу до единицы.
+      const fresh = action === 'keep' ? routines : (await getRoutines(today)).routines;
+      setRoutines(fresh.filter((r) => r.id !== id));
+    } catch {
+      setRoutineError('Не удалось сохранить решение');
     } finally {
       setRoutineBusy(null);
     }
   }
 ```
 
-`keep` не шлёт запрос — норма подтверждена как есть, задача шага в том, чтобы решение было принято осознанно, а не записано в базу. Рутина просто уходит из очереди до следующего открытия обзора.
+`keep` не шлёт запрос — норма подтверждена как есть, задача шага в том, чтобы решение было принято осознанно, а не записано в базу. Рутина просто уходит из очереди до следующего открытия обзора. Снижение и удаление тоже убирают рутину из очереди: шаг спрашивает один раз, а не переспрашивает после каждого понижения нормы.
+
+`today` (локальная дата, уже приходит пропом) якорит неделю на бэкенде: без него `GET /routines` считает неделю от своей UTC-даты, и в ночные часы обзор спросит про прошлую неделю.
 
 - [ ] **Step 2: Отрисовать очередь рутин**
 

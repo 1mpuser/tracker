@@ -43,6 +43,7 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
 
   const [routines, setRoutines] = useState<RoutineView[]>([]);
   const [routineBusy, setRoutineBusy] = useState<number | null>(null);
+  const [routineError, setRoutineError] = useState<string | null>(null);
 
   useEffect(() => {
     // `today` уже локальная дата — якорим неделю на неё, иначе обзор спросит
@@ -55,11 +56,18 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
   async function decideRoutine(id: number, action: 'keep' | 'lower' | 'archive', goal: number) {
     if (routineBusy !== null) return;
     setRoutineBusy(id);
+    setRoutineError(null);
     try {
       if (action === 'lower') await updateRoutine(id, { weeklyGoal: goal - 1 });
       if (action === 'archive') await archiveRoutine(id);
-      const fresh = await getRoutines(today);
-      setRoutines(action === 'keep' ? routines.filter((r) => r.id !== id) : fresh.routines);
+      // Решённая рутина уходит из очереди при любом исходе. Свежий список нужен
+      // только чтобы подтянуть обновлённые значения: если вернуть его как есть,
+      // снижение нормы с 3 до 2 при одной отметке снова оставит рутину
+      // «недобравшей», и шаг предложит снижать её по кругу до единицы.
+      const fresh = action === 'keep' ? routines : (await getRoutines(today)).routines;
+      setRoutines(fresh.filter((r) => r.id !== id));
+    } catch {
+      setRoutineError('Не удалось сохранить решение');
     } finally {
       setRoutineBusy(null);
     }
@@ -234,9 +242,11 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
                     ))}
                   </div>
                 )}
-                {step.key === 'routines' && missed.length > 0 && (
+                {step.key === 'routines' && (missed.length > 0 || routineError) && (
                   <div className={styles.queue}>
-                    <div className={styles.queueTitle}>не добрали норму: {missed.length}</div>
+                    {missed.length > 0 && (
+                      <div className={styles.queueTitle}>не добрали норму: {missed.length}</div>
+                    )}
                     {missed.map((r) => (
                       <div key={r.id} className={styles.queueItem}>
                         <div className={styles.queueName}>
@@ -273,6 +283,7 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
                         </div>
                       </div>
                     ))}
+                    {routineError && <div className={styles.queueQuestion}>{routineError}</div>}
                   </div>
                 )}
               </li>
