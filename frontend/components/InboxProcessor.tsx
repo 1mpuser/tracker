@@ -29,7 +29,7 @@ export default function InboxProcessor({ items, allItems, today, onChanged, onOp
   const [waitingValue, setWaitingValue] = useState<Record<number, string>>({});
   // id просроченной задачи, для которой открыт выбор новой даты
   const [rescheduleId, setRescheduleId] = useState<number | null>(null);
-  const [rescheduleValue, setRescheduleValue] = useState('');
+  const [rescheduleValue, setRescheduleValue] = useState<Record<number, string>>({});
 
   async function capture() {
     const trimmed = title.trim();
@@ -128,10 +128,15 @@ export default function InboxProcessor({ items, allItems, today, onChanged, onOp
   }
 
   async function confirmReschedule(item: GtdItem) {
-    if (!rescheduleValue) return;
-    await updateGtdItem(item.id, { status: 'calendar', scheduledDate: rescheduleValue });
+    const value = rescheduleValue[item.id];
+    if (!value) return;
+    await updateGtdItem(item.id, { status: 'calendar', scheduledDate: value });
     setRescheduleId(null);
-    setRescheduleValue('');
+    setRescheduleValue((s) => {
+      const next = { ...s };
+      delete next[item.id];
+      return next;
+    });
     await onChanged();
   }
 
@@ -263,13 +268,13 @@ export default function InboxProcessor({ items, allItems, today, onChanged, onOp
               {rescheduleId === item.id && (
                 <div className={styles.datePick}>
                   <DatePicker
-                    value={rescheduleValue || null}
-                    onChange={(v) => setRescheduleValue(v ?? '')}
+                    value={rescheduleValue[item.id] ?? null}
+                    onChange={(v) => setRescheduleValue((s) => ({ ...s, [item.id]: v ?? '' }))}
                   />
                   <button
                     type="button"
                     className={styles.addBtn}
-                    disabled={!rescheduleValue}
+                    disabled={!rescheduleValue[item.id]}
                     onClick={() => confirmReschedule(item)}
                   >
                     OK
