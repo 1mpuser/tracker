@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import type { GtdItem, GtdStatus } from '@/types/api';
 import { createGtdItem, updateGtdItem } from '@/lib/api';
-import { CLARIFY, CLARIFY_START, findSimilar, type ClarifyOption, type ClarifyRoute } from '@/lib/gtd';
+import { CLARIFY, CLARIFY_START, findSimilar, overdueItems, type ClarifyOption, type ClarifyRoute } from '@/lib/gtd';
+import { formatRuDate } from '@/lib/date';
 import DatePicker from './DatePicker';
 import styles from './InboxProcessor.module.css';
 
@@ -26,6 +27,9 @@ export default function InboxProcessor({ items, allItems, today, onChanged, onOp
   // per-item pending route awaiting an inline "who is this waiting on" name
   const [waitingPick, setWaitingPick] = useState<Record<number, ClarifyRoute>>({});
   const [waitingValue, setWaitingValue] = useState<Record<number, string>>({});
+  // id просроченной задачи, для которой открыт выбор новой даты
+  const [rescheduleId, setRescheduleId] = useState<number | null>(null);
+  const [rescheduleValue, setRescheduleValue] = useState('');
 
   async function capture() {
     const trimmed = title.trim();
@@ -113,7 +117,26 @@ export default function InboxProcessor({ items, allItems, today, onChanged, onOp
     await onChanged();
   }
 
+  async function resolveOverdue(item: GtdItem, action: 'backlog' | 'archive') {
+    await updateGtdItem(
+      item.id,
+      action === 'backlog'
+        ? { status: 'backlog', scheduledDate: null, scheduledTime: null }
+        : { status: 'archived' },
+    );
+    await onChanged();
+  }
+
+  async function confirmReschedule(item: GtdItem) {
+    if (!rescheduleValue) return;
+    await updateGtdItem(item.id, { status: 'calendar', scheduledDate: rescheduleValue });
+    setRescheduleId(null);
+    setRescheduleValue('');
+    await onChanged();
+  }
+
   const similar = findSimilar(title, allItems);
+  const overdue = overdueItems(allItems, today);
 
   return (
     <div className={styles.wrap}>
@@ -212,6 +235,51 @@ export default function InboxProcessor({ items, allItems, today, onChanged, onOp
           );
         })}
       </ul>
+
+      {items.length === 0 && overdue.length > 0 && (
+        <div className={styles.overdueBlock}>
+          <div className={styles.overdueTitle}>Просроченные</div>
+          {overdue.map((item) => (
+            <div key={item.id} className={styles.item}>
+              <div className={styles.itemTitle}>{item.title}</div>
+              <div className={styles.question}>
+                Дата {formatRuDate(item.scheduledDate as string)} прошла. Что с ней?
+              </div>
+              <div className={styles.options}>
+                <button
+                  type="button"
+                  className={styles.optBtn}
+                  onClick={() => setRescheduleId(rescheduleId === item.id ? null : item.id)}
+                >
+                  Новая дата
+                </button>
+                <button type="button" className={styles.optBtn} onClick={() => resolveOverdue(item, 'backlog')}>
+                  В бэклог недели
+                </button>
+                <button type="button" className={styles.optBtn} onClick={() => resolveOverdue(item, 'archive')}>
+                  Архив
+                </button>
+              </div>
+              {rescheduleId === item.id && (
+                <div className={styles.datePick}>
+                  <DatePicker
+                    value={rescheduleValue || null}
+                    onChange={(v) => setRescheduleValue(v ?? '')}
+                  />
+                  <button
+                    type="button"
+                    className={styles.addBtn}
+                    disabled={!rescheduleValue}
+                    onClick={() => confirmReschedule(item)}
+                  >
+                    OK
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
