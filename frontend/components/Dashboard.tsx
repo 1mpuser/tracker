@@ -262,7 +262,11 @@ export default function Dashboard() {
               onClick={() => setActiveTab(t.key)}
             >
               {t.label}
-              {t.key === 'routines' && routinesLeft > 0 ? ` ${routinesLeft}` : ''}
+              {t.key === 'routines' && routinesLeft > 0 ? (
+                <span className={styles.tabBadge} title="рутин с незакрытой нормой">
+                  {routinesLeft}
+                </span>
+              ) : null}
             </button>
           ))}
         </nav>

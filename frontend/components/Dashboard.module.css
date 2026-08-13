@@ -38,6 +38,21 @@
   color: var(--accent);
 }
 
+/* Тот же вид, что у счётчиков бакетов в GTD, чтобы число читалось
+   как счётчик, а не как часть названия вкладки. */
+.tabBadge {
+  display: inline-block;
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 8px;
+  padding: 0 6px;
+  line-height: 15px;
+  vertical-align: middle;
+}
+
 .sysHint {
   font-family: var(--font-mono);
   font-size: 10.5px;
