@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import type { Category, RoutineHistoryWeek, RoutinesWeek } from '@/types/api';
-import { addRoutineLog, archiveRoutine, createRoutine, getCategories, getRoutines, getRoutinesHistory, removeRoutineLog, updateRoutine } from '@/lib/api';
-import { isDoneOn, routineRatioColor, weekDays } from '@/lib/routines';
+import { archiveRoutine, createRoutine, getCategories, getRoutines, getRoutinesHistory, removeRoutineLog, setRoutineLog, updateRoutine } from '@/lib/api';
+import { dayCount, isDayFull, nextCount, routineRatioColor, weekDays } from '@/lib/routines';
 import { todayLocal } from '@/lib/date';
 import styles from './RoutinesScreen.module.css';
 
@@ -45,24 +45,23 @@ export default function RoutinesScreen() {
       .catch(() => setError((prev) => prev ?? 'Не удалось загрузить список сфер'));
   }, []);
 
-  async function toggle(routineId: number, date: string, done: boolean) {
+  async function setDay(routineId: number, date: string, count: number) {
     if (busy !== null) return;
     setBusy(routineId);
     setError(null);
     try {
       try {
-        setWeek(done ? await removeRoutineLog(routineId, date) : await addRoutineLog(routineId, date));
+        // Ноль отправляем отдельным эндпоинтом снятия: он же чистит строку дня.
+        setWeek(count === 0 ? await removeRoutineLog(routineId, date) : await setRoutineLog(routineId, date, count));
       } catch {
-        setError(done ? 'Не удалось снять отметку' : 'Не удалось отметить день');
+        setError(count === 0 ? 'Не удалось снять отметку' : 'Не удалось отметить день');
         return;
       }
-      // Отдельный catch: отсюда лог уже записан и неделя перерисована. Общий
-      // try на оба запроса врал бы «Не удалось отметить день» ровно в тот
-      // момент, когда день отмечен и виден на экране.
+      // Отдельный catch: отсюда отметка уже записана и неделя перерисована.
       try {
         setHistory(await getRoutinesHistory(8, today));
       } catch {
-        setError(done ? 'Отметка снята, но история недель не обновилась' : 'День отмечен, но история недель не обновилась');
+        setError(count === 0 ? 'Отметка снята, но история недель не обновилась' : 'День отмечен, но история недель не обновилась');
       }
     } finally {
       setBusy(null);
@@ -124,40 +123,55 @@ export default function RoutinesScreen() {
       )}
 
       {week.routines.map((r) => {
-        const doneToday = isDoneOn(r, today);
+        const todayCount = dayCount(r, today);
+        const todayFull = isDayFull(r, today);
         return (
           <div key={r.id} className={styles.row}>
             <div className={styles.title}>{r.title}</div>
 
             <div className={styles.dots}>
               {days.map((d, i) => {
-                const filled = isDoneOn(r, d);
+                const count = dayCount(r, d);
                 const future = d > today;
+                // Доля дня: при норме 1 точка либо пуста, либо залита целиком —
+                // ровно как было до появления дневной нормы.
+                const ratio = Math.min(1, count / r.timesPerDay);
                 return (
                   <button
                     key={d}
                     type="button"
-                    className={`${styles.dot} ${filled ? styles.dotFilled : ''}`}
+                    className={styles.dot}
+                    style={{
+                      background:
+                        ratio === 0
+                          ? undefined
+                          : `linear-gradient(to top, var(--accent) ${ratio * 100}%, var(--panel-alt) ${ratio * 100}%)`,
+                      borderColor: ratio >= 1 ? 'var(--accent)' : undefined,
+                    }}
                     disabled={future || busy !== null}
-                    title={`${DAY_LABELS[i]} ${d}`}
-                    aria-label={`${r.title}, ${DAY_LABELS[i]}`}
-                    onClick={() => toggle(r.id, d, filled)}
+                    title={`${DAY_LABELS[i]} ${d}: ${count} из ${r.timesPerDay}`}
+                    aria-label={`${r.title}, ${DAY_LABELS[i]}, ${count} из ${r.timesPerDay}`}
+                    onClick={() => setDay(r.id, d, nextCount(count, r.timesPerDay))}
                   />
                 );
               })}
             </div>
 
-            <div className={`${styles.count} ${r.done >= r.weeklyGoal ? styles.countDone : ''}`}>
-              {r.done}/{r.weeklyGoal}
+            <div className={`${styles.count} ${r.done >= r.daysPerWeek ? styles.countDone : ''}`}>
+              {r.done}/{r.daysPerWeek}
             </div>
 
             <button
               type="button"
               className={styles.markBtn}
               disabled={busy !== null}
-              onClick={() => toggle(r.id, today, doneToday)}
+              onClick={() => setDay(r.id, today, nextCount(todayCount, r.timesPerDay))}
             >
-              {doneToday ? '✓ отмечено' : '+ отметить сегодня'}
+              {todayFull
+                ? '✓ сегодня закрыт'
+                : r.timesPerDay > 1
+                  ? `+ отметить (${todayCount} из ${r.timesPerDay})`
+                  : '+ отметить сегодня'}
             </button>
           </div>
         );
@@ -173,7 +187,7 @@ export default function RoutinesScreen() {
                 {history.map((w) => {
                   const item = w.items.find((i) => i.routineId === r.id);
                   const done = item?.done ?? 0;
-                  const goal = item?.weeklyGoal ?? r.weeklyGoal;
+                  const goal = item?.daysPerWeek ?? r.daysPerWeek;
                   return (
                     <span
                       key={w.weekStart}

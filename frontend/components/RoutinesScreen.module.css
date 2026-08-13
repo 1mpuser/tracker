@@ -33,12 +33,8 @@
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--panel-alt);
+  background-clip: padding-box;
   cursor: pointer;
-}
-
-.dotFilled {
-  background: var(--accent);
-  border-color: var(--accent);
 }
 
 .dot:disabled {
