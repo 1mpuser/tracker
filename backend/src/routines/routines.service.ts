@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DaysService } from '../days/days.service';
 import { addDays, formatDate, mondayOf, parseDateParam, todayDate } from '../common/date.util';
@@ -64,12 +64,18 @@ export class RoutinesService {
     };
   }
 
-  async create(dto: { title: string; weeklyGoal?: number; categoryId?: number | null }) {
+  async create(dto: {
+    title: string;
+    timesPerDay?: number;
+    daysPerWeek?: number;
+    categoryId?: number | null;
+  }) {
     const maxOrder = await this.prisma.routine.aggregate({ _max: { order: true } });
     return this.prisma.routine.create({
       data: {
         title: dto.title,
-        weeklyGoal: dto.weeklyGoal ?? 3,
+        timesPerDay: dto.timesPerDay ?? 1,
+        daysPerWeek: dto.daysPerWeek ?? 3,
         categoryId: dto.categoryId ?? null,
         order: (maxOrder._max.order ?? -1) + 1,
       },
@@ -78,7 +84,13 @@ export class RoutinesService {
 
   async update(
     id: number,
-    dto: { title?: string; weeklyGoal?: number; categoryId?: number | null; archived?: boolean },
+    dto: {
+      title?: string;
+      timesPerDay?: number;
+      daysPerWeek?: number;
+      categoryId?: number | null;
+      archived?: boolean;
+    },
   ) {
     const existing = await this.prisma.routine.findUnique({ where: { id } });
     if (!existing) {
@@ -86,7 +98,8 @@ export class RoutinesService {
     }
     const data: any = {};
     if (dto.title !== undefined) data.title = dto.title;
-    if (dto.weeklyGoal !== undefined) data.weeklyGoal = dto.weeklyGoal;
+    if (dto.timesPerDay !== undefined) data.timesPerDay = dto.timesPerDay;
+    if (dto.daysPerWeek !== undefined) data.daysPerWeek = dto.daysPerWeek;
     if (dto.categoryId !== undefined) data.categoryId = dto.categoryId;
     if (dto.archived !== undefined) data.archived = dto.archived;
     return this.prisma.routine.update({ where: { id }, data });
@@ -103,16 +116,31 @@ export class RoutinesService {
     return { id };
   }
 
-  async addLog(id: number, dateStr: string): Promise<RoutinesWeekView> {
+  /**
+   * `count` — абсолютное число отметок за этот день, а не приращение.
+   * Инкрементальный протокол накручивался бы двойным кликом; здесь повтор
+   * запроса с тем же числом ничего не меняет.
+   */
+  async setLog(id: number, dateStr: string, count: number): Promise<RoutinesWeekView> {
     const routine = await this.prisma.routine.findUnique({ where: { id } });
     if (!routine || routine.archived) {
       throw new NotFoundException(`Routine ${id} not found`);
     }
+    if (!Number.isInteger(count) || count < 0 || count > routine.timesPerDay) {
+      throw new BadRequestException(`count must be an integer between 0 and ${routine.timesPerDay}`);
+    }
+
     const date = parseDateParam(dateStr);
+
+    if (count === 0) {
+      await this.prisma.routineLog.deleteMany({ where: { routineId: id, date } });
+      return this.getWeek(dateStr);
+    }
+
     await this.prisma.routineLog.upsert({
       where: { routineId_date: { routineId: id, date } },
-      update: {},
-      create: { routineId: id, date },
+      update: { count },
+      create: { routineId: id, date, count },
     });
 
     if (routine.categoryId !== null) {
