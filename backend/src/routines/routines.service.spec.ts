@@ -229,6 +229,21 @@ describe('RoutinesService.setLog', () => {
     });
   });
 
+  // Единственный путь, который вообще пишет в DayCategoryStatus, — отметка
+  // больше нуля. Без этого теста условие `categoryId !== null` не закреплено
+  // ничем: сломавшись, оно даст запись с categoryId = null, то есть падение в
+  // проде, а не тихую деградацию.
+  it('не трогает сферы, когда привязки нет', async () => {
+    const { service, prisma, days } = makeService();
+    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 2 });
+    prisma.routine.findMany.mockResolvedValue([]);
+
+    await service.setLog(1, '2026-08-12', 1);
+
+    expect(days.getOrCreateDayId).not.toHaveBeenCalled();
+    expect(prisma.dayCategoryStatus.upsert).not.toHaveBeenCalled();
+  });
+
   it('не трогает сферу, когда число обнуляют', async () => {
     const { service, prisma, days } = makeService();
     prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: 5, timesPerDay: 2 });
@@ -246,6 +261,19 @@ describe('RoutinesService.setLog', () => {
 
     await expect(service.setLog(1, '2026-08-12', 1)).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.routineLog.upsert).not.toHaveBeenCalled();
+  });
+
+  // Фронт присваивает ответ setLog прямо в состояние недели: если вернуть
+  // не ту неделю, экран уедет на чужую семёрку дней сразу после отметки.
+  it('возвращает неделю, содержащую отмеченную дату', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 1 });
+    prisma.routine.findMany.mockResolvedValue([]);
+
+    const view = await service.setLog(1, '2026-08-16', 1); // воскресенье
+
+    expect(view.weekStart).toBe('2026-08-10');
+    expect(view.weekEnd).toBe('2026-08-16');
   });
 });
 
