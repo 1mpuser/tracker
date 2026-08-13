@@ -37,8 +37,8 @@ export class RoutinesController {
   }
 
   @Post(':id/log')
-  addLog(@Param('id', ParseIntPipe) id: number, @Body() dto: RoutineLogDto) {
-    return this.routinesService.addLog(id, dto.date);
+  setLog(@Param('id', ParseIntPipe) id: number, @Body() dto: RoutineLogDto) {
+    return this.routinesService.setLog(id, dto.date, dto.count);
   }
 
   @Delete(':id/log/:date')

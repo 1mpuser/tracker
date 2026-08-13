@@ -8,8 +8,14 @@ export class CreateRoutineDto {
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(10)
+  timesPerDay?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
   @Max(7)
-  weeklyGoal?: number;
+  daysPerWeek?: number;
 
   @IsOptional()
   @IsInt()
