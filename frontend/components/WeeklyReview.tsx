@@ -60,12 +60,12 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
 
   const missed = routines.filter((r) => r.done < r.daysPerWeek);
 
-  async function decideRoutine(id: number, action: 'keep' | 'lower' | 'archive', goal: number) {
+  async function decideRoutine(id: number, action: 'keep' | 'lower' | 'archive', daysPerWeek: number) {
     if (routineBusy !== null) return;
     setRoutineBusy(id);
     setRoutineError(null);
     try {
-      if (action === 'lower') await updateRoutine(id, { daysPerWeek: goal - 1 });
+      if (action === 'lower') await updateRoutine(id, { daysPerWeek: daysPerWeek - 1 });
       if (action === 'archive') await archiveRoutine(id);
       // Решённая рутина уходит из очереди при любом исходе. Свежий список с
       // сервера только ОБНОВЛЯЕТ значения тех, кто ещё в очереди, и никогда не

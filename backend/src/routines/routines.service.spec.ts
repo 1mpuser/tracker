@@ -309,7 +309,7 @@ describe('RoutinesService.removeLog', () => {
     await expect(service.removeLog(1, '2026-08-12')).resolves.toBeDefined();
   });
 
-  it('падает NotFound на несуществующей рутине — как и addLog', async () => {
+  it('падает NotFound на несуществующей рутине — как и setLog', async () => {
     const { service, prisma } = makeService();
     prisma.routine.findUnique.mockResolvedValue(null);
 
