@@ -16,7 +16,8 @@ export default function RoutinesScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newGoal, setNewGoal] = useState(3);
+  const [newTimesPerDay, setNewTimesPerDay] = useState(1);
+  const [newDaysPerWeek, setNewDaysPerWeek] = useState(3);
   const [newCategoryId, setNewCategoryId] = useState<number | null>(null);
   // Одно сообщение об ошибке на весь экран: отметка — единственная ценность
   // этой вкладки, и потерянный запрос не должен выглядеть как «ничего не
@@ -77,11 +78,15 @@ export default function RoutinesScreen() {
     const trimmed = newTitle.trim();
     if (!trimmed) return;
     setError(null);
-    const goal = Math.min(7, Math.max(1, Math.round(newGoal) || 1));
+    // Клампим сами: атрибуты min/max у инпута не работают вне <form>, а кнопка
+    // здесь обычная, не отправляющая.
+    const times = Math.min(10, Math.max(1, Math.round(newTimesPerDay) || 1));
+    const days = Math.min(7, Math.max(1, Math.round(newDaysPerWeek) || 1));
     try {
-      await createRoutine(trimmed, goal, newCategoryId);
+      await createRoutine(trimmed, times, days, newCategoryId);
       setNewTitle('');
-      setNewGoal(3);
+      setNewTimesPerDay(1);
+      setNewDaysPerWeek(3);
       setNewCategoryId(null);
       await reload();
     } catch {
@@ -89,7 +94,10 @@ export default function RoutinesScreen() {
     }
   }
 
-  async function patch(id: number, p: { title?: string; weeklyGoal?: number; categoryId?: number | null }) {
+  async function patch(
+    id: number,
+    p: { title?: string; timesPerDay?: number; daysPerWeek?: number; categoryId?: number | null },
+  ) {
     setError(null);
     try {
       await updateRoutine(id, p);
@@ -220,16 +228,30 @@ export default function RoutinesScreen() {
                 }}
               />
               <label className={styles.settingsLabel}>
-                норма
+                раз в день
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  className={styles.settingsNumber}
+                  defaultValue={r.timesPerDay}
+                  onBlur={(e) => {
+                    const v = Math.round(Number(e.target.value));
+                    if (v >= 1 && v <= 10 && v !== r.timesPerDay) patch(r.id, { timesPerDay: v });
+                  }}
+                />
+              </label>
+              <label className={styles.settingsLabel}>
+                дней в неделю
                 <input
                   type="number"
                   min={1}
                   max={7}
                   className={styles.settingsNumber}
-                  defaultValue={r.weeklyGoal}
+                  defaultValue={r.daysPerWeek}
                   onBlur={(e) => {
-                    const v = Number(e.target.value);
-                    if (v >= 1 && v <= 7 && v !== r.weeklyGoal) patch(r.id, { weeklyGoal: v });
+                    const v = Math.round(Number(e.target.value));
+                    if (v >= 1 && v <= 7 && v !== r.daysPerWeek) patch(r.id, { daysPerWeek: v });
                   }}
                 />
               </label>
@@ -268,14 +290,25 @@ export default function RoutinesScreen() {
               }}
             />
             <label className={styles.settingsLabel}>
-              норма
+              раз в день
+              <input
+                type="number"
+                min={1}
+                max={10}
+                className={styles.settingsNumber}
+                value={newTimesPerDay}
+                onChange={(e) => setNewTimesPerDay(Number(e.target.value))}
+              />
+            </label>
+            <label className={styles.settingsLabel}>
+              дней в неделю
               <input
                 type="number"
                 min={1}
                 max={7}
                 className={styles.settingsNumber}
-                value={newGoal}
-                onChange={(e) => setNewGoal(Number(e.target.value))}
+                value={newDaysPerWeek}
+                onChange={(e) => setNewDaysPerWeek(Number(e.target.value))}
               />
             </label>
             <select
