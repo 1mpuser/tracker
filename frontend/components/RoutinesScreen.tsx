@@ -133,6 +133,21 @@ export default function RoutinesScreen() {
       {week.routines.map((r) => {
         const todayCount = dayCount(r, today);
         const todayFull = isDayFull(r, today);
+        const multi = r.timesPerDay > 1;
+        // Закрытый день гасит кнопку, но только при дневной норме больше
+        // единицы: её клик проводит день по циклу и на закрытом дне даёт ноль,
+        // то есть одним промахом сносит все отметки дня без подтверждения.
+        // Сброс остаётся на самих точках, где цикл виден и предсказуем.
+        // При норме 1 кнопка обязана вести себя как прежний переключатель:
+        // клик отмечает, повторный снимает.
+        const markDisabled = busy !== null || (todayFull && multi);
+        const markLabel = todayFull
+          ? multi
+            ? '✓ сегодня закрыт'
+            : '✓ отмечено'
+          : multi
+            ? `+ отметить (${todayCount} из ${r.timesPerDay})`
+            : '+ отметить сегодня';
         return (
           <div key={r.id} className={styles.row}>
             <div className={styles.title}>{r.title}</div>
@@ -172,14 +187,10 @@ export default function RoutinesScreen() {
             <button
               type="button"
               className={styles.markBtn}
-              disabled={busy !== null}
+              disabled={markDisabled}
               onClick={() => setDay(r.id, today, nextCount(todayCount, r.timesPerDay))}
             >
-              {todayFull
-                ? '✓ сегодня закрыт'
-                : r.timesPerDay > 1
-                  ? `+ отметить (${todayCount} из ${r.timesPerDay})`
-                  : '+ отметить сегодня'}
+              {markLabel}
             </button>
           </div>
         );
