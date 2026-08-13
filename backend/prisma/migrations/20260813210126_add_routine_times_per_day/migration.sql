@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Routine" ADD COLUMN     "daysPerWeek" INTEGER NOT NULL DEFAULT 3,
+ADD COLUMN     "timesPerDay" INTEGER NOT NULL DEFAULT 1;
+
+-- AlterTable
+ALTER TABLE "RoutineLog" ADD COLUMN     "count" INTEGER NOT NULL DEFAULT 1;

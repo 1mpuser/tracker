@@ -103,15 +103,16 @@ model GtdItem {
 }
 
 model Routine {
-  id         Int          @id @default(autoincrement())
-  title      String
-  weeklyGoal Int          @default(3)
-  categoryId Int?
-  category   Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  archived   Boolean      @default(false)
-  order      Int          @default(0)
-  logs       RoutineLog[]
-  createdAt  DateTime     @default(now())
+  id          Int          @id @default(autoincrement())
+  title       String
+  timesPerDay Int          @default(1)
+  daysPerWeek Int          @default(3)
+  categoryId  Int?
+  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  archived    Boolean      @default(false)
+  order       Int          @default(0)
+  logs        RoutineLog[]
+  createdAt   DateTime     @default(now())
 }
 
 model RoutineLog {
@@ -119,6 +120,7 @@ model RoutineLog {
   routineId Int
   routine   Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
   date      DateTime @db.Date
+  count     Int      @default(1)
 
   @@unique([routineId, date])
 }
