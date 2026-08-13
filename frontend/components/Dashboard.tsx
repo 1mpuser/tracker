@@ -57,7 +57,9 @@ export default function Dashboard() {
   const [closingDay, setClosingDay] = useState(false);
   const [syncingSession, setSyncingSession] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
-  const [routinesLeft, setRoutinesLeft] = useState(0);
+  // Закрыто норм из скольких: голое число «сколько не добрал» ничего не объясняет,
+  // а «1/3» читается так же, как счётчик на самой строке рутины.
+  const [routinesDone, setRoutinesDone] = useState({ closed: 0, total: 0 });
   const { sendIfSunday, chartNode } = useWeeklySummary();
 
   const loadCore = useCallback(async () => {
@@ -85,8 +87,13 @@ export default function Dashboard() {
     // Без него бэкенд посчитал бы неделю от своей UTC-даты, и ночью счётчик
     // показывал бы недобор прошлой недели.
     getRoutines(date)
-      .then((w) => setRoutinesLeft(unclosedRoutines(w.routines)))
-      .catch(() => setRoutinesLeft(0));
+      .then((w) =>
+        setRoutinesDone({
+          closed: w.routines.length - unclosedRoutines(w.routines),
+          total: w.routines.length,
+        }),
+      )
+      .catch(() => setRoutinesDone({ closed: 0, total: 0 }));
   }, [activeTab, date]);
 
   useEffect(() => {
@@ -262,9 +269,14 @@ export default function Dashboard() {
               onClick={() => setActiveTab(t.key)}
             >
               {t.label}
-              {t.key === 'routines' && routinesLeft > 0 ? (
-                <span className={styles.tabBadge} title="рутин с незакрытой нормой">
-                  {routinesLeft}
+              {t.key === 'routines' && routinesDone.total > 0 ? (
+                <span
+                  className={`${styles.tabBadge} ${
+                    routinesDone.closed === routinesDone.total ? styles.tabBadgeDone : ''
+                  }`}
+                  title="рутин с выполненной недельной нормой"
+                >
+                  {routinesDone.closed}/{routinesDone.total}
                 </span>
               ) : null}
             </button>
