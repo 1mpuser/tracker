@@ -2,14 +2,18 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DaysService } from '../days/days.service';
 import { addDays, formatDate, mondayOf, parseDateParam, todayDate } from '../common/date.util';
+import { closedDays } from './routines.helpers';
 
 export interface RoutineView {
   id: number;
   title: string;
-  weeklyGoal: number;
+  timesPerDay: number;
+  daysPerWeek: number;
   categoryId: number | null;
+  /** Закрытых дней на этой неделе. */
   done: number;
-  days: string[];
+  /** Дни недели с числом отметок — фронт рисует из них заполненность точки. */
+  days: { date: string; count: number }[];
   order: number;
 }
 
@@ -21,7 +25,7 @@ export interface RoutinesWeekView {
 
 export interface RoutineHistoryWeek {
   weekStart: string;
-  items: { routineId: number; done: number; weeklyGoal: number }[];
+  items: { routineId: number; done: number; daysPerWeek: number }[];
 }
 
 @Injectable()
@@ -50,10 +54,11 @@ export class RoutinesService {
       routines: routines.map((r: any) => ({
         id: r.id,
         title: r.title,
-        weeklyGoal: r.weeklyGoal,
+        timesPerDay: r.timesPerDay,
+        daysPerWeek: r.daysPerWeek,
         categoryId: r.categoryId,
-        done: r.logs.length,
-        days: r.logs.map((l: any) => formatDate(l.date)),
+        done: closedDays(r.logs, r.timesPerDay),
+        days: r.logs.map((l: any) => ({ date: formatDate(l.date), count: l.count })),
         order: r.order,
       })),
     };
@@ -163,10 +168,13 @@ export class RoutinesService {
       },
     });
 
-    const counts = new Map<string, number>();
+    // Ключ — рутина и неделя; значение — сколько отметок в каждый день той недели.
+    const byWeek = new Map<string, number[]>();
     for (const log of logs as any[]) {
       const key = `${log.routineId}|${formatDate(mondayOf(log.date))}`;
-      counts.set(key, (counts.get(key) ?? 0) + 1);
+      const bucket = byWeek.get(key) ?? [];
+      bucket.push(log.count);
+      byWeek.set(key, bucket);
     }
 
     const result: RoutineHistoryWeek[] = [];
@@ -176,8 +184,11 @@ export class RoutinesService {
         weekStart,
         items: routines.map((r: any) => ({
           routineId: r.id,
-          done: counts.get(`${r.id}|${weekStart}`) ?? 0,
-          weeklyGoal: r.weeklyGoal,
+          done: closedDays(
+            (byWeek.get(`${r.id}|${weekStart}`) ?? []).map((c) => ({ count: c })),
+            r.timesPerDay,
+          ),
+          daysPerWeek: r.daysPerWeek,
         })),
       });
     }

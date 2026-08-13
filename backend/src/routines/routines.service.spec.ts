@@ -25,14 +25,53 @@ describe('RoutinesService.getWeek', () => {
     expect(where.date.lte.toISOString()).toBe('2026-08-16T00:00:00.000Z');
   });
 
-  it('считает done по логам недели и отдаёт дни строками', async () => {
+  it('считает done в закрытых днях, а не в отметках', async () => {
     const { service, prisma } = makeService();
     prisma.routine.findMany.mockResolvedValue([
       {
-        id: 1, title: 'Позаниматься в качалке', weeklyGoal: 3, categoryId: 5, order: 0,
+        id: 1, title: 'Гигиена', timesPerDay: 2, daysPerWeek: 7, categoryId: null, order: 0,
         logs: [
-          { date: new Date('2026-08-10T00:00:00.000Z') },
-          { date: new Date('2026-08-12T00:00:00.000Z') },
+          { date: new Date('2026-08-10T00:00:00.000Z'), count: 2 },
+          { date: new Date('2026-08-11T00:00:00.000Z'), count: 1 },
+        ],
+      },
+    ]);
+
+    const view = await service.getWeek('2026-08-12');
+
+    expect(view.routines[0].done).toBe(1);
+    expect(view.routines[0].timesPerDay).toBe(2);
+    expect(view.routines[0].daysPerWeek).toBe(7);
+  });
+
+  it('отдаёт дни с числом отметок', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([
+      {
+        id: 1, title: 'Гигиена', timesPerDay: 2, daysPerWeek: 7, categoryId: null, order: 0,
+        logs: [
+          { date: new Date('2026-08-10T00:00:00.000Z'), count: 2 },
+          { date: new Date('2026-08-11T00:00:00.000Z'), count: 1 },
+        ],
+      },
+    ]);
+
+    const view = await service.getWeek('2026-08-12');
+
+    expect(view.routines[0].days).toEqual([
+      { date: '2026-08-10', count: 2 },
+      { date: '2026-08-11', count: 1 },
+    ]);
+  });
+
+  it('при дневной норме 1 каждая отметка закрывает день', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findMany.mockResolvedValue([
+      {
+        id: 1, title: 'Качалка', timesPerDay: 1, daysPerWeek: 3, categoryId: null, order: 0,
+        logs: [
+          { date: new Date('2026-08-10T00:00:00.000Z'), count: 1 },
+          { date: new Date('2026-08-12T00:00:00.000Z'), count: 1 },
         ],
       },
     ]);
@@ -40,9 +79,6 @@ describe('RoutinesService.getWeek', () => {
     const view = await service.getWeek('2026-08-12');
 
     expect(view.routines[0].done).toBe(2);
-    expect(view.routines[0].days).toEqual(['2026-08-10', '2026-08-12']);
-    expect(view.routines[0].weeklyGoal).toBe(3);
-    expect(view.routines[0].categoryId).toBe(5);
   });
 
   it('не показывает архивные рутины', async () => {
@@ -234,7 +270,7 @@ describe('RoutinesService.removeLog', () => {
 describe('RoutinesService.getHistory', () => {
   it('возвращает запрошенное число недель, последняя — текущая', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findMany.mockResolvedValue([{ id: 1, weeklyGoal: 3 }]);
+    prisma.routine.findMany.mockResolvedValue([{ id: 1, timesPerDay: 1, daysPerWeek: 3 }]);
     prisma.routineLog.findMany.mockResolvedValue([]);
     jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-10T00:00:00.000Z'));
 
@@ -243,31 +279,31 @@ describe('RoutinesService.getHistory', () => {
     expect(history.map((w) => w.weekStart)).toEqual(['2026-07-27', '2026-08-03', '2026-08-10']);
   });
 
-  it('раскладывает логи по неделям, к которым они относятся', async () => {
+  it('раскладывает логи по неделям и считает закрытые дни', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findMany.mockResolvedValue([{ id: 1, weeklyGoal: 3 }]);
+    prisma.routine.findMany.mockResolvedValue([{ id: 1, timesPerDay: 2, daysPerWeek: 7 }]);
     prisma.routineLog.findMany.mockResolvedValue([
-      { routineId: 1, date: new Date('2026-08-11T00:00:00.000Z') },
-      { routineId: 1, date: new Date('2026-08-13T00:00:00.000Z') },
-      { routineId: 1, date: new Date('2026-08-05T00:00:00.000Z') },
+      { routineId: 1, date: new Date('2026-08-11T00:00:00.000Z'), count: 2 },
+      { routineId: 1, date: new Date('2026-08-13T00:00:00.000Z'), count: 1 },
+      { routineId: 1, date: new Date('2026-08-05T00:00:00.000Z'), count: 2 },
     ]);
     jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-10T00:00:00.000Z'));
 
     const history = await service.getHistory(2);
 
-    expect(history[0]).toEqual({ weekStart: '2026-08-03', items: [{ routineId: 1, done: 1, weeklyGoal: 3 }] });
-    expect(history[1]).toEqual({ weekStart: '2026-08-10', items: [{ routineId: 1, done: 2, weeklyGoal: 3 }] });
+    expect(history[0]).toEqual({ weekStart: '2026-08-03', items: [{ routineId: 1, done: 1, daysPerWeek: 7 }] });
+    expect(history[1]).toEqual({ weekStart: '2026-08-10', items: [{ routineId: 1, done: 1, daysPerWeek: 7 }] });
   });
 
   it('отдаёт нули для недели без отметок, а не пропускает её', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findMany.mockResolvedValue([{ id: 1, weeklyGoal: 3 }]);
+    prisma.routine.findMany.mockResolvedValue([{ id: 1, timesPerDay: 1, daysPerWeek: 3 }]);
     prisma.routineLog.findMany.mockResolvedValue([]);
     jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-10T00:00:00.000Z'));
 
     const history = await service.getHistory(2);
 
-    expect(history[0].items).toEqual([{ routineId: 1, done: 0, weeklyGoal: 3 }]);
+    expect(history[0].items).toEqual([{ routineId: 1, done: 0, daysPerWeek: 3 }]);
   });
 
   it('не считает архивные рутины', async () => {
@@ -283,7 +319,7 @@ describe('RoutinesService.getHistory', () => {
 
   it('с якорем последняя неделя определяется по нему, а не по текущему понедельнику', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findMany.mockResolvedValue([{ id: 1, weeklyGoal: 3 }]);
+    prisma.routine.findMany.mockResolvedValue([{ id: 1, timesPerDay: 1, daysPerWeek: 3 }]);
     prisma.routineLog.findMany.mockResolvedValue([]);
     jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-03T00:00:00.000Z'));
 
@@ -294,7 +330,7 @@ describe('RoutinesService.getHistory', () => {
 
   it('без якоря последняя неделя — текущий понедельник', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findMany.mockResolvedValue([{ id: 1, weeklyGoal: 3 }]);
+    prisma.routine.findMany.mockResolvedValue([{ id: 1, timesPerDay: 1, daysPerWeek: 3 }]);
     prisma.routineLog.findMany.mockResolvedValue([]);
     jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-03T00:00:00.000Z'));
 
@@ -306,14 +342,14 @@ describe('RoutinesService.getHistory', () => {
   it('не путает рутины между собой внутри одной недели', async () => {
     const { service, prisma } = makeService();
     prisma.routine.findMany.mockResolvedValue([
-      { id: 1, weeklyGoal: 3 },
-      { id: 2, weeklyGoal: 2 },
+      { id: 1, timesPerDay: 1, daysPerWeek: 3 },
+      { id: 2, timesPerDay: 1, daysPerWeek: 2 },
     ]);
     prisma.routineLog.findMany.mockResolvedValue([
-      { routineId: 1, date: new Date('2026-08-10T00:00:00.000Z') },
-      { routineId: 1, date: new Date('2026-08-12T00:00:00.000Z') },
-      { routineId: 2, date: new Date('2026-08-12T00:00:00.000Z') },
-      { routineId: 2, date: new Date('2026-08-05T00:00:00.000Z') },
+      { routineId: 1, date: new Date('2026-08-10T00:00:00.000Z'), count: 1 },
+      { routineId: 1, date: new Date('2026-08-12T00:00:00.000Z'), count: 1 },
+      { routineId: 2, date: new Date('2026-08-12T00:00:00.000Z'), count: 1 },
+      { routineId: 2, date: new Date('2026-08-05T00:00:00.000Z'), count: 1 },
     ]);
 
     const history = await service.getHistory(2, '2026-08-12');
@@ -321,15 +357,15 @@ describe('RoutinesService.getHistory', () => {
     expect(history[1]).toEqual({
       weekStart: '2026-08-10',
       items: [
-        { routineId: 1, done: 2, weeklyGoal: 3 },
-        { routineId: 2, done: 1, weeklyGoal: 2 },
+        { routineId: 1, done: 2, daysPerWeek: 3 },
+        { routineId: 2, done: 1, daysPerWeek: 2 },
       ],
     });
     expect(history[0]).toEqual({
       weekStart: '2026-08-03',
       items: [
-        { routineId: 1, done: 0, weeklyGoal: 3 },
-        { routineId: 2, done: 1, weeklyGoal: 2 },
+        { routineId: 1, done: 0, daysPerWeek: 3 },
+        { routineId: 2, done: 1, daysPerWeek: 2 },
       ],
     });
   });
