@@ -58,14 +58,14 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
       .catch(() => setRoutineError('Не удалось загрузить рутины'));
   }, [today]);
 
-  const missed = routines.filter((r) => r.done < r.weeklyGoal);
+  const missed = routines.filter((r) => r.done < r.daysPerWeek);
 
   async function decideRoutine(id: number, action: 'keep' | 'lower' | 'archive', goal: number) {
     if (routineBusy !== null) return;
     setRoutineBusy(id);
     setRoutineError(null);
     try {
-      if (action === 'lower') await updateRoutine(id, { weeklyGoal: goal - 1 });
+      if (action === 'lower') await updateRoutine(id, { daysPerWeek: goal - 1 });
       if (action === 'archive') await archiveRoutine(id);
       // Решённая рутина уходит из очереди при любом исходе. Свежий список с
       // сервера только ОБНОВЛЯЕТ значения тех, кто ещё в очереди, и никогда не
@@ -266,7 +266,7 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
                     {missed.map((r) => (
                       <div key={r.id} className={styles.queueItem}>
                         <div className={styles.queueName}>
-                          «{r.title}» — {r.done} из {r.weeklyGoal} на этой неделе.
+                          «{r.title}» — {r.done} из {r.daysPerWeek} дней на этой неделе.
                         </div>
                         <div className={styles.queueQuestion}>Норма реальная?</div>
                         <div className={styles.queueActions}>
@@ -274,25 +274,25 @@ export default function WeeklyReview({ items, today, onClose, onChanged, onGoToB
                             type="button"
                             className={styles.queueBtn}
                             disabled={routineBusy === r.id}
-                            onClick={() => decideRoutine(r.id, 'keep', r.weeklyGoal)}
+                            onClick={() => decideRoutine(r.id, 'keep', r.daysPerWeek)}
                           >
                             Оставить
                           </button>
-                          {r.weeklyGoal > 1 && (
+                          {r.daysPerWeek > 1 && (
                             <button
                               type="button"
                               className={styles.queueBtn}
                               disabled={routineBusy === r.id}
-                              onClick={() => decideRoutine(r.id, 'lower', r.weeklyGoal)}
+                              onClick={() => decideRoutine(r.id, 'lower', r.daysPerWeek)}
                             >
-                              Снизить до {r.weeklyGoal - 1}
+                              Снизить до {r.daysPerWeek - 1}
                             </button>
                           )}
                           <button
                             type="button"
                             className={styles.queueBtn}
                             disabled={routineBusy === r.id}
-                            onClick={() => decideRoutine(r.id, 'archive', r.weeklyGoal)}
+                            onClick={() => decideRoutine(r.id, 'archive', r.daysPerWeek)}
                           >
                             Удалить рутину
                           </button>
