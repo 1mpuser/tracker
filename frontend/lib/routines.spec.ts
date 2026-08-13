@@ -1,10 +1,11 @@
-import { isDoneOn, routineRatioColor, weekDays } from './routines';
+import { dayCount, isDayFull, nextCount, routineRatioColor, weekDays } from './routines';
 import type { RoutineView } from '@/types/api';
 
 function routine(over: Partial<RoutineView>): RoutineView {
   return {
-    id: over.id ?? 1, title: over.title ?? 'Позаниматься в качалке',
-    weeklyGoal: over.weeklyGoal ?? 3, categoryId: over.categoryId ?? null,
+    id: over.id ?? 1, title: over.title ?? 'Гигиена',
+    timesPerDay: over.timesPerDay ?? 1, daysPerWeek: over.daysPerWeek ?? 3,
+    categoryId: over.categoryId ?? null,
     done: over.done ?? 0, days: over.days ?? [], order: over.order ?? 0,
   };
 }
@@ -22,13 +23,48 @@ describe('weekDays', () => {
   });
 });
 
-describe('isDoneOn', () => {
-  it('видит отмеченный день', () => {
-    expect(isDoneOn(routine({ days: ['2026-08-10', '2026-08-12'] }), '2026-08-12')).toBe(true);
+describe('dayCount', () => {
+  it('возвращает число отметок за день', () => {
+    const r = routine({ days: [{ date: '2026-08-10', count: 2 }] });
+    expect(dayCount(r, '2026-08-10')).toBe(2);
   });
 
-  it('не видит неотмеченный', () => {
-    expect(isDoneOn(routine({ days: ['2026-08-10'] }), '2026-08-12')).toBe(false);
+  it('день без отметок — ноль', () => {
+    expect(dayCount(routine({ days: [] }), '2026-08-10')).toBe(0);
+  });
+});
+
+describe('isDayFull', () => {
+  it('день закрыт, когда набрана дневная норма', () => {
+    const r = routine({ timesPerDay: 2, days: [{ date: '2026-08-10', count: 2 }] });
+    expect(isDayFull(r, '2026-08-10')).toBe(true);
+  });
+
+  it('половина нормы — не закрыт', () => {
+    const r = routine({ timesPerDay: 2, days: [{ date: '2026-08-10', count: 1 }] });
+    expect(isDayFull(r, '2026-08-10')).toBe(false);
+  });
+
+  it('при норме 1 одна отметка закрывает день', () => {
+    const r = routine({ timesPerDay: 1, days: [{ date: '2026-08-10', count: 1 }] });
+    expect(isDayFull(r, '2026-08-10')).toBe(true);
+  });
+});
+
+describe('nextCount', () => {
+  it('при норме 1 работает как переключатель', () => {
+    expect(nextCount(0, 1)).toBe(1);
+    expect(nextCount(1, 1)).toBe(0);
+  });
+
+  it('при норме 2 цикл 0 → 1 → 2 → 0', () => {
+    expect(nextCount(0, 2)).toBe(1);
+    expect(nextCount(1, 2)).toBe(2);
+    expect(nextCount(2, 2)).toBe(0);
+  });
+
+  it('значение выше нормы сбрасывается в ноль', () => {
+    expect(nextCount(5, 2)).toBe(0);
   });
 });
 

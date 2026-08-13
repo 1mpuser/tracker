@@ -119,7 +119,8 @@ export interface GtdItem {
 export interface Routine {
   id: number;
   title: string;
-  weeklyGoal: number;
+  timesPerDay: number;
+  daysPerWeek: number;
   categoryId: number | null;
   archived: boolean;
   order: number;
@@ -129,10 +130,11 @@ export interface Routine {
 export interface RoutineView {
   id: number;
   title: string;
-  weeklyGoal: number;
+  timesPerDay: number;
+  daysPerWeek: number;
   categoryId: number | null;
   done: number;
-  days: string[];
+  days: { date: string; count: number }[];
   order: number;
 }
 
@@ -144,5 +146,5 @@ export interface RoutinesWeek {
 
 export interface RoutineHistoryWeek {
   weekStart: string;
-  items: { routineId: number; done: number; weeklyGoal: number }[];
+  items: { routineId: number; done: number; daysPerWeek: number }[];
 }

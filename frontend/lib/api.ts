@@ -176,13 +176,21 @@ export function getRoutinesHistory(weeks = 8, anchor?: string): Promise<RoutineH
 
 // Оба эндпоинта отдают сырую запись рутины, а не недельный срез: прогресс за
 // неделю фронт всё равно перечитывает через getRoutines.
-export function createRoutine(title: string, weeklyGoal: number, categoryId: number | null): Promise<Routine> {
-  return request(`/routines`, { method: 'POST', body: JSON.stringify({ title, weeklyGoal, categoryId }) });
+export function createRoutine(
+  title: string,
+  timesPerDay: number,
+  daysPerWeek: number,
+  categoryId: number | null,
+): Promise<Routine> {
+  return request(`/routines`, {
+    method: 'POST',
+    body: JSON.stringify({ title, timesPerDay, daysPerWeek, categoryId }),
+  });
 }
 
 export function updateRoutine(
   id: number,
-  patch: { title?: string; weeklyGoal?: number; categoryId?: number | null },
+  patch: { title?: string; timesPerDay?: number; daysPerWeek?: number; categoryId?: number | null },
 ): Promise<Routine> {
   return request(`/routines/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
 }
@@ -191,8 +199,9 @@ export function archiveRoutine(id: number): Promise<{ id: number }> {
   return request(`/routines/${id}`, { method: 'DELETE' });
 }
 
-export function addRoutineLog(id: number, date: string): Promise<RoutinesWeek> {
-  return request(`/routines/${id}/log`, { method: 'POST', body: JSON.stringify({ date }) });
+// count — абсолютное число отметок за день, а не приращение.
+export function setRoutineLog(id: number, date: string, count: number): Promise<RoutinesWeek> {
+  return request(`/routines/${id}/log`, { method: 'POST', body: JSON.stringify({ date, count }) });
 }
 
 export function removeRoutineLog(id: number, date: string): Promise<RoutinesWeek> {
