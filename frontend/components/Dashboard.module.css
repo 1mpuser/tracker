@@ -38,30 +38,6 @@
   color: var(--accent);
 }
 
-/* Тот же вид, что у счётчиков бакетов в GTD, чтобы число читалось
-   как счётчик, а не как часть названия вкладки. Показывает «закрыто/всего»:
-   голое число не объясняет, что именно посчитано. */
-.tabBadge {
-  display: inline-block;
-  margin-left: 6px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  background: var(--panel-alt);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0 6px;
-  line-height: 15px;
-  vertical-align: middle;
-}
-
-/* Все нормы недели закрыты — счётчик перестаёт быть напоминанием. */
-.tabBadgeDone {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
-}
-
 .sysHint {
   font-family: var(--font-mono);
   font-size: 10.5px;

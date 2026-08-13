@@ -1,4 +1,4 @@
-import { isDoneOn, routineRatioColor, unclosedRoutines, weekDays } from './routines';
+import { isDoneOn, routineRatioColor, weekDays } from './routines';
 import type { RoutineView } from '@/types/api';
 
 function routine(over: Partial<RoutineView>): RoutineView {
@@ -52,24 +52,5 @@ describe('routineRatioColor', () => {
 
   it('норма 0 не роняет расчёт делением на ноль', () => {
     expect(routineRatioColor(0, 0)).toBe('var(--panel-alt)');
-  });
-});
-
-describe('unclosedRoutines', () => {
-  it('считает рутины, не добравшие норму', () => {
-    const list = [
-      routine({ id: 1, done: 1, weeklyGoal: 3 }),
-      routine({ id: 2, done: 3, weeklyGoal: 3 }),
-      routine({ id: 3, done: 0, weeklyGoal: 2 }),
-    ];
-    expect(unclosedRoutines(list)).toBe(2);
-  });
-
-  it('перевыполненная не считается недобравшей', () => {
-    expect(unclosedRoutines([routine({ done: 7, weeklyGoal: 3 })])).toBe(0);
-  });
-
-  it('пустой список даёт ноль', () => {
-    expect(unclosedRoutines([])).toBe(0);
   });
 });

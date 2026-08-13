@@ -20,7 +20,3 @@ export function routineRatioColor(done: number, goal: number): string {
   if (ratio >= 0.33) return 'rgba(224, 164, 88, 0.3)';
   return 'var(--accent-soft)';
 }
-
-export function unclosedRoutines(routines: RoutineView[]): number {
-  return routines.filter((r) => r.done < r.weeklyGoal).length;
-}
