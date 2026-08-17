@@ -341,7 +341,7 @@ export default function GtdItemRow({
                     closeMenu();
                   }}
                 >
-                  В разбор
+                  В Корзину
                 </button>
               )}
               {!confirmDelete ? (

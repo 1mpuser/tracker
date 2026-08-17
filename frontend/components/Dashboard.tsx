@@ -109,7 +109,7 @@ export default function Dashboard() {
         const key = todayLocal();
         if (localStorage.getItem('weeklyReviewNotified') !== key) {
           new Notification(
-            'Воскресенье — время для Weekly Review: разбери входящие, пройдись по Бэклогу недели и Проектам',
+            'Воскресенье — время для Weekly Review: разбери Корзину, пройдись по Бэклогу недели и Проектам',
           );
           localStorage.setItem('weeklyReviewNotified', key);
         }

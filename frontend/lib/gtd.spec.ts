@@ -292,9 +292,9 @@ describe('findSimilar', () => {
 });
 
 describe('подписи бакетов и воронки', () => {
-  it('бэклог называется «Бэклог недели», someday — «Потом», inbox — «Разбор»', () => {
+  it('бэклог называется «Бэклог недели», someday — «Потом», inbox — «Корзина»', () => {
     const label = (s: GtdItem['status']) => BUCKET_TABS.find((b) => b.status === s)?.label;
-    expect(label('inbox')).toBe('Разбор');
+    expect(label('inbox')).toBe('Корзина');
     expect(label('backlog')).toBe('Бэклог недели');
     expect(label('someday')).toBe('Потом');
   });

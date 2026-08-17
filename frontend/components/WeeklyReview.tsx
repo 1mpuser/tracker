@@ -16,7 +16,7 @@ interface ReviewStep {
 }
 
 const STEPS: ReviewStep[] = [
-  { key: 'inbox', title: 'Разбор', guidance: 'Обнули: разбери все входящие до нуля.' },
+  { key: 'inbox', title: 'Корзина', guidance: 'Обнули: разбери Корзину до нуля.' },
   { key: 'backlog', title: 'Бэклог недели', guidance: 'Что берёшь на эту неделю, а что уже не актуально?' },
   { key: 'project', title: 'Проекты', guidance: 'У каждого проекта есть следующий шаг?' },
   { key: 'waiting', title: 'Ожидание', guidance: 'Не завис ли кто? Напомни, если нужно.' },

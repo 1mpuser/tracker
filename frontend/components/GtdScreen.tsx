@@ -87,7 +87,7 @@ export default function GtdScreen() {
     if (query.trim()) return 'Ничего не найдено.';
     switch (active) {
       case 'backlog':
-        return 'Бэклог недели пуст — разбери входящие или добавь задачу.';
+        return 'Бэклог недели пуст — разбери Корзину или добавь задачу.';
       case 'calendar':
         return 'Пока ничего не запланировано.';
       case 'project':

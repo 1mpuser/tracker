@@ -64,7 +64,7 @@ export const CLARIFY: Record<string, ClarifyQuestion> = {
 };
 
 export const BUCKET_TABS: { status: GtdStatus; label: string }[] = [
-  { status: 'inbox', label: 'Разбор' },
+  { status: 'inbox', label: 'Корзина' },
   { status: 'backlog', label: 'Бэклог недели' },
   { status: 'calendar', label: 'Календарь' },
   { status: 'project', label: 'Проекты' },

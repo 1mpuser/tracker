@@ -164,7 +164,7 @@ export default function InboxProcessor({ items, allItems, today, onChanged, onOp
       <div className={styles.capture}>
         <input
           className={styles.input}
-          placeholder="Скинуть мысль в разбор…"
+          placeholder="Скинуть мысль в Корзину…"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {
@@ -195,7 +195,7 @@ export default function InboxProcessor({ items, allItems, today, onChanged, onOp
       {/* Поздравление уместно, только когда разбирать больше нечего: ниже может
           висеть блок «Просроченные» с нерешёнными задачами. */}
       {items.length === 0 && overdue.length === 0 && (
-        <div className={styles.empty}>Входящие разобраны — красота.</div>
+        <div className={styles.empty}>Корзина пуста — красота.</div>
       )}
 
       <ul className={styles.list}>

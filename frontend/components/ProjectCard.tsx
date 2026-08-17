@@ -160,7 +160,7 @@ export default function ProjectCard({ project, onClose, onChanged }: ProjectCard
       <div className={styles.addRow}>
         <input
           className={styles.input}
-          placeholder="Новый шаг (уйдёт в разбор)…"
+          placeholder="Новый шаг (уйдёт в Корзину)…"
           value={stepTitle}
           onChange={(e) => setStepTitle(e.target.value)}
           onKeyDown={(e) => {
