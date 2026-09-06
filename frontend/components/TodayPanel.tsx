@@ -1,24 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import type { GtdItem, TaskTemplate } from '@/types/api';
-import { getTaskTemplates } from '@/lib/api';
-import { sortGtdItems } from '@/lib/gtd';
+import type { GtdItem } from '@/types/api';
+import { getGtdItems } from '@/lib/api';
+import { backlogForToday, sortGtdItems, toggleBacklogSelection } from '@/lib/gtd';
 import { todayLocal, formatRuDate } from '@/lib/date';
 import styles from './TodayPanel.module.css';
 
 interface TodayPanelProps {
   items: GtdItem[];
   onAdd: (title: string) => void;
+  onTakeFromBacklog: (ids: number[]) => void | Promise<void>;
   onToggleDone: (item: GtdItem) => void;
   onRemove: (id: number) => void;
 }
 
-export default function TodayPanel({ items, onAdd, onToggleDone, onRemove }: TodayPanelProps) {
+export default function TodayPanel({ items, onAdd, onTakeFromBacklog, onToggleDone, onRemove }: TodayPanelProps) {
   const [text, setText] = useState('');
-  const [templatesOpen, setTemplatesOpen] = useState(false);
-  const [templates, setTemplates] = useState<TaskTemplate[]>([]);
-  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [backlogOpen, setBacklogOpen] = useState(false);
+  const [backlogItems, setBacklogItems] = useState<GtdItem[]>([]);
+  const [backlogLoading, setBacklogLoading] = useState(false);
+  const [backlogError, setBacklogError] = useState<string | null>(null);
+  const [selectedBacklogIds, setSelectedBacklogIds] = useState<number[]>([]);
+  const [takingBacklog, setTakingBacklog] = useState(false);
 
   function submit() {
     const trimmed = text.trim();
@@ -27,23 +31,43 @@ export default function TodayPanel({ items, onAdd, onToggleDone, onRemove }: Tod
     setText('');
   }
 
-  async function openTemplates() {
-    if (templatesOpen) {
-      setTemplatesOpen(false);
+  async function openBacklog() {
+    if (backlogOpen) {
+      setBacklogOpen(false);
+      setSelectedBacklogIds([]);
       return;
     }
-    setTemplatesOpen(true);
-    setTemplatesLoading(true);
+    setBacklogOpen(true);
+    setBacklogError(null);
+    setSelectedBacklogIds([]);
+    setBacklogLoading(true);
     try {
-      setTemplates(await getTaskTemplates());
+      setBacklogItems(backlogForToday(await getGtdItems('backlog'), todayLocal()));
+    } catch {
+      setBacklogError('Не удалось загрузить бэклог');
     } finally {
-      setTemplatesLoading(false);
+      setBacklogLoading(false);
     }
   }
 
-  function pickTemplate(t: TaskTemplate) {
-    onAdd(t.text);
-    setTemplatesOpen(false);
+  function toggleBacklogItem(id: number) {
+    setSelectedBacklogIds((current) => toggleBacklogSelection(current, id));
+  }
+
+  async function takeSelectedBacklog() {
+    if (selectedBacklogIds.length === 0) return;
+    setTakingBacklog(true);
+    setBacklogError(null);
+    try {
+      await onTakeFromBacklog(selectedBacklogIds);
+      setBacklogItems((current) => current.filter((item) => !selectedBacklogIds.includes(item.id)));
+      setSelectedBacklogIds([]);
+      setBacklogOpen(false);
+    } catch {
+      setBacklogError('Не удалось взять выбранные задачи на сегодня');
+    } finally {
+      setTakingBacklog(false);
+    }
   }
 
   return (
@@ -63,22 +87,52 @@ export default function TodayPanel({ items, onAdd, onToggleDone, onRemove }: Tod
         <button type="button" className={styles.addBtn} onClick={submit}>
           +
         </button>
-        <div className={styles.templatesWrap}>
-          <button type="button" className={styles.templatesBtn} onClick={openTemplates}>
-            из шаблонов
+        <div className={styles.backlogWrap}>
+          <button
+            type="button"
+            className={styles.backlogBtn}
+            onClick={openBacklog}
+            aria-expanded={backlogOpen}
+            aria-haspopup="dialog"
+          >
+            выбрать из бэклога
           </button>
-          {templatesOpen && (
-            <div className={styles.dropdown}>
-              {templatesLoading && <div className={styles.dropdownEmpty}>загрузка…</div>}
-              {!templatesLoading && templates.length === 0 && (
-                <div className={styles.dropdownEmpty}>Шаблонов пока нет</div>
+          {backlogOpen && (
+            <div className={styles.backlogDropdown} role="dialog" aria-label="Выбрать задачи из бэклога">
+              {backlogLoading && <div className={styles.dropdownEmpty}>загрузка…</div>}
+              {!backlogLoading && backlogError && <div className={styles.dropdownEmpty}>{backlogError}</div>}
+              {!backlogLoading && !backlogError && backlogItems.length === 0 && (
+                <div className={styles.dropdownEmpty}>Бэклог пуст</div>
               )}
-              {!templatesLoading &&
-                templates.map((t) => (
-                  <button key={t.id} type="button" className={styles.dropdownItem} onClick={() => pickTemplate(t)}>
-                    {t.text}
-                  </button>
+              {!backlogLoading &&
+                !backlogError &&
+                backlogItems.map((item) => (
+                  <label
+                    key={item.id}
+                    className={styles.dropdownItem}
+                  >
+                    <input
+                      className={styles.dropdownCheck}
+                      type="checkbox"
+                      checked={selectedBacklogIds.includes(item.id)}
+                      onChange={() => toggleBacklogItem(item.id)}
+                      disabled={takingBacklog}
+                    />
+                    {item.title}
+                  </label>
                 ))}
+              {!backlogLoading && !backlogError && backlogItems.length > 0 && (
+                <div className={styles.backlogActions}>
+                  <button
+                    type="button"
+                    className={styles.backlogApply}
+                    onClick={takeSelectedBacklog}
+                    disabled={selectedBacklogIds.length === 0 || takingBacklog}
+                  >
+                    {takingBacklog ? 'добавление…' : `Взять на сегодня (${selectedBacklogIds.length})`}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

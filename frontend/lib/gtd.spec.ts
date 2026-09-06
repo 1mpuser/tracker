@@ -1,4 +1,14 @@
-import { BUCKET_TABS, CLARIFY, CLARIFY_START, groupByStatus, sortGtdItems, nextActionId, findSimilar } from './gtd';
+import {
+  BUCKET_TABS,
+  CLARIFY,
+  CLARIFY_START,
+  groupByStatus,
+  sortGtdItems,
+  nextActionId,
+  findSimilar,
+  backlogForToday,
+  toggleBacklogSelection,
+} from './gtd';
 import type { GtdItem } from '@/types/api';
 
 function item(id: number, status: GtdItem['status']): GtdItem {
@@ -84,6 +94,24 @@ describe('sortGtdItems', () => {
     const r = sortGtdItems(input);
     expect(r.map((i) => i.id)).toEqual([2, 1]);
     expect(input.map((i) => i.id)).toEqual([1, 2]);
+  });
+});
+
+describe('backlogForToday', () => {
+  it('returns backlog items that are not already planned for today, sorted for display', () => {
+    const items = [
+      item(3, 'backlog'),
+      item(1, 'backlog'),
+      { ...item(2, 'backlog'), plannedDate: '2026-08-12' },
+      item(4, 'someday'),
+    ];
+
+    expect(backlogForToday(items, '2026-08-12').map((i) => i.id)).toEqual([1, 3]);
+  });
+
+  it('toggles one item without changing the other selected items', () => {
+    expect(toggleBacklogSelection([2, 5], 3)).toEqual([2, 5, 3]);
+    expect(toggleBacklogSelection([2, 5], 5)).toEqual([2]);
   });
 });
 

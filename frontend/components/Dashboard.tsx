@@ -172,6 +172,11 @@ export default function Dashboard() {
     await refreshDay();
   }
 
+  async function takeFromBacklog(ids: number[]) {
+    await Promise.all(ids.map((id) => updateGtdItem(id, { plannedDate: date })));
+    await refreshDay();
+  }
+
   async function toggleTodayDone(item: GtdItem) {
     if (item.status === 'done') {
       await updateGtdItem(item.id, { status: 'backlog' });
@@ -281,6 +286,7 @@ export default function Dashboard() {
             <TodayPanel
               items={day.today}
               onAdd={addToday}
+              onTakeFromBacklog={takeFromBacklog}
               onToggleDone={toggleTodayDone}
               onRemove={removeFromToday}
             />

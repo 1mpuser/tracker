@@ -99,6 +99,14 @@ export function sortGtdItems(items: GtdItem[]): GtdItem[] {
   });
 }
 
+export function backlogForToday(items: GtdItem[], today: string): GtdItem[] {
+  return sortGtdItems(items.filter((item) => item.status === 'backlog' && item.plannedDate !== today));
+}
+
+export function toggleBacklogSelection(selectedIds: number[], id: number): number[] {
+  return selectedIds.includes(id) ? selectedIds.filter((selectedId) => selectedId !== id) : [...selectedIds, id];
+}
+
 export function nextActionId(children: GtdItem[]): number | null {
   const backlog = children.filter((c) => c.status === 'backlog').sort((a, b) => a.order - b.order);
   return backlog[0]?.id ?? null;
