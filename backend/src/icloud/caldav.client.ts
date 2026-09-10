@@ -1,56 +1,60 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { DAVClient, DAVCalendar } from 'tsdav';
 import { redactSecret } from '../common/redact.util';
 
+export interface ICloudCredentials {
+  appleId: string;
+  appPassword: string;
+}
+
+// Кэш на пользователя. fingerprint = sha256(appleId + ':' + appPassword):
+// сменили учётку → fingerprint другой → новый client. Неудачный логин НЕ
+// кэшируется (правило из git-истории): иначе следующий запрос думал бы, что
+// залогинен, и падал глубже.
 @Injectable()
 export class CalDavClient {
   private readonly logger = new Logger(CalDavClient.name);
-  private client: DAVClient | null = null;
+  private clients = new Map<number, { fingerprint: string; client: DAVClient }>();
   private calendars = new Map<string, DAVCalendar>();
 
-  // Текст ошибки от tsdav/fetch может содержать пароль приложения — вырезаем
-  // его перед логированием, тем же способом, что и SessionService.
-  private redact(message: string): string {
-    return redactSecret(message, process.env.ICLOUD_APP_PASSWORD);
+  private redact(message: string, password: string): string {
+    return password ? redactSecret(message, password) : message;
   }
 
-  hasCredentials(): boolean {
-    return Boolean(process.env.ICLOUD_APPLE_ID && process.env.ICLOUD_APP_PASSWORD);
+  private fingerprint(creds: ICloudCredentials): string {
+    return createHash('sha256').update(`${creds.appleId}:${creds.appPassword}`).digest('hex');
   }
 
-  private credentials(): { username: string; password: string } | null {
-    const username = process.env.ICLOUD_APPLE_ID;
-    const password = process.env.ICLOUD_APP_PASSWORD;
-    return username && password ? { username, password } : null;
-  }
-
-  async getClient(): Promise<DAVClient | null> {
-    const creds = this.credentials();
-    if (!creds) return null;
-    if (this.client) return this.client;
+  async getClient(userId: number, creds: ICloudCredentials): Promise<DAVClient | null> {
+    const fp = this.fingerprint(creds);
+    const cached = this.clients.get(userId);
+    if (cached && cached.fingerprint === fp) return cached.client;
     try {
-      // Присваиваем только после успешного login(): если он бросил, this.client
-      // должен остаться null, чтобы следующий вызов повторил попытку, а не
-      // переиспользовал навсегда неаутентифицированный экземпляр.
+      // Присваиваем только после успешного login(): если он бросил, в кэш
+      // ничего не попадает, и следующий вызов повторит попытку.
       const client = new DAVClient({
         serverUrl: 'https://caldav.icloud.com',
-        credentials: creds,
+        credentials: { username: creds.appleId, password: creds.appPassword },
         authMethod: 'Basic',
         defaultAccountType: 'caldav',
       });
       await client.login();
-      this.client = client;
+      this.clients.set(userId, { fingerprint: fp, client });
       return client;
     } catch (e) {
-      this.logger.warn(`iCloud login failed: ${this.redact(String(e))}`);
+      this.logger.warn(`iCloud login failed: ${this.redact(String(e), creds.appPassword)}`);
       return null;
     }
   }
 
-  async findCalendar(name: string): Promise<DAVCalendar | null> {
-    const cached = this.calendars.get(name);
+  async findCalendar(userId: number, creds: ICloudCredentials, name: string): Promise<DAVCalendar | null> {
+    // Списки ищем по ключу (userId, name): у разных пользователей могут быть
+    // списки с одинаковыми именами и разным содержимым.
+    const key = `${userId}:${name}`;
+    const cached = this.calendars.get(key);
     if (cached) return cached;
-    const client = await this.getClient();
+    const client = await this.getClient(userId, creds);
     if (!client) return null;
     try {
       const calendars = await client.fetchCalendars();
@@ -59,11 +63,19 @@ export class CalDavClient {
         this.logger.warn(`iCloud calendar "${name}" not found`);
         return null;
       }
-      this.calendars.set(name, found);
+      this.calendars.set(key, found);
       return found;
     } catch (e) {
-      this.logger.warn(`iCloud calendar discovery failed: ${this.redact(String(e))}`);
+      this.logger.warn(`iCloud calendar discovery failed: ${this.redact(String(e), creds.appPassword)}`);
       return null;
+    }
+  }
+
+  // Сброс кэша пользователя: смена/удаление учётки.
+  forget(userId: number) {
+    this.clients.delete(userId);
+    for (const key of [...this.calendars.keys()]) {
+      if (key.startsWith(`${userId}:`)) this.calendars.delete(key);
     }
   }
 }

@@ -138,6 +138,11 @@ model Settings {
   distractionLabel     String  @default("Залипание")
   notificationsEnabled Boolean @default(false)
   telegramBotToken     String?
+  icloudAppleId        String?
+  icloudAppPasswordEnc String?
+  icloudRemindersList  String  @default("GTD")
+  sessionCalendarName  String?
+  sessionMinMinutes    Int     @default(20)
 }
 
 enum GtdStatus {

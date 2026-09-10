@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DAVCalendar } from 'tsdav';
+import { IntegrationsService } from '../integrations/integrations.service';
 import { CalDavClient } from './caldav.client';
-import { AuthUser } from '../auth/auth-user';
 import { EffectiveDue, buildReminderIcs, effectiveDue, reminderUid } from './icloud.helpers';
+import { AuthUser } from '../auth/auth-user';
 
-interface ReminderItem {
+export interface ReminderItem {
   id: number;
   title: string;
   status: string;
@@ -18,50 +19,58 @@ interface ReminderItem {
 export class ICloudService {
   private readonly logger = new Logger(ICloudService.name);
 
-  constructor(private readonly caldav: CalDavClient) {}
+  constructor(
+    private readonly caldav: CalDavClient,
+    private readonly integrations: IntegrationsService,
+  ) {}
 
-  private async getRemindersCalendar(): Promise<DAVCalendar | null> {
-    const listName = process.env.ICLOUD_REMINDERS_LIST_NAME || 'GTD';
-    return this.caldav.findCalendar(listName);
+  private async getRemindersCalendar(user: AuthUser): Promise<{ calendar: DAVCalendar | null; creds: { appleId: string; appPassword: string } | null; listName: string }> {
+    const creds = await this.integrations.icloudCredentials(user.id);
+    if (!creds) return { calendar: null, creds: null, listName: 'GTD' };
+    const settings = await this.integrations.getICloud(user.id);
+    const calendar = await this.caldav.findCalendar(user.id, creds, settings.remindersList);
+    return { calendar, creds, listName: settings.remindersList };
   }
 
-  private async upsert(filename: string, iCalString: string): Promise<void> {
-    const calendar = await this.getRemindersCalendar();
-    const client = await this.caldav.getClient();
-    if (!calendar || !client) return;
-    const url = `${calendar.url}${filename}`;
-    await client.deleteCalendarObject({ calendarObject: { url } }).catch(() => undefined);
-    await client.createCalendarObject({ calendar, filename, iCalString });
+  private async upsert(user: AuthUser, filename: string, iCalString: string): Promise<void> {
+    const { calendar, creds } = await this.getRemindersCalendar(user);
+    if (!calendar || !creds) return;
+    const client = await this.caldav.getClient(user.id, creds);
+    if (!client) return;
+    try {
+      const url = `${calendar.url}${filename}`;
+      await client.deleteCalendarObject({ calendarObject: { url } }).catch(() => undefined);
+      await client.createCalendarObject({ calendar, filename, iCalString });
+    } catch (e) {
+      this.logger.warn(`iCloud upsert(${filename}) failed: ${e}`);
+    }
   }
 
-  // user пока не используется: учётка берётся из env (Task 3.3 переведёт
-  // на настройки пользователя). Параметр уже здесь, чтобы сигнатуры не
-  // менялись дважды.
   async syncReminder(user: AuthUser, item: ReminderItem, due: EffectiveDue): Promise<void> {
-    if (!this.caldav.hasCredentials()) return;
+    if (!(await this.integrations.icloudCredentials(user.id))) return;
     try {
       const uid = reminderUid(item.id);
       const ics = buildReminderIcs({ uid, title: `GTD: ${item.title}`, due, priority: item.priority, completed: false });
-      await this.upsert(`${uid}.ics`, ics);
+      await this.upsert(user, `${uid}.ics`, ics);
     } catch (e) {
       this.logger.warn(`iCloud syncReminder(${item.id}) failed: ${e}`);
     }
   }
 
   async completeReminder(user: AuthUser, id: number, item: ReminderItem, due: EffectiveDue): Promise<void> {
-    if (!this.caldav.hasCredentials()) return;
+    if (!(await this.integrations.icloudCredentials(user.id))) return;
     try {
       const uid = reminderUid(id);
       const ics = buildReminderIcs({ uid, title: `GTD: ${item.title}`, due, priority: item.priority, completed: true });
-      await this.upsert(`${uid}.ics`, ics);
+      await this.upsert(user, `${uid}.ics`, ics);
     } catch (e) {
       this.logger.warn(`iCloud completeReminder(${id}) failed: ${e}`);
     }
   }
 
   async removeReminder(user: AuthUser, id: number): Promise<void> {
-    const calendar = await this.getRemindersCalendar();
-    const client = await this.caldav.getClient();
+    const { calendar, creds } = await this.getRemindersCalendar(user);
+    const client = calendar && creds ? await this.caldav.getClient(user.id, creds) : null;
     if (!calendar || !client) return;
     try {
       const url = `${calendar.url}${reminderUid(id)}.ics`;

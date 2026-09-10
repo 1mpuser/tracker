@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CalDavClient } from '../icloud/caldav.client';
+import { IntegrationsService } from '../integrations/integrations.service';
 import { redactSecret } from '../common/redact.util';
 import { countPomodoros, dayWindow, parseEvents } from './session.helpers';
+import { AuthUser } from '../auth/auth-user';
 
 const DEFAULT_MIN_MINUTES = 20;
 
@@ -9,47 +11,42 @@ const DEFAULT_MIN_MINUTES = 20;
 export class SessionService {
   private readonly logger = new Logger(SessionService.name);
 
-  constructor(private readonly caldav: CalDavClient) {}
+  constructor(
+    private readonly caldav: CalDavClient,
+    private readonly integrations: IntegrationsService,
+  ) {}
 
-  private calendarName(): string {
-    return (process.env.SESSION_CALENDAR_NAME ?? '').trim();
+  private async configFor(user: AuthUser): Promise<{ calendarName: string; minMinutes: number } | null> {
+    const stored = await this.integrations.getSession(user.id);
+    if (!stored.calendarName) return null;
+    return {
+      calendarName: stored.calendarName,
+      minMinutes: stored.minMinutes > 0 ? stored.minMinutes : DEFAULT_MIN_MINUTES,
+    };
   }
 
-  private minMinutes(): number {
-    const parsed = Number(process.env.SESSION_MIN_MINUTES);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MIN_MINUTES;
-  }
-
-  private timeZone(): string {
-    const tz = process.env.TZ || 'UTC';
-    try {
-      // Единственный дешёвый способ проверить имя пояса до того, как оно
-      // взорвётся посреди разбора календаря: если Intl его не знает
-      // (опечатка вроде "Europe/Moskow"), он бросает RangeError.
-      new Intl.DateTimeFormat('en-US', { timeZone: tz });
-      return tz;
-    } catch {
-      this.logger.warn(`Session: TZ="${tz}" не распознан, откат на UTC`);
-      return 'UTC';
-    }
-  }
-
-  isEnabled(): boolean {
-    return this.caldav.hasCredentials() && this.calendarName().length > 0;
+  // Есть ли у пользователя и учётка iCloud, и имя календаря Session.
+  async isEnabledFor(user: AuthUser): Promise<boolean> {
+    const cfg = await this.configFor(user);
+    if (!cfg) return false;
+    return (await this.integrations.icloudCredentials(user.id)) !== null;
   }
 
   // Число — календарь ответил. null — не настроено или чтение не удалось;
   // вызывающий обязан не трогать счётчик, иначе сетевой сбой обнулил бы день.
-  // userId пока не используется: учётка iCloud берётся из env (Task 3.3
-  // переведёт на настройки пользователя, а часовой пояс — на user.timezone).
-  async syncDate(userId: number, date: string): Promise<number | null> {
-    if (!this.isEnabled()) return null;
+  async syncDate(user: AuthUser, date: string): Promise<number | null> {
+    if (!(await this.isEnabledFor(user))) return null;
     try {
-      const calendar = await this.caldav.findCalendar(this.calendarName());
-      const client = await this.caldav.getClient();
+      const creds = await this.integrations.icloudCredentials(user.id);
+      if (!creds) return null;
+      const cfg = await this.configFor(user);
+      if (!cfg) return null;
+      const calendar = await this.caldav.findCalendar(user.id, creds, cfg.calendarName);
+      const client = await this.caldav.getClient(user.id, creds);
       if (!calendar || !client) return null;
 
-      const timeZone = this.timeZone();
+      // Окна дня — в часовом поясе пользователя, а не контейнера.
+      const timeZone = user.timezone;
       const window = dayWindow(date, timeZone);
       const objects = await client.fetchCalendarObjects({
         calendar,
@@ -68,16 +65,17 @@ export class SessionService {
       if (skipped > 0) {
         this.logger.debug(`Session syncDate(${date}): пропущено ${skipped} нераспознанных VEVENT`);
       }
-      return countPomodoros(events, window, this.minMinutes());
+      return countPomodoros(events, window, cfg.minMinutes);
     } catch (e) {
-      this.logger.warn(`Session syncDate(${date}) failed: ${this.redact(String(e))}`);
+      this.logger.warn(`Session syncDate(${date}) failed: ${this.redactFor(user, String(e))}`);
       return null;
     }
   }
 
   // Текст ошибки от tsdav/fetch может содержать URL с учётными данными —
   // вырезаем пароль приложения, чтобы он не осел в логах.
-  private redact(message: string): string {
-    return redactSecret(message, process.env.ICLOUD_APP_PASSWORD);
+  private async redactFor(user: AuthUser, message: string): Promise<string> {
+    const creds = await this.integrations.icloudCredentials(user.id);
+    return creds ? redactSecret(message, creds.appPassword) : message;
   }
 }

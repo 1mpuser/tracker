@@ -43,6 +43,7 @@ export interface Settings {
   distractionBudget: number;
   distractionLabel: string;
   notificationsEnabled: boolean;
+  icloudEnabled: boolean;
   sessionSyncEnabled: boolean;
 }
 
@@ -175,4 +176,17 @@ export interface TelegramChatInfo {
   chatId: string;
   title: string;
   type: string;
+}
+
+export interface ICloudView {
+  configured: boolean;
+  appleId: string | null;
+  remindersList: string;
+}
+
+export interface SessionView {
+  configured: boolean;
+  calendarName: string | null;
+  minMinutes: number;
+  icloudConfigured: boolean;
 }

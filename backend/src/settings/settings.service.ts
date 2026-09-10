@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { IntegrationsService } from '../integrations/integrations.service';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
-import { SessionService } from '../session/session.service';
 
 interface SettingsRow {
   id: number;
@@ -10,20 +10,33 @@ interface SettingsRow {
   notificationsEnabled: boolean;
 }
 
-export type SettingsView = SettingsRow & { sessionSyncEnabled: boolean };
+export type SettingsView = SettingsRow & {
+  icloudEnabled: boolean;
+  sessionSyncEnabled: boolean;
+  obsidianEnabled: boolean;
+};
 
 @Injectable()
 export class SettingsService {
   constructor(
     private prisma: PrismaService,
-    private session: SessionService,
+    private integrations: IntegrationsService,
   ) {}
 
-  // sessionSyncEnabled в БД не хранится: это отражение интеграции Session,
-  // а не пользовательская настройка, поэтому и в PATCH оно не принимается.
-  // (После Task 3.3 станет per-user, пока — из env.)
-  private withFlags(row: SettingsRow): SettingsView {
-    return { ...row, sessionSyncEnabled: this.session.isEnabled() };
+  // Флаги интеграций per-user или по конфигу сервера, поэтому в PATCH они не
+  // принимаются.
+  private async withFlags(userId: number, row: SettingsRow): Promise<SettingsView> {
+    const [icloudEnabled, sessionSyncEnabled] = await Promise.all([
+      this.integrations.icloudConfigured(userId),
+      this.integrations.sessionSyncEnabled(userId),
+    ]);
+    return {
+      ...row,
+      icloudEnabled,
+      sessionSyncEnabled,
+      // Obsidian-экспорт — только на хосте с папкой вольюма; на VPS выключен.
+      obsidianEnabled: Boolean(process.env.OBSIDIAN_EXPORT_DIR),
+    };
   }
 
   private async row(userId: number): Promise<SettingsRow> {
@@ -33,12 +46,12 @@ export class SettingsService {
   }
 
   async get(userId: number): Promise<SettingsView> {
-    return this.withFlags(await this.row(userId));
+    return this.withFlags(userId, await this.row(userId));
   }
 
   async update(userId: number, dto: UpdateSettingsDto): Promise<SettingsView> {
     await this.row(userId);
     const updated = await this.prisma.settings.update({ where: { userId }, data: dto });
-    return this.withFlags(updated);
+    return this.withFlags(userId, updated);
   }
 }

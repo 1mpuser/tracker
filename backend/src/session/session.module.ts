@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { SessionService } from './session.service';
-import { ICloudModule } from '../icloud/icloud.module';
+import { IntegrationsModule } from '../integrations/integrations.module';
 
 @Module({
-  imports: [ICloudModule],
+  imports: [IntegrationsModule],
   providers: [SessionService],
   exports: [SessionService],
 })

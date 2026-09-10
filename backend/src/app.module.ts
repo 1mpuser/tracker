@@ -10,6 +10,7 @@ import { GtdModule } from './gtd/gtd.module';
 import { RoutinesModule } from './routines/routines.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { AuthModule } from './auth/auth.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
@@ -26,6 +27,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     GtdModule,
     RoutinesModule,
     TelegramModule,
+    IntegrationsModule,
   ],
   controllers: [AppController],
 })

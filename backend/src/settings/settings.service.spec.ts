@@ -2,7 +2,7 @@ import { SettingsService } from './settings.service';
 
 describe('SettingsService', () => {
   let prisma: any;
-  let session: any;
+  let integrations: any;
   let service: SettingsService;
   const userId = 1;
 
@@ -26,29 +26,38 @@ describe('SettingsService', () => {
         }),
       },
     };
-    session = { isEnabled: jest.fn().mockReturnValue(true) };
-    service = new SettingsService(prisma, session);
+    integrations = {
+      icloudConfigured: jest.fn().mockResolvedValue(true),
+      sessionSyncEnabled: jest.fn().mockResolvedValue(true),
+    };
+    service = new SettingsService(prisma, integrations);
   });
 
-  it('exposes sessionSyncEnabled from the session service on get', async () => {
+  it('exposes per-user integration flags on get', async () => {
     expect(await service.get(userId)).toEqual({
       id: 1,
       userId,
       distractionBudget: 60,
       distractionLabel: 'Залипание',
       notificationsEnabled: false,
+      icloudEnabled: true,
       sessionSyncEnabled: true,
+      obsidianEnabled: false,
     });
     expect(prisma.settings.findUnique).toHaveBeenCalledWith({ where: { userId } });
   });
 
-  it('reports the flag as false when the integration is off', async () => {
-    session.isEnabled.mockReturnValue(false);
-    expect((await service.get(userId)).sessionSyncEnabled).toBe(false);
+  it('reports flags as false when the integrations are off', async () => {
+    integrations.icloudConfigured.mockResolvedValue(false);
+    integrations.sessionSyncEnabled.mockResolvedValue(false);
+    const view = await service.get(userId);
+    expect(view.icloudEnabled).toBe(false);
+    expect(view.sessionSyncEnabled).toBe(false);
   });
 
-  it('keeps the flag on the update response', async () => {
+  it('keeps the flags on the update response', async () => {
     const result = await service.update(userId, { distractionBudget: 90 });
+    expect(result.icloudEnabled).toBe(true);
     expect(result.sessionSyncEnabled).toBe(true);
     expect(result.distractionBudget).toBe(90);
     expect(prisma.settings.update).toHaveBeenCalledWith({ where: { userId }, data: { distractionBudget: 90 } });

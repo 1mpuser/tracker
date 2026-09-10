@@ -46,10 +46,10 @@ export class DaysController {
 
   @Post('days/:date/pomodoros/sync-session')
   async syncSessionPomodoros(@CurrentUser() user: AuthUser, @Param('date') date: string) {
-    if (!this.session.isEnabled()) {
+    if (!(await this.session.isEnabledFor(user))) {
       throw new ConflictException('Синхронизация с календарём Session не настроена');
     }
-    const count = await this.session.syncDate(user.id, date);
+    const count = await this.session.syncDate(user, date);
     // null — календарь прочитать не удалось. Счётчик не трогаем: иначе сетевой
     // сбой обнулил бы день. Ноль пишется только когда календарь ответил пустым.
     if (count === null) {

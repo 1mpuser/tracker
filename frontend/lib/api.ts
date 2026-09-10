@@ -14,6 +14,8 @@ import type {
   TelegramChat,
   TelegramChatInfo,
   TelegramChatList,
+  ICloudView,
+  SessionView,
   WeekStats,
   DistractionDayStat,
   DistractionWeekStat,
@@ -341,4 +343,32 @@ export function testTelegramChat(id: number): Promise<{ ok: boolean }> {
 
 export function discoverTelegramChats(): Promise<TelegramChatInfo[]> {
   return request('/telegram/discover');
+}
+
+export function getICloud(): Promise<ICloudView> {
+  return request('/integrations/icloud');
+}
+
+export function setICloud(data: { appleId: string; appPassword: string; remindersList?: string }): Promise<ICloudView> {
+  return request('/integrations/icloud', { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export function clearICloud(): Promise<ICloudView> {
+  return request('/integrations/icloud', { method: 'DELETE' });
+}
+
+export function resyncICloud(): Promise<{ synced: number }> {
+  return request('/integrations/icloud/resync', { method: 'POST' });
+}
+
+export function getSession(): Promise<SessionView> {
+  return request('/integrations/session');
+}
+
+export function setSession(data: { calendarName: string; minMinutes?: number }): Promise<SessionView> {
+  return request('/integrations/session', { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export function clearSession(): Promise<SessionView> {
+  return request('/integrations/session', { method: 'DELETE' });
 }

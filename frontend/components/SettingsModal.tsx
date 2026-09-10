@@ -9,9 +9,19 @@ import TaskTemplatesTab from './TaskTemplatesTab';
 import DistractionSettingsTab from './DistractionSettingsTab';
 import TelegramBotTab from './TelegramBotTab';
 import TelegramChatsTab from './TelegramChatsTab';
+import ICloudTab from './ICloudTab';
+import SessionTab from './SessionTab';
 import AccountTab from './AccountTab';
 
-type Tab = 'categories' | 'templates' | 'distraction' | 'telegramBot' | 'telegramChats' | 'account';
+type Tab =
+  | 'categories'
+  | 'templates'
+  | 'distraction'
+  | 'telegramBot'
+  | 'telegramChats'
+  | 'icloud'
+  | 'session'
+  | 'account';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -112,6 +122,27 @@ export default function SettingsModal({ onClose, onCategoriesChanged, onSettings
             >
               Чаты
             </button>
+                        <button
+              type="button"
+              className={`${styles.tab} ${tab === 'telegramChats' ? styles.tabActive : ''}`}
+              onClick={() => setTab('telegramChats')}
+            >
+              Чаты
+            </button>
+            <button
+              type="button"
+              className={`${styles.tab} ${tab === 'icloud' ? styles.tabActive : ''}`}
+              onClick={() => setTab('icloud')}
+            >
+              iCloud
+            </button>
+            <button
+              type="button"
+              className={`${styles.tab} ${tab === 'session' ? styles.tabActive : ''}`}
+              onClick={() => setTab('session')}
+            >
+              Session
+            </button>
             <button
               type="button"
               className={`${styles.tab} ${tab === 'account' ? styles.tabActive : ''}`}
@@ -175,6 +206,8 @@ export default function SettingsModal({ onClose, onCategoriesChanged, onSettings
         {tab === 'distraction' && <DistractionSettingsTab onSettingsChanged={onSettingsChanged} />}
         {tab === 'telegramBot' && <TelegramBotTab />}
         {tab === 'telegramChats' && <TelegramChatsTab />}
+        {tab === 'icloud' && <ICloudTab />}
+        {tab === 'session' && <SessionTab />}
         {tab === 'account' && <AccountTab />}
       </div>
     </div>

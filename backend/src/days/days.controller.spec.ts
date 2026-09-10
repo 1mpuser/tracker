@@ -9,12 +9,12 @@ describe('DaysController.syncSessionPomodoros', () => {
 
   beforeEach(() => {
     daysService = { setPomodoros: jest.fn().mockResolvedValue({ date: '2026-08-04', pomodoros: 3 }) };
-    session = { isEnabled: jest.fn().mockReturnValue(true), syncDate: jest.fn().mockResolvedValue(3) };
+    session = { isEnabledFor: jest.fn().mockResolvedValue(true), syncDate: jest.fn().mockResolvedValue(3) };
     controller = new DaysController(daysService, session, { isConfigured: jest.fn().mockResolvedValue(true) } as any);
   });
 
   it('rejects with 409 when the Session integration is disabled, without touching syncDate or the counter', async () => {
-    session.isEnabled.mockReturnValue(false);
+    session.isEnabledFor.mockResolvedValue(false);
 
     await expect(controller.syncSessionPomodoros(user, '2026-08-04')).rejects.toThrow(ConflictException);
 
