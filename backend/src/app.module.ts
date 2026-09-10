@@ -8,6 +8,7 @@ import { TaskTemplatesModule } from './task-templates/task-templates.module';
 import { StatsModule } from './stats/stats.module';
 import { GtdModule } from './gtd/gtd.module';
 import { RoutinesModule } from './routines/routines.module';
+import { TelegramModule } from './telegram/telegram.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { RoutinesModule } from './routines/routines.module';
     StatsModule,
     GtdModule,
     RoutinesModule,
+    TelegramModule,
   ],
   controllers: [AppController],
 })
