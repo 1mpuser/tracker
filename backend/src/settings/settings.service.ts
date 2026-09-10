@@ -19,25 +19,26 @@ export class SettingsService {
     private session: SessionService,
   ) {}
 
-  // sessionSyncEnabled в БД не хранится: это отражение переменных окружения,
+  // sessionSyncEnabled в БД не хранится: это отражение интеграции Session,
   // а не пользовательская настройка, поэтому и в PATCH оно не принимается.
+  // (После Task 3.3 станет per-user, пока — из env.)
   private withFlags(row: SettingsRow): SettingsView {
     return { ...row, sessionSyncEnabled: this.session.isEnabled() };
   }
 
-  private async row(): Promise<SettingsRow> {
-    const settings = await this.prisma.settings.findUnique({ where: { id: 1 } });
+  private async row(userId: number): Promise<SettingsRow> {
+    const settings = await this.prisma.settings.findUnique({ where: { userId } });
     if (settings) return settings;
-    return this.prisma.settings.create({ data: { id: 1 } });
+    return this.prisma.settings.create({ data: { userId } });
   }
 
-  async get(): Promise<SettingsView> {
-    return this.withFlags(await this.row());
+  async get(userId: number): Promise<SettingsView> {
+    return this.withFlags(await this.row(userId));
   }
 
-  async update(dto: UpdateSettingsDto): Promise<SettingsView> {
-    await this.row();
-    const updated = await this.prisma.settings.update({ where: { id: 1 }, data: dto });
+  async update(userId: number, dto: UpdateSettingsDto): Promise<SettingsView> {
+    await this.row(userId);
+    const updated = await this.prisma.settings.update({ where: { userId }, data: dto });
     return this.withFlags(updated);
   }
 }

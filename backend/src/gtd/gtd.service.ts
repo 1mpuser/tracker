@@ -57,27 +57,36 @@ export class GtdService {
     };
   }
 
-  async create(title: string, parentId?: number) {
-    const maxOrder = await this.prisma.gtdItem.aggregate({ _max: { order: true } });
+  async create(userId: number, title: string, parentId?: number) {
+    if (parentId != null) {
+      const parent = await this.prisma.gtdItem.findFirst({ where: { id: parentId, userId } });
+      if (!parent) {
+        throw new NotFoundException(`GtdItem ${parentId} not found`);
+      }
+    }
+    const maxOrder = await this.prisma.gtdItem.aggregate({ where: { userId }, _max: { order: true } });
     return this.prisma.gtdItem.create({
       // Создание — тоже решение о судьбе задачи, поэтому decidedAt проставляется
       // сразу. Для inbox это не наблюдаемо (входящие не протухают), но так поле
       // никогда не остаётся NULL и staleDays не может вернуть Infinity.
-      data: { title, status: 'inbox', order: (maxOrder._max.order ?? -1) + 1, parentId, decidedAt: new Date() },
+      data: { userId, title, status: 'inbox', order: (maxOrder._max.order ?? -1) + 1, parentId, decidedAt: new Date() },
     });
   }
 
-  async getItems(status?: string): Promise<GtdItemView[]> {
-    const where = status ? { status } : { status: { notIn: ACTIVE_EXCLUDED } };
+  async getItems(userId: number, status?: string): Promise<GtdItemView[]> {
+    const where = status
+      ? { userId, status }
+      : { userId, status: { notIn: ACTIVE_EXCLUDED } };
     const items = await this.prisma.gtdItem.findMany({ where: where as any, orderBy: { order: 'asc' } });
     return items.map((i) => this.toView(i));
   }
 
   async update(
+    userId: number,
     id: number,
     patch: { title?: string; notes?: string; status?: string; scheduledDate?: string | null; scheduledTime?: string | null; waitingFor?: string | null; plannedDate?: string | null; dueDate?: string | null; priority?: boolean; acceptanceCriteria?: string | null; discussWith?: string | null },
   ): Promise<GtdItemView> {
-    const existing = await this.prisma.gtdItem.findUnique({ where: { id } });
+    const existing = await this.prisma.gtdItem.findFirst({ where: { id, userId } });
     if (!existing) {
       throw new NotFoundException(`GtdItem ${id} not found`);
     }
@@ -119,45 +128,46 @@ export class GtdService {
     const updatedView = this.toView(updated);
 
     if (updatedView.status === 'reference') {
-      await this.obsidian.syncNote(updatedView);
+      await this.obsidian.syncNote(userId, updatedView);
     } else if (existingView.status === 'reference') {
-      await this.obsidian.removeNote(id);
+      await this.obsidian.removeNote(userId, id);
     }
 
     const dueBefore = effectiveDue(existingView);
     const dueAfter = effectiveDue(updatedView);
 
     if (updatedView.status === 'done' && dueBefore) {
-      await this.icloud.completeReminder(id, updatedView, dueBefore);
+      await this.icloud.completeReminder(userId, id, updatedView, dueBefore);
     } else if (dueAfter) {
-      await this.icloud.syncReminder(updatedView, dueAfter);
+      await this.icloud.syncReminder(userId, updatedView, dueAfter);
     } else if (dueBefore) {
-      await this.icloud.removeReminder(id);
+      await this.icloud.removeReminder(userId, id);
     }
 
     return updatedView;
   }
 
-  async remove(id: number): Promise<{ id: number }> {
-    const existing = await this.prisma.gtdItem.findUnique({ where: { id } });
+  async remove(userId: number, id: number): Promise<{ id: number }> {
+    const existing = await this.prisma.gtdItem.findFirst({ where: { id, userId } });
     if (!existing) {
       throw new NotFoundException(`GtdItem ${id} not found`);
     }
     const existingView = this.toView(existing);
     if (existingView.status === 'reference') {
-      await this.obsidian.removeNote(id);
+      await this.obsidian.removeNote(userId, id);
     }
     if (effectiveDue(existingView) || existingView.status === 'done') {
-      await this.icloud.removeReminder(id);
+      await this.icloud.removeReminder(userId, id);
     }
     await this.prisma.gtdItem.delete({ where: { id } });
     return { id };
   }
 
-  async getForDate(dateStr: string): Promise<GtdItemView[]> {
+  async getForDate(userId: number, dateStr: string): Promise<GtdItemView[]> {
     const date = parseDateParam(dateStr);
     const items = await this.prisma.gtdItem.findMany({
       where: {
+        userId,
         status: { not: 'archived' },
         OR: [{ plannedDate: date }, { status: 'calendar', scheduledDate: date }],
       } as any,
@@ -166,13 +176,14 @@ export class GtdService {
     return items.map((i) => this.toView(i));
   }
 
-  async createForDate(title: string, dateStr: string) {
+  async createForDate(userId: number, title: string, dateStr: string) {
     const date = parseDateParam(dateStr);
-    const maxOrder = await this.prisma.gtdItem.aggregate({ _max: { order: true } });
+    const maxOrder = await this.prisma.gtdItem.aggregate({ where: { userId }, _max: { order: true } });
     return this.prisma.gtdItem.create({
       // Постановка задачи на дату — решение о её судьбе. Без decidedAt задача,
       // у которой потом снимут plannedDate, осталась бы вообще без даты решения.
       data: {
+        userId,
         title,
         status: 'backlog',
         order: (maxOrder._max.order ?? -1) + 1,

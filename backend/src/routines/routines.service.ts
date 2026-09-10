@@ -35,13 +35,13 @@ export class RoutinesService {
     private days: DaysService,
   ) {}
 
-  async getWeek(weekParam?: string): Promise<RoutinesWeekView> {
+  async getWeek(userId: number, weekParam?: string): Promise<RoutinesWeekView> {
     const anchor = weekParam ? parseDateParam(weekParam) : todayDate();
     const weekStart = mondayOf(anchor);
     const weekEnd = addDays(weekStart, 6);
 
     const routines = await this.prisma.routine.findMany({
-      where: { archived: false },
+      where: { userId, archived: false },
       orderBy: { order: 'asc' },
       include: {
         logs: { where: { date: { gte: weekStart, lte: weekEnd } }, orderBy: { date: 'asc' } },
@@ -64,15 +64,27 @@ export class RoutinesService {
     };
   }
 
-  async create(dto: {
-    title: string;
-    timesPerDay?: number;
-    daysPerWeek?: number;
-    categoryId?: number | null;
-  }) {
-    const maxOrder = await this.prisma.routine.aggregate({ _max: { order: true } });
+  async create(
+    userId: number,
+    dto: {
+      title: string;
+      timesPerDay?: number;
+      daysPerWeek?: number;
+      categoryId?: number | null;
+    },
+  ) {
+    if (dto.categoryId != null) {
+      const category = await this.prisma.category.findFirst({
+        where: { id: dto.categoryId, userId },
+      });
+      if (!category) {
+        throw new NotFoundException(`Category ${dto.categoryId} not found`);
+      }
+    }
+    const maxOrder = await this.prisma.routine.aggregate({ where: { userId }, _max: { order: true } });
     return this.prisma.routine.create({
       data: {
+        userId,
         title: dto.title,
         timesPerDay: dto.timesPerDay ?? 1,
         daysPerWeek: dto.daysPerWeek ?? 3,
@@ -83,6 +95,7 @@ export class RoutinesService {
   }
 
   async update(
+    userId: number,
     id: number,
     dto: {
       title?: string;
@@ -92,7 +105,7 @@ export class RoutinesService {
       archived?: boolean;
     },
   ) {
-    const existing = await this.prisma.routine.findUnique({ where: { id } });
+    const existing = await this.prisma.routine.findFirst({ where: { id, userId } });
     if (!existing) {
       throw new NotFoundException(`Routine ${id} not found`);
     }
@@ -107,8 +120,8 @@ export class RoutinesService {
 
   // Жёсткого удаления нет намеренно: логи — самое ценное здесь,
   // а каскад унёс бы историю выполнения вместе с рутиной.
-  async archive(id: number): Promise<{ id: number }> {
-    const existing = await this.prisma.routine.findUnique({ where: { id } });
+  async archive(userId: number, id: number): Promise<{ id: number }> {
+    const existing = await this.prisma.routine.findFirst({ where: { id, userId } });
     if (!existing) {
       throw new NotFoundException(`Routine ${id} not found`);
     }
@@ -121,8 +134,8 @@ export class RoutinesService {
    * Инкрементальный протокол накручивался бы двойным кликом; здесь повтор
    * запроса с тем же числом ничего не меняет.
    */
-  async setLog(id: number, dateStr: string, count: number): Promise<RoutinesWeekView> {
-    const routine = await this.prisma.routine.findUnique({ where: { id } });
+  async setLog(userId: number, id: number, dateStr: string, count: number): Promise<RoutinesWeekView> {
+    const routine = await this.prisma.routine.findFirst({ where: { id, userId } });
     if (!routine || routine.archived) {
       throw new NotFoundException(`Routine ${id} not found`);
     }
@@ -134,7 +147,7 @@ export class RoutinesService {
 
     if (count === 0) {
       await this.prisma.routineLog.deleteMany({ where: { routineId: id, date } });
-      return this.getWeek(dateStr);
+      return this.getWeek(userId, dateStr);
     }
 
     await this.prisma.routineLog.upsert({
@@ -144,7 +157,7 @@ export class RoutinesService {
     });
 
     if (routine.categoryId !== null) {
-      const dayId = await this.days.getOrCreateDayId(dateStr);
+      const dayId = await this.days.getOrCreateDayId(userId, dateStr);
       await this.prisma.dayCategoryStatus.upsert({
         where: { dayId_categoryId: { dayId, categoryId: routine.categoryId } },
         update: { done: true },
@@ -152,20 +165,20 @@ export class RoutinesService {
       });
     }
 
-    return this.getWeek(dateStr);
+    return this.getWeek(userId, dateStr);
   }
 
   // Галочку сферы намеренно не снимаем: сферу могли закрыть и по другой
   // причине (пробежка вместо качалки), и снятие отметки рутины не даёт
   // системе права стирать этот факт.
-  async removeLog(id: number, dateStr: string): Promise<RoutinesWeekView> {
-    const routine = await this.prisma.routine.findUnique({ where: { id } });
+  async removeLog(userId: number, id: number, dateStr: string): Promise<RoutinesWeekView> {
+    const routine = await this.prisma.routine.findFirst({ where: { id, userId } });
     if (!routine || routine.archived) {
       throw new NotFoundException(`Routine ${id} not found`);
     }
     const date = parseDateParam(dateStr);
     await this.prisma.routineLog.deleteMany({ where: { routineId: id, date } });
-    return this.getWeek(dateStr);
+    return this.getWeek(userId, dateStr);
   }
 
   /** Вынесено отдельным методом, чтобы тесты могли зафиксировать «сегодня». */
@@ -178,7 +191,7 @@ export class RoutinesService {
    * своё локальное «сегодня»: без якоря последняя неделя бралась бы от UTC-даты
    * сервера, и в ночные часы история разъезжалась бы с показанной неделей.
    */
-  async getHistory(weeks = 8, anchor?: string): Promise<RoutineHistoryWeek[]> {
+  async getHistory(userId: number, weeks = 8, anchor?: string): Promise<RoutineHistoryWeek[]> {
     // Число недель приходит из строки запроса: дробное или мусорное значение
     // ушло бы в границы диапазона дат и уронило бы запрос к базе.
     const count = Math.min(52, Math.max(1, Math.trunc(Number(weeks)) || 8));
@@ -186,7 +199,7 @@ export class RoutinesService {
     const firstMonday = addDays(lastMonday, -(count - 1) * 7);
 
     const routines = await this.prisma.routine.findMany({
-      where: { archived: false },
+      where: { userId, archived: false },
       orderBy: { order: 'asc' },
     });
     const logs = await this.prisma.routineLog.findMany({

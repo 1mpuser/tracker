@@ -6,19 +6,40 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  // null — у владельца сразу после переезда, пока set-owner не задал пароль.
+  passwordHash String?
+  timezone     String   @default("UTC")
+  createdAt    DateTime @default(now())
+
+  categories    Category[]
+  days          Day[]
+  taskTemplates TaskTemplate[]
+  settings      Settings?
+  gtdItems      GtdItem[]
+  routines      Routine[]
+  telegramChats TelegramChat[]
+}
+
 model Category {
   id       Int    @id @default(autoincrement())
-  key      String @unique
+  key      String
   label    String
   order    Int    @default(0)
   archived Boolean @default(false)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   Int
   statuses DayCategoryStatus[]
   routines Routine[]
+
+  @@unique([userId, key])
 }
 
 model Day {
   id                Int      @id @default(autoincrement())
-  date              DateTime @unique @db.Date
+  date              DateTime @db.Date
   distractionMinutes Int     @default(0)
   pomodoros         Int      @default(0)
   eveningClosed     Boolean  @default(false)
@@ -26,10 +47,14 @@ model Day {
   comment           String?
   telegramMessageId Int?
   weeklyTelegramMessageId Int?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            Int
   categories        DayCategoryStatus[]
   dailies           DailyTask[]
   telegramPosts     TelegramPost[]
   createdAt         DateTime @default(now())
+
+  @@unique([userId, date])
 }
 
 model DayCategoryStatus {
@@ -59,10 +84,16 @@ model TaskTemplate {
   id    Int    @id @default(autoincrement())
   text  String
   order Int    @default(0)
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  @@index([userId])
 }
 
 model Settings {
-  id                   Int     @id @default(1)
+  id                   Int     @id @default(autoincrement())
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               Int     @unique
   distractionBudget    Int     @default(60)
   distractionLabel     String  @default("Залипание")
   notificationsEnabled Boolean @default(false)
@@ -98,11 +129,15 @@ model GtdItem {
   acceptanceCriteria String?
   discussWith        String?
   order         Int       @default(0)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        Int
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   completedAt   DateTime?
   decidedAt     DateTime?
   deferCount    Int       @default(0)
+
+  @@index([userId])
 }
 
 model Routine {
@@ -114,8 +149,12 @@ model Routine {
   category    Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   archived    Boolean      @default(false)
   order       Int          @default(0)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int
   logs        RoutineLog[]
   createdAt   DateTime     @default(now())
+
+  @@index([userId])
 }
 
 model RoutineLog {
@@ -131,10 +170,14 @@ model RoutineLog {
 model TelegramChat {
   id        Int      @id @default(autoincrement())
   title     String
-  chatId    String   @unique
+  chatId    String
   daily     Boolean  @default(true)
   weekly    Boolean  @default(true)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
   createdAt DateTime @default(now())
+
+  @@unique([userId, chatId])
 }
 
 enum TelegramPostKind {

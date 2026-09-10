@@ -27,7 +27,9 @@ export class ObsidianService {
     );
   }
 
-  async syncNote(item: RefItem): Promise<void> {
+  // userId в сигнатуре уже есть, но папка экспорта пока одна на всех
+  // (Obsidian-экспорт в многопользовательском режиме выключен — Task 3.3).
+  async syncNote(userId: number, item: RefItem): Promise<void> {
     const dir = this.dir();
     if (!dir) return;
     try {
@@ -40,7 +42,7 @@ export class ObsidianService {
     }
   }
 
-  async removeNote(id: number): Promise<void> {
+  async removeNote(userId: number, id: number): Promise<void> {
     const dir = this.dir();
     if (!dir) return;
     try {
@@ -50,9 +52,9 @@ export class ObsidianService {
     }
   }
 
-  async syncAllReference(items: RefItem[]): Promise<void> {
+  async syncAllReference(userId: number, items: RefItem[]): Promise<void> {
     for (const item of items) {
-      await this.syncNote(item);
+      await this.syncNote(userId, item);
     }
   }
 }

@@ -14,55 +14,57 @@ import { TelegramConfigService } from './telegram-config.service';
 import { SetBotTokenDto } from './dto/set-bot-token.dto';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { AuthUser } from '../auth/auth-user';
 
 @Controller('telegram')
 export class TelegramController {
   constructor(private readonly config: TelegramConfigService) {}
 
   @Get('bot')
-  getBot() {
-    return this.config.getBot();
+  getBot(@CurrentUser() user: AuthUser) {
+    return this.config.getBot(user.id);
   }
 
   @Put('bot')
-  setBot(@Body() dto: SetBotTokenDto) {
-    return this.config.setBotToken(dto.token);
+  setBot(@CurrentUser() user: AuthUser, @Body() dto: SetBotTokenDto) {
+    return this.config.setBotToken(user.id, dto.token);
   }
 
   @Delete('bot')
-  clearBot() {
-    return this.config.clearBotToken();
+  clearBot(@CurrentUser() user: AuthUser) {
+    return this.config.clearBotToken(user.id);
   }
 
   @Get('chats')
-  listChats() {
-    return this.config.listChats();
+  listChats(@CurrentUser() user: AuthUser) {
+    return this.config.listChats(user.id);
   }
 
   @Post('chats')
-  createChat(@Body() dto: CreateChatDto) {
-    return this.config.createChat(dto);
+  createChat(@CurrentUser() user: AuthUser, @Body() dto: CreateChatDto) {
+    return this.config.createChat(user.id, dto);
   }
 
   @Patch('chats/:id')
-  updateChat(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateChatDto) {
-    return this.config.updateChat(id, dto);
+  updateChat(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateChatDto) {
+    return this.config.updateChat(user.id, id, dto);
   }
 
   @Delete('chats/:id')
   @HttpCode(204)
-  deleteChat(@Param('id', ParseIntPipe) id: number) {
-    return this.config.deleteChat(id);
+  deleteChat(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number) {
+    return this.config.deleteChat(user.id, id);
   }
 
   @Post('chats/:id/test')
-  async testChat(@Param('id', ParseIntPipe) id: number) {
-    await this.config.testChat(id);
+  async testChat(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number) {
+    await this.config.testChat(user.id, id);
     return { ok: true };
   }
 
   @Get('discover')
-  discover() {
-    return this.config.discover();
+  discover(@CurrentUser() user: AuthUser) {
+    return this.config.discover(user.id);
   }
 }

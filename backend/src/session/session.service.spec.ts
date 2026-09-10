@@ -40,7 +40,7 @@ describe('SessionService', () => {
   it('is disabled when the calendar name is empty', async () => {
     process.env.SESSION_CALENDAR_NAME = '';
     expect(service.isEnabled()).toBe(false);
-    expect(await service.syncDate('2026-08-04')).toBeNull();
+    expect(await service.syncDate(1, '2026-08-04')).toBeNull();
     expect(caldav.findCalendar).not.toHaveBeenCalled();
   });
 
@@ -51,16 +51,16 @@ describe('SessionService', () => {
 
   it('returns null when the calendar is not found', async () => {
     caldav.findCalendar.mockResolvedValue(null);
-    expect(await service.syncDate('2026-08-04')).toBeNull();
+    expect(await service.syncDate(1, '2026-08-04')).toBeNull();
   });
 
   it('returns null when the CalDAV request throws', async () => {
     client.fetchCalendarObjects.mockRejectedValue(new Error('network down'));
-    expect(await service.syncDate('2026-08-04')).toBeNull();
+    expect(await service.syncDate(1, '2026-08-04')).toBeNull();
   });
 
   it('returns 0 when the calendar answers with no events', async () => {
-    expect(await service.syncDate('2026-08-04')).toBe(0);
+    expect(await service.syncDate(1, '2026-08-04')).toBe(0);
   });
 
   it('counts qualifying events from the calendar response', async () => {
@@ -69,11 +69,11 @@ describe('SessionService', () => {
       { data: icsEvent('2026-08-04T10:00:00Z', '2026-08-04T10:30:00Z') },
       { data: icsEvent('2026-08-04T11:00:00Z', '2026-08-04T11:10:00Z') },
     ]);
-    expect(await service.syncDate('2026-08-04')).toBe(2);
+    expect(await service.syncDate(1, '2026-08-04')).toBe(2);
   });
 
   it('asks the calendar for the requested day window', async () => {
-    await service.syncDate('2026-08-04');
+    await service.syncDate(1, '2026-08-04');
     expect(client.fetchCalendarObjects).toHaveBeenCalledWith(
       expect.objectContaining({
         timeRange: { start: '2026-08-04T00:00:00.000Z', end: '2026-08-05T00:00:00.000Z' },
@@ -87,7 +87,7 @@ describe('SessionService', () => {
     client.fetchCalendarObjects.mockResolvedValue([
       { data: icsEvent('2026-08-04T09:00:00Z', '2026-08-04T09:25:00Z') },
     ]);
-    expect(await service.syncDate('2026-08-04')).toBe(1);
+    expect(await service.syncDate(1, '2026-08-04')).toBe(1);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Europe/Moskow'));
     expect(client.fetchCalendarObjects).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -99,7 +99,7 @@ describe('SessionService', () => {
   it('never leaks the app password into the log message', async () => {
     const warn = jest.spyOn((service as any).logger, 'warn').mockImplementation(() => undefined);
     client.fetchCalendarObjects.mockRejectedValue(new Error('failed for app-specific-password'));
-    await service.syncDate('2026-08-04');
+    await service.syncDate(1, '2026-08-04');
     expect(warn).toHaveBeenCalled();
     expect(String(warn.mock.calls[0][0])).not.toContain('app-specific-password');
   });

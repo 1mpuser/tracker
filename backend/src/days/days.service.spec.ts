@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { DaysService } from './days.service';
 
 describe('DaysService.getDay', () => {
+  const userId = 1;
   let service: DaysService;
   let prisma: any;
   let categoriesService: any;
@@ -25,7 +26,7 @@ describe('DaysService.getDay', () => {
       categories: [],
     });
 
-    const result = await service.getDay('2026-07-15');
+    const result = await service.getDay(userId, '2026-07-15');
 
     expect(result.pomodoros).toBe(2);
   });
@@ -38,15 +39,16 @@ describe('DaysService.getDay', () => {
     });
     gtdService.getForDate.mockResolvedValue([{ id: 9, title: 'Из бэклога', status: 'backlog', plannedDate: '2026-07-15' }]);
 
-    const result = await service.getDay('2026-07-15');
+    const result = await service.getDay(userId, '2026-07-15');
 
-    expect(gtdService.getForDate).toHaveBeenCalledWith('2026-07-15');
+    expect(gtdService.getForDate).toHaveBeenCalledWith(userId, '2026-07-15');
     expect(result.today).toEqual([{ id: 9, title: 'Из бэклога', status: 'backlog', plannedDate: '2026-07-15' }]);
     expect((result as any).dailies).toBeUndefined();
   });
 });
 
 describe('DaysService.getHistory', () => {
+  const userId = 1;
   let service: DaysService;
   let prisma: any;
 
@@ -74,7 +76,7 @@ describe('DaysService.getHistory', () => {
     ]);
     prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
-    const [entry] = await service.getHistory(1);
+    const [entry] = await service.getHistory(userId, 1);
 
     expect(entry.completed).toBe(0);
     expect(entry.total).toBe(2);
@@ -95,7 +97,7 @@ describe('DaysService.getHistory', () => {
     ]);
     prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
-    const [entry] = await service.getHistory(1);
+    const [entry] = await service.getHistory(userId, 1);
 
     expect(entry.total).toBe(2);
     expect(entry.completed).toBe(1);
@@ -109,7 +111,7 @@ describe('DaysService.getHistory', () => {
     ]);
     prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
-    const [entry] = await service.getHistory(1);
+    const [entry] = await service.getHistory(userId, 1);
 
     expect(entry.total).toBe(1);
   });
@@ -122,7 +124,7 @@ describe('DaysService.getHistory', () => {
     prisma.category.findMany.mockResolvedValue([]);
     prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
-    const [entry] = await service.getHistory(1);
+    const [entry] = await service.getHistory(userId, 1);
 
     expect(entry.distractionOver).toBe(true);
   });
@@ -133,7 +135,7 @@ describe('DaysService.getHistory', () => {
     prisma.category.findMany.mockResolvedValue([]);
     prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
-    const [entry] = await service.getHistory(1);
+    const [entry] = await service.getHistory(userId, 1);
 
     expect(entry.rating).toBe(7);
   });
@@ -143,7 +145,7 @@ describe('DaysService.getHistory', () => {
     prisma.category.findMany.mockResolvedValue([]);
     prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
-    const [entry] = await service.getHistory(1);
+    const [entry] = await service.getHistory(userId, 1);
 
     expect(entry.rating).toBeNull();
   });
@@ -153,7 +155,7 @@ describe('DaysService.getHistory', () => {
     prisma.category.findMany.mockResolvedValue([]);
     prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
-    const [entry] = await service.getHistory(1);
+    const [entry] = await service.getHistory(userId, 1);
 
     expect(entry.date).toBe('2026-07-15');
   });
@@ -163,7 +165,7 @@ describe('DaysService.getHistory', () => {
     prisma.category.findMany.mockResolvedValue([]);
     prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
-    const [entry] = await service.getHistory(1, '2026-07-20');
+    const [entry] = await service.getHistory(userId, 1, '2026-07-20');
 
     expect(entry.date).toBe('2026-07-20');
   });
@@ -174,13 +176,14 @@ describe('DaysService.getHistory', () => {
     prisma.category.findMany.mockResolvedValue([]);
     prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
-    const [entry] = await service.getHistory(1);
+    const [entry] = await service.getHistory(userId, 1);
 
     expect(entry.pomodoros).toBe(6);
   });
 });
 
 describe('DaysService.updateDay telegram posting', () => {
+  const userId = 1;
   let service: DaysService;
   let prisma: any;
   let delivery: any;
@@ -222,17 +225,17 @@ describe('DaysService.updateDay telegram posting', () => {
   it('delivers the day summary when the day is closed', async () => {
     prisma.day.findUnique.mockResolvedValue(dayRow());
 
-    await service.updateDay('2026-08-01', { eveningClosed: true });
+    await service.updateDay(userId, '2026-08-01', { eveningClosed: true });
 
     expect(delivery.deliverDay).toHaveBeenCalledTimes(1);
     expect(delivery.deliverDay.mock.calls[0][0]).toBe(1);
-    expect(delivery.deliverDay.mock.calls[0][1]).toMatchObject({ date: '2026-08-01', pomodoros: 7 });
+    expect(delivery.deliverDay.mock.calls[0][2]).toMatchObject({ date: '2026-08-01', pomodoros: 7 });
   });
 
   it('does not deliver when the day is reopened', async () => {
     prisma.day.findUnique.mockResolvedValue(dayRow({ eveningClosed: true }));
 
-    await service.updateDay('2026-08-01', { eveningClosed: false });
+    await service.updateDay(userId, '2026-08-01', { eveningClosed: false });
 
     expect(delivery.deliverDay).not.toHaveBeenCalled();
   });
@@ -240,13 +243,14 @@ describe('DaysService.updateDay telegram posting', () => {
   it('does not deliver when only rating or comment changed', async () => {
     prisma.day.findUnique.mockResolvedValue(dayRow());
 
-    await service.updateDay('2026-08-01', { rating: 9 });
+    await service.updateDay(userId, '2026-08-01', { rating: 9 });
 
     expect(delivery.deliverDay).not.toHaveBeenCalled();
   });
 });
 
 describe('DaysService.updateDay', () => {
+  const userId = 1;
   let service: DaysService;
   let prisma: any;
 
@@ -263,7 +267,7 @@ describe('DaysService.updateDay', () => {
   it('forwards only the provided fields to the Prisma update, not a merged full-day object', async () => {
     jest.spyOn(service, 'getDay').mockResolvedValue({} as any);
 
-    await service.updateDay('2026-07-14', { rating: 8 });
+    await service.updateDay(userId, '2026-07-14', { rating: 8 });
 
     expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 7 }, data: { rating: 8 } });
   });
@@ -271,7 +275,7 @@ describe('DaysService.updateDay', () => {
   it('supports updating multiple fields in one call', async () => {
     jest.spyOn(service, 'getDay').mockResolvedValue({} as any);
 
-    await service.updateDay('2026-07-14', { eveningClosed: true, comment: 'Хороший день' });
+    await service.updateDay(userId, '2026-07-14', { eveningClosed: true, comment: 'Хороший день' });
 
     expect(prisma.day.update).toHaveBeenCalledWith({
       where: { id: 7 },
@@ -281,6 +285,7 @@ describe('DaysService.updateDay', () => {
 });
 
 describe('DaysService.updatePomodoros', () => {
+  const userId = 1;
   let service: DaysService;
   let prisma: any;
 
@@ -298,23 +303,24 @@ describe('DaysService.updatePomodoros', () => {
   });
 
   it('increments the count by the given delta', async () => {
-    await service.updatePomodoros('2026-07-18', 1);
+    await service.updatePomodoros(userId, '2026-07-18', 1);
     expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 5 }, data: { pomodoros: 4 } });
   });
 
   it('clamps the count at zero on a negative delta', async () => {
     prisma.day.findUniqueOrThrow.mockResolvedValue({ id: 5, pomodoros: 0 });
-    await service.updatePomodoros('2026-07-18', -1);
+    await service.updatePomodoros(userId, '2026-07-18', -1);
     expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 5 }, data: { pomodoros: 0 } });
   });
 
   it('resets the count to zero when reset is true', async () => {
-    await service.updatePomodoros('2026-07-18', undefined, true);
+    await service.updatePomodoros(userId, '2026-07-18', undefined, true);
     expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 5 }, data: { pomodoros: 0 } });
   });
 });
 
 describe('DaysService.setPomodoros', () => {
+  const userId = 1;
   let service: DaysService;
   let prisma: any;
 
@@ -345,17 +351,18 @@ describe('DaysService.setPomodoros', () => {
   });
 
   it('writes an absolute value regardless of the previous count', async () => {
-    await service.setPomodoros('2026-08-04', 3);
+    await service.setPomodoros(userId, '2026-08-04', 3);
     expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { pomodoros: 3 } });
   });
 
   it('clamps a negative count to zero', async () => {
-    await service.setPomodoros('2026-08-04', -1);
+    await service.setPomodoros(userId, '2026-08-04', -1);
     expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { pomodoros: 0 } });
   });
 });
 
 describe('DaysService.postWeeklySummary', () => {
+  const userId = 1;
   let prisma: any;
   let delivery: any;
   let stats: any;
@@ -394,19 +401,19 @@ describe('DaysService.postWeeklySummary', () => {
   });
 
   it('reports posted when at least one chat received the summary', async () => {
-    const result = await service.postWeeklySummary('2026-08-02', 'AAAA');
+    const result = await service.postWeeklySummary(userId, '2026-08-02', 'AAAA');
 
     expect(delivery.deliverWeek).toHaveBeenCalledTimes(1);
     expect(delivery.deliverWeek.mock.calls[0][0]).toBe(1);
-    expect(delivery.deliverWeek.mock.calls[0][1]).toContain('📊 Неделя');
-    expect(delivery.deliverWeek.mock.calls[0][2]).toBe('AAAA');
+    expect(delivery.deliverWeek.mock.calls[0][2]).toContain('📊 Неделя');
+    expect(delivery.deliverWeek.mock.calls[0][3]).toBe('AAAA');
     expect(result).toEqual({ posted: true, withChart: true });
   });
 
   it('reports send-failed when attempts were made and all failed', async () => {
     delivery.deliverWeek.mockResolvedValue({ sent: 0, failed: 2, skipped: 0 });
 
-    const result = await service.postWeeklySummary('2026-08-02', 'AAAA');
+    const result = await service.postWeeklySummary(userId, '2026-08-02', 'AAAA');
 
     expect(result).toEqual({ posted: false, withChart: true, reason: 'send-failed' });
   });
@@ -414,22 +421,22 @@ describe('DaysService.postWeeklySummary', () => {
   it('reports already-posted when every chat already got this week', async () => {
     delivery.deliverWeek.mockResolvedValue({ sent: 0, failed: 0, skipped: 2 });
 
-    const result = await service.postWeeklySummary('2026-08-02', 'AAAA');
+    const result = await service.postWeeklySummary(userId, '2026-08-02', 'AAAA');
 
     expect(result).toEqual({ posted: false, withChart: false, reason: 'already-posted' });
   });
 
   it('reports withChart false when no image was supplied', async () => {
-    const result = await service.postWeeklySummary('2026-08-02', null);
+    const result = await service.postWeeklySummary(userId, '2026-08-02', null);
 
-    expect(delivery.deliverWeek.mock.calls[0][2]).toBeNull();
+    expect(delivery.deliverWeek.mock.calls[0][3]).toBeNull();
     expect(result).toEqual({ posted: true, withChart: false });
   });
 
   it('rejects a day that was never closed, without creating a row or delivering', async () => {
     prisma.day.findUnique.mockResolvedValue(null);
 
-    await expect(service.postWeeklySummary('2026-08-02', 'AAAA')).rejects.toThrow(BadRequestException);
+    await expect(service.postWeeklySummary(userId, '2026-08-02', 'AAAA')).rejects.toThrow(BadRequestException);
 
     expect(delivery.deliverWeek).not.toHaveBeenCalled();
   });
@@ -437,7 +444,7 @@ describe('DaysService.postWeeklySummary', () => {
   it('rejects a day that exists but is not evening-closed', async () => {
     prisma.day.findUnique.mockResolvedValue({ id: 1, eveningClosed: false });
 
-    await expect(service.postWeeklySummary('2026-08-02', 'AAAA')).rejects.toThrow(BadRequestException);
+    await expect(service.postWeeklySummary(userId, '2026-08-02', 'AAAA')).rejects.toThrow(BadRequestException);
 
     expect(delivery.deliverWeek).not.toHaveBeenCalled();
   });
@@ -453,7 +460,7 @@ describe('DaysService.postWeeklySummary', () => {
       return { sent: 1, failed: 0, skipped: 0 };
     });
 
-    await service.postWeeklySummary('2026-08-02', 'AAAA');
+    await service.postWeeklySummary(userId, '2026-08-02', 'AAAA');
 
     expect(calls).toEqual(['weekStats', 'deliverWeek']);
   });
@@ -461,7 +468,7 @@ describe('DaysService.postWeeklySummary', () => {
   it('never delivers when weekStats throws', async () => {
     stats.weekStats.mockRejectedValue(new Error('db is down'));
 
-    await expect(service.postWeeklySummary('2026-08-02', 'AAAA')).rejects.toThrow('db is down');
+    await expect(service.postWeeklySummary(userId, '2026-08-02', 'AAAA')).rejects.toThrow('db is down');
 
     expect(delivery.deliverWeek).not.toHaveBeenCalled();
   });

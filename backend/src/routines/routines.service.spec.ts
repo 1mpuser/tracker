@@ -1,9 +1,12 @@
+const userId = 1;
+
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { RoutinesService } from './routines.service';
 
 function makeService() {
   const prisma: any = {
-    routine: { findMany: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), aggregate: jest.fn() },
+    routine: { findMany: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), update: jest.fn(), aggregate: jest.fn() },
+    category: { findFirst: jest.fn().mockResolvedValue({ id: 1 }) },
     routineLog: { upsert: jest.fn(), deleteMany: jest.fn(), findMany: jest.fn() },
     dayCategoryStatus: { upsert: jest.fn() },
   };
@@ -16,7 +19,7 @@ describe('RoutinesService.getWeek', () => {
     const { service, prisma } = makeService();
     prisma.routine.findMany.mockResolvedValue([]);
 
-    const view = await service.getWeek('2026-08-16'); // воскресенье
+    const view = await service.getWeek(userId, '2026-08-16'); // воскресенье
 
     expect(view.weekStart).toBe('2026-08-10');
     expect(view.weekEnd).toBe('2026-08-16');
@@ -37,7 +40,7 @@ describe('RoutinesService.getWeek', () => {
       },
     ]);
 
-    const view = await service.getWeek('2026-08-12');
+    const view = await service.getWeek(userId, '2026-08-12');
 
     expect(view.routines[0].done).toBe(1);
     expect(view.routines[0].timesPerDay).toBe(2);
@@ -56,7 +59,7 @@ describe('RoutinesService.getWeek', () => {
       },
     ]);
 
-    const view = await service.getWeek('2026-08-12');
+    const view = await service.getWeek(userId, '2026-08-12');
 
     expect(view.routines[0].days).toEqual([
       { date: '2026-08-10', count: 2 },
@@ -76,7 +79,7 @@ describe('RoutinesService.getWeek', () => {
       },
     ]);
 
-    const view = await service.getWeek('2026-08-12');
+    const view = await service.getWeek(userId, '2026-08-12');
 
     expect(view.routines[0].done).toBe(2);
   });
@@ -85,9 +88,9 @@ describe('RoutinesService.getWeek', () => {
     const { service, prisma } = makeService();
     prisma.routine.findMany.mockResolvedValue([]);
 
-    await service.getWeek('2026-08-12');
+    await service.getWeek(userId, '2026-08-12');
 
-    expect(prisma.routine.findMany.mock.calls[0][0].where).toEqual({ archived: false });
+    expect(prisma.routine.findMany.mock.calls[0][0].where).toEqual({ userId: 1, archived: false });
   });
 });
 
@@ -97,10 +100,10 @@ describe('RoutinesService.create', () => {
     prisma.routine.aggregate.mockResolvedValue({ _max: { order: 4 } });
     prisma.routine.create.mockResolvedValue({ id: 1 });
 
-    await service.create({ title: 'Растяжка' });
+    await service.create(userId, { title: 'Растяжка' });
 
     expect(prisma.routine.create).toHaveBeenCalledWith({
-      data: { title: 'Растяжка', timesPerDay: 1, daysPerWeek: 3, categoryId: null, order: 5 },
+      data: { userId: 1, title: 'Растяжка', timesPerDay: 1, daysPerWeek: 3, categoryId: null, order: 5 },
     });
   });
 
@@ -109,10 +112,10 @@ describe('RoutinesService.create', () => {
     prisma.routine.aggregate.mockResolvedValue({ _max: { order: null } });
     prisma.routine.create.mockResolvedValue({ id: 2 });
 
-    await service.create({ title: 'Гигиена', timesPerDay: 2, daysPerWeek: 7, categoryId: 1 });
+    await service.create(userId, { title: 'Гигиена', timesPerDay: 2, daysPerWeek: 7, categoryId: 1 });
 
     expect(prisma.routine.create).toHaveBeenCalledWith({
-      data: { title: 'Гигиена', timesPerDay: 2, daysPerWeek: 7, categoryId: 1, order: 0 },
+      data: { userId: 1, title: 'Гигиена', timesPerDay: 2, daysPerWeek: 7, categoryId: 1, order: 0 },
     });
   });
 });
@@ -120,28 +123,28 @@ describe('RoutinesService.create', () => {
 describe('RoutinesService.update', () => {
   it('падает NotFound на несуществующей рутине', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue(null);
+    prisma.routine.findFirst.mockResolvedValue(null);
 
-    await expect(service.update(7, { title: 'x' })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.update(userId, 7, { title: 'x' })).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.routine.update).not.toHaveBeenCalled();
   });
 
   it('обновляет только переданные поля', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false });
     prisma.routine.update.mockResolvedValue({ id: 1 });
 
-    await service.update(1, { daysPerWeek: 5 });
+    await service.update(userId, 1, { daysPerWeek: 5 });
 
     expect(prisma.routine.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { daysPerWeek: 5 } });
   });
 
   it('позволяет менять дневную норму', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false });
     prisma.routine.update.mockResolvedValue({ id: 1 });
 
-    await service.update(1, { timesPerDay: 2 });
+    await service.update(userId, 1, { timesPerDay: 2 });
 
     expect(prisma.routine.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { timesPerDay: 2 } });
   });
@@ -150,10 +153,10 @@ describe('RoutinesService.update', () => {
 describe('RoutinesService.archive', () => {
   it('архивирует, а не удаляет', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 3, archived: false });
+    prisma.routine.findFirst.mockResolvedValue({ id: 3, archived: false });
     prisma.routine.update.mockResolvedValue({ id: 3 });
 
-    const res = await service.archive(3);
+    const res = await service.archive(userId, 3);
 
     expect(prisma.routine.update).toHaveBeenCalledWith({ where: { id: 3 }, data: { archived: true } });
     expect(res).toEqual({ id: 3 });
@@ -161,19 +164,19 @@ describe('RoutinesService.archive', () => {
 
   it('падает NotFound на несуществующей рутине', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue(null);
+    prisma.routine.findFirst.mockResolvedValue(null);
 
-    await expect(service.archive(9)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.archive(userId, 9)).rejects.toBeInstanceOf(NotFoundException);
   });
 });
 
 describe('RoutinesService.setLog', () => {
   it('пишет абсолютное число отметок за день', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 2 });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 2 });
     prisma.routine.findMany.mockResolvedValue([]);
 
-    await service.setLog(1, '2026-08-12', 2);
+    await service.setLog(userId, 1, '2026-08-12', 2);
 
     expect(prisma.routineLog.upsert).toHaveBeenCalledWith({
       where: { routineId_date: { routineId: 1, date: new Date('2026-08-12T00:00:00.000Z') } },
@@ -184,21 +187,21 @@ describe('RoutinesService.setLog', () => {
 
   it('идемпотентен: повтор с тем же числом даёт тот же результат', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 2 });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 2 });
     prisma.routine.findMany.mockResolvedValue([]);
 
-    await service.setLog(1, '2026-08-12', 1);
-    await service.setLog(1, '2026-08-12', 1);
+    await service.setLog(userId, 1, '2026-08-12', 1);
+    await service.setLog(userId, 1, '2026-08-12', 1);
 
     expect(prisma.routineLog.upsert).toHaveBeenNthCalledWith(2, expect.objectContaining({ update: { count: 1 } }));
   });
 
   it('ноль удаляет строку дня, а не пишет нулевой счётчик', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 2 });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 2 });
     prisma.routine.findMany.mockResolvedValue([]);
 
-    await service.setLog(1, '2026-08-12', 0);
+    await service.setLog(userId, 1, '2026-08-12', 0);
 
     expect(prisma.routineLog.deleteMany).toHaveBeenCalledWith({
       where: { routineId: 1, date: new Date('2026-08-12T00:00:00.000Z') },
@@ -208,19 +211,19 @@ describe('RoutinesService.setLog', () => {
 
   it('отклоняет число больше дневной нормы', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 2 });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 2 });
 
-    await expect(service.setLog(1, '2026-08-12', 3)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.setLog(userId, 1, '2026-08-12', 3)).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.routineLog.upsert).not.toHaveBeenCalled();
   });
 
   it('ставит галочку сферы, когда день получает первую отметку', async () => {
     const { service, prisma, days } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: 5, timesPerDay: 2 });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false, categoryId: 5, timesPerDay: 2 });
     prisma.routine.findMany.mockResolvedValue([]);
     days.getOrCreateDayId.mockResolvedValue(42);
 
-    await service.setLog(1, '2026-08-12', 1);
+    await service.setLog(userId, 1, '2026-08-12', 1);
 
     expect(prisma.dayCategoryStatus.upsert).toHaveBeenCalledWith({
       where: { dayId_categoryId: { dayId: 42, categoryId: 5 } },
@@ -235,10 +238,10 @@ describe('RoutinesService.setLog', () => {
   // проде, а не тихую деградацию.
   it('не трогает сферы, когда привязки нет', async () => {
     const { service, prisma, days } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 2 });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 2 });
     prisma.routine.findMany.mockResolvedValue([]);
 
-    await service.setLog(1, '2026-08-12', 1);
+    await service.setLog(userId, 1, '2026-08-12', 1);
 
     expect(days.getOrCreateDayId).not.toHaveBeenCalled();
     expect(prisma.dayCategoryStatus.upsert).not.toHaveBeenCalled();
@@ -246,10 +249,10 @@ describe('RoutinesService.setLog', () => {
 
   it('не трогает сферу, когда число обнуляют', async () => {
     const { service, prisma, days } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: 5, timesPerDay: 2 });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false, categoryId: 5, timesPerDay: 2 });
     prisma.routine.findMany.mockResolvedValue([]);
 
-    await service.setLog(1, '2026-08-12', 0);
+    await service.setLog(userId, 1, '2026-08-12', 0);
 
     expect(days.getOrCreateDayId).not.toHaveBeenCalled();
     expect(prisma.dayCategoryStatus.upsert).not.toHaveBeenCalled();
@@ -257,9 +260,9 @@ describe('RoutinesService.setLog', () => {
 
   it('падает NotFound на архивной рутине', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: true, categoryId: null, timesPerDay: 1 });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: true, categoryId: null, timesPerDay: 1 });
 
-    await expect(service.setLog(1, '2026-08-12', 1)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.setLog(userId, 1, '2026-08-12', 1)).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.routineLog.upsert).not.toHaveBeenCalled();
   });
 
@@ -267,10 +270,10 @@ describe('RoutinesService.setLog', () => {
   // не ту неделю, экран уедет на чужую семёрку дней сразу после отметки.
   it('возвращает неделю, содержащую отмеченную дату', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 1 });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false, categoryId: null, timesPerDay: 1 });
     prisma.routine.findMany.mockResolvedValue([]);
 
-    const view = await service.setLog(1, '2026-08-16', 1); // воскресенье
+    const view = await service.setLog(userId, 1, '2026-08-16', 1); // воскресенье
 
     expect(view.weekStart).toBe('2026-08-10');
     expect(view.weekEnd).toBe('2026-08-16');
@@ -280,10 +283,10 @@ describe('RoutinesService.setLog', () => {
 describe('RoutinesService.removeLog', () => {
   it('снимает отметку за конкретную дату', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false, categoryId: null });
     prisma.routine.findMany.mockResolvedValue([]);
 
-    await service.removeLog(1, '2026-08-12');
+    await service.removeLog(userId, 1, '2026-08-12');
 
     expect(prisma.routineLog.deleteMany).toHaveBeenCalledWith({
       where: { routineId: 1, date: new Date('2026-08-12T00:00:00.000Z') },
@@ -292,36 +295,36 @@ describe('RoutinesService.removeLog', () => {
 
   it('не снимает галочку сферы — сферу могли закрыть по другой причине', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: 5 });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false, categoryId: 5 });
     prisma.routine.findMany.mockResolvedValue([]);
 
-    await service.removeLog(1, '2026-08-12');
+    await service.removeLog(userId, 1, '2026-08-12');
 
     expect(prisma.dayCategoryStatus.upsert).not.toHaveBeenCalled();
   });
 
   it('не падает, когда отметки не было', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: false, categoryId: null });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false, categoryId: null });
     prisma.routine.findMany.mockResolvedValue([]);
     prisma.routineLog.deleteMany.mockResolvedValue({ count: 0 });
 
-    await expect(service.removeLog(1, '2026-08-12')).resolves.toBeDefined();
+    await expect(service.removeLog(userId, 1, '2026-08-12')).resolves.toBeDefined();
   });
 
   it('падает NotFound на несуществующей рутине — как и setLog', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue(null);
+    prisma.routine.findFirst.mockResolvedValue(null);
 
-    await expect(service.removeLog(1, '2026-08-12')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.removeLog(userId, 1, '2026-08-12')).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.routineLog.deleteMany).not.toHaveBeenCalled();
   });
 
   it('падает NotFound на архивной рутине', async () => {
     const { service, prisma } = makeService();
-    prisma.routine.findUnique.mockResolvedValue({ id: 1, archived: true, categoryId: null });
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: true, categoryId: null });
 
-    await expect(service.removeLog(1, '2026-08-12')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.removeLog(userId, 1, '2026-08-12')).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.routineLog.deleteMany).not.toHaveBeenCalled();
   });
 });
@@ -333,7 +336,7 @@ describe('RoutinesService.getHistory', () => {
     prisma.routineLog.findMany.mockResolvedValue([]);
     jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-10T00:00:00.000Z'));
 
-    const history = await service.getHistory(3);
+    const history = await service.getHistory(userId, 3);
 
     expect(history.map((w) => w.weekStart)).toEqual(['2026-07-27', '2026-08-03', '2026-08-10']);
   });
@@ -348,7 +351,7 @@ describe('RoutinesService.getHistory', () => {
     ]);
     jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-10T00:00:00.000Z'));
 
-    const history = await service.getHistory(2);
+    const history = await service.getHistory(userId, 2);
 
     expect(history[0]).toEqual({ weekStart: '2026-08-03', items: [{ routineId: 1, done: 1, daysPerWeek: 7 }] });
     expect(history[1]).toEqual({ weekStart: '2026-08-10', items: [{ routineId: 1, done: 1, daysPerWeek: 7 }] });
@@ -360,7 +363,7 @@ describe('RoutinesService.getHistory', () => {
     prisma.routineLog.findMany.mockResolvedValue([]);
     jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-10T00:00:00.000Z'));
 
-    const history = await service.getHistory(2);
+    const history = await service.getHistory(userId, 2);
 
     expect(history[0].items).toEqual([{ routineId: 1, done: 0, daysPerWeek: 3 }]);
   });
@@ -371,9 +374,9 @@ describe('RoutinesService.getHistory', () => {
     prisma.routineLog.findMany.mockResolvedValue([]);
     jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-10T00:00:00.000Z'));
 
-    await service.getHistory(2);
+    await service.getHistory(userId, 2);
 
-    expect(prisma.routine.findMany.mock.calls[0][0].where).toEqual({ archived: false });
+    expect(prisma.routine.findMany.mock.calls[0][0].where).toEqual({ userId: 1, archived: false });
   });
 
   it('с якорем последняя неделя определяется по нему, а не по текущему понедельнику', async () => {
@@ -382,7 +385,7 @@ describe('RoutinesService.getHistory', () => {
     prisma.routineLog.findMany.mockResolvedValue([]);
     jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-03T00:00:00.000Z'));
 
-    const history = await service.getHistory(2, '2026-08-16'); // воскресенье недели с 10.08
+    const history = await service.getHistory(userId, 2, '2026-08-16'); // воскресенье недели с 10.08
 
     expect(history.map((w) => w.weekStart)).toEqual(['2026-08-03', '2026-08-10']);
   });
@@ -393,7 +396,7 @@ describe('RoutinesService.getHistory', () => {
     prisma.routineLog.findMany.mockResolvedValue([]);
     jest.spyOn(service as any, 'currentMonday').mockReturnValue(new Date('2026-08-03T00:00:00.000Z'));
 
-    const history = await service.getHistory(2);
+    const history = await service.getHistory(userId, 2);
 
     expect(history.map((w) => w.weekStart)).toEqual(['2026-07-27', '2026-08-03']);
   });
@@ -411,7 +414,7 @@ describe('RoutinesService.getHistory', () => {
       { routineId: 2, date: new Date('2026-08-05T00:00:00.000Z'), count: 1 },
     ]);
 
-    const history = await service.getHistory(2, '2026-08-12');
+    const history = await service.getHistory(userId, 2, '2026-08-12');
 
     expect(history[1]).toEqual({
       weekStart: '2026-08-10',
@@ -434,7 +437,7 @@ describe('RoutinesService.getHistory', () => {
     prisma.routine.findMany.mockResolvedValue([]);
     prisma.routineLog.findMany.mockResolvedValue([]);
 
-    const history = await service.getHistory(Number('abc'), '2026-08-12');
+    const history = await service.getHistory(userId, Number('abc'), '2026-08-12');
 
     expect(history).toHaveLength(8);
     expect(history[7].weekStart).toBe('2026-08-10');
@@ -445,9 +448,9 @@ describe('RoutinesService.getHistory', () => {
     prisma.routine.findMany.mockResolvedValue([]);
     prisma.routineLog.findMany.mockResolvedValue([]);
 
-    expect(await service.getHistory(1000, '2026-08-12')).toHaveLength(52);
-    expect(await service.getHistory(-5, '2026-08-12')).toHaveLength(1);
-    expect(await service.getHistory(2.7, '2026-08-12')).toHaveLength(2);
+    expect(await service.getHistory(userId, 1000, '2026-08-12')).toHaveLength(52);
+    expect(await service.getHistory(userId, -5, '2026-08-12')).toHaveLength(1);
+    expect(await service.getHistory(userId, 2.7, '2026-08-12')).toHaveLength(2);
   });
 
   it('отклоняет якорь, который не является датой', async () => {
@@ -455,6 +458,6 @@ describe('RoutinesService.getHistory', () => {
     prisma.routine.findMany.mockResolvedValue([]);
     prisma.routineLog.findMany.mockResolvedValue([]);
 
-    await expect(service.getHistory(2, 'вчера')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.getHistory(userId, 2, 'вчера')).rejects.toBeInstanceOf(BadRequestException);
   });
 });

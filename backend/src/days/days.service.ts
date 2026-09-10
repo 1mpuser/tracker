@@ -49,30 +49,30 @@ export class DaysService {
     private stats: StatsService,
   ) {}
 
-  async getOrCreateDayId(dateStr: string): Promise<number> {
+  async getOrCreateDayId(userId: number, dateStr: string): Promise<number> {
     const date = parseDateParam(dateStr);
-    const existing = await this.prisma.day.findUnique({ where: { date } });
+    const existing = await this.prisma.day.findUnique({ where: { userId_date: { userId, date } } });
     if (existing) return existing.id;
-    const created = await this.prisma.day.create({ data: { date } });
+    const created = await this.prisma.day.create({ data: { userId, date } });
     return created.id;
   }
 
-  async getDay(dateStr: string): Promise<DayView> {
+  async getDay(userId: number, dateStr: string): Promise<DayView> {
     const date = parseDateParam(dateStr);
     let day = await this.prisma.day.findUnique({
-      where: { date },
+      where: { userId_date: { userId, date } },
       include: { categories: true },
     });
     if (!day) {
       day = await this.prisma.day.create({
-        data: { date },
+        data: { userId, date },
         include: { categories: true },
       });
     }
 
-    const activeCategories = await this.categoriesService.findActive();
+    const activeCategories = await this.categoriesService.findActive(userId);
     const statusByCategoryId = new Map(day.categories.map((s) => [s.categoryId, s]));
-    const today = await this.gtdService.getForDate(formatDate(day.date));
+    const today = await this.gtdService.getForDate(userId, formatDate(day.date));
 
     return {
       date: formatDate(day.date),
@@ -90,9 +90,11 @@ export class DaysService {
     };
   }
 
-  async setCategoryStatus(dateStr: string, key: string, done: boolean): Promise<DayView> {
-    const dayId = await this.getOrCreateDayId(dateStr);
-    const category = await this.prisma.category.findUnique({ where: { key } });
+  async setCategoryStatus(userId: number, dateStr: string, key: string, done: boolean): Promise<DayView> {
+    const dayId = await this.getOrCreateDayId(userId, dateStr);
+    const category = await this.prisma.category.findUnique({
+      where: { userId_key: { userId, key } },
+    });
     if (!category) {
       throw new NotFoundException(`Category "${key}" not found`);
     }
@@ -101,43 +103,43 @@ export class DaysService {
       update: { done },
       create: { dayId, categoryId: category.id, done },
     });
-    return this.getDay(dateStr);
+    return this.getDay(userId, dateStr);
   }
 
-  async updateDistraction(dateStr: string, delta?: number, reset?: boolean): Promise<DayView> {
-    const dayId = await this.getOrCreateDayId(dateStr);
+  async updateDistraction(userId: number, dateStr: string, delta?: number, reset?: boolean): Promise<DayView> {
+    const dayId = await this.getOrCreateDayId(userId, dateStr);
     const day = await this.prisma.day.findUniqueOrThrow({ where: { id: dayId } });
     const nextMinutes = reset ? 0 : Math.max(0, day.distractionMinutes + (delta ?? 0));
     await this.prisma.day.update({ where: { id: dayId }, data: { distractionMinutes: nextMinutes } });
-    return this.getDay(dateStr);
+    return this.getDay(userId, dateStr);
   }
 
-  async updatePomodoros(dateStr: string, delta?: number, reset?: boolean): Promise<DayView> {
-    const dayId = await this.getOrCreateDayId(dateStr);
+  async updatePomodoros(userId: number, dateStr: string, delta?: number, reset?: boolean): Promise<DayView> {
+    const dayId = await this.getOrCreateDayId(userId, dateStr);
     const day = await this.prisma.day.findUniqueOrThrow({ where: { id: dayId } });
     const nextCount = reset ? 0 : Math.max(0, day.pomodoros + (delta ?? 0));
     await this.prisma.day.update({ where: { id: dayId }, data: { pomodoros: nextCount } });
-    return this.getDay(dateStr);
+    return this.getDay(userId, dateStr);
   }
 
   // Абсолютная запись — в отличие от updatePomodoros с его delta/reset.
   // Нужна синхронизации с календарём, где источник правды — число событий.
-  async setPomodoros(dateStr: string, count: number): Promise<DayView> {
-    const dayId = await this.getOrCreateDayId(dateStr);
+  async setPomodoros(userId: number, dateStr: string, count: number): Promise<DayView> {
+    const dayId = await this.getOrCreateDayId(userId, dateStr);
     await this.prisma.day.update({ where: { id: dayId }, data: { pomodoros: Math.max(0, count) } });
-    return this.getDay(dateStr);
+    return this.getDay(userId, dateStr);
   }
 
-  async updateDay(dateStr: string, data: UpdateDayData): Promise<DayView> {
-    const dayId = await this.getOrCreateDayId(dateStr);
+  async updateDay(userId: number, dateStr: string, data: UpdateDayData): Promise<DayView> {
+    const dayId = await this.getOrCreateDayId(userId, dateStr);
     await this.prisma.day.update({ where: { id: dayId }, data });
-    const view = await this.getDay(dateStr);
+    const view = await this.getDay(userId, dateStr);
 
     if (data.eveningClosed === true) {
       // Идемпотентность «один пост на день на чат» обеспечивает
       // TelegramDeliveryService через таблицу TelegramPost. Отчёт игнорируем:
       // закрытие дня не должно падать из-за Telegram.
-      await this.delivery.deliverDay(dayId, view);
+      await this.delivery.deliverDay(userId, dayId, view);
     }
 
     return view;
@@ -148,6 +150,7 @@ export class DaysService {
   // рисовать нечем; текст собираем здесь из базы, чтобы пост не разошёлся
   // с реальными числами, даже если клиент прислал что-то своё.
   async postWeeklySummary(
+    userId: number,
     dateStr: string,
     chartPngBase64?: string | null,
   ): Promise<{ posted: boolean; withChart: boolean; reason?: 'already-posted' | 'send-failed' }> {
@@ -156,36 +159,35 @@ export class DaysService {
     // будущее воскресенье завёл бы пустую строку и навсегда занял неделю
     // сводкой из одних нулей.
     const date = parseDateParam(dateStr);
-    const day = await this.prisma.day.findUnique({ where: { date } });
+    const day = await this.prisma.day.findUnique({ where: { userId_date: { userId, date } } });
     if (!day || day.eveningClosed !== true) {
       throw new BadRequestException('Недельная сводка публикуется только для закрытого дня');
     }
-    const dayId = day.id;
     const withChart = Boolean(chartPngBase64);
 
-    const stats = await this.stats.weekStats(dateStr);
+    const stats = await this.stats.weekStats(userId, dateStr);
     const text = buildWeekSummary(stats);
 
     // Идемпотентность «один пост на неделю на чат» обеспечивает
     // TelegramDeliveryService через таблицу TelegramPost.
-    const report = await this.delivery.deliverWeek(day.id, text, chartPngBase64 ?? null);
+    const report = await this.delivery.deliverWeek(userId, day.id, text, chartPngBase64 ?? null);
 
     if (report.sent > 0) return { posted: true, withChart };
     if (report.failed > 0) return { posted: false, withChart, reason: 'send-failed' };
     return { posted: false, withChart: false, reason: 'already-posted' };
   }
 
-  async getHistory(limit: number, endDateStr?: string): Promise<HistoryEntry[]> {
+  async getHistory(userId: number, limit: number, endDateStr?: string): Promise<HistoryEntry[]> {
     const end = endDateStr ? parseDateParam(endDateStr) : todayDate();
     const start = addDays(end, -(limit - 1));
 
     const [days, categories, settings] = await Promise.all([
       this.prisma.day.findMany({
-        where: { date: { gte: start, lte: end } },
+        where: { userId, date: { gte: start, lte: end } },
         include: { categories: true },
       }),
-      this.prisma.category.findMany(),
-      this.prisma.settings.findUnique({ where: { id: 1 } }),
+      this.prisma.category.findMany({ where: { userId } }),
+      this.prisma.settings.findUnique({ where: { userId } }),
     ]);
 
     const budget = settings?.distractionBudget ?? 60;

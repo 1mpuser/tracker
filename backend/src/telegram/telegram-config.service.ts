@@ -38,23 +38,26 @@ export class TelegramConfigService {
     private telegram: TelegramService,
   ) {}
 
-  // Строку настроек получаем тем же способом, что SettingsService.row():
-  // findUnique → create, чтобы сервис не падал на пустой БД.
-  private async settingsRow() {
-    const settings = await this.prisma.settings.findUnique({ where: { id: 1 } });
+  // Внимание: env-фоллбэки ниже — только на время Фазы 1 (однопользовательской
+  // разработки). В многопользовательском режиме (Task 3.2) они удаляются:
+  // иначе чужие действия уходили бы в Telegram владельца.
+  private async settingsRow(userId: number) {
+    const settings = await this.prisma.settings.findUnique({ where: { userId } });
     if (settings) return settings;
-    return this.prisma.settings.create({ data: { id: 1 } });
+    return this.prisma.settings.create({ data: { userId } });
   }
 
   // Токен из БД → из env → null.
-  async resolveToken(): Promise<string | null> {
-    const dbToken = (await this.settingsRow()).telegramBotToken;
+  async resolveToken(userId: number): Promise<string | null> {
+    const dbToken = (await this.settingsRow(userId)).telegramBotToken;
     return dbToken ?? envValue('TELEGRAM_BOT_TOKEN');
   }
 
-  // chatId всех чатов с видом kind=true; env-фоллбэк — только если таблица пуста.
-  async recipients(kind: 'day' | 'week'): Promise<string[]> {
+  // chatId всех чатов пользователя с видом kind=true; env-фоллбэк — только
+  // если у пользователя таблица пуста.
+  async recipients(userId: number, kind: 'day' | 'week'): Promise<string[]> {
     const chats = await this.prisma.telegramChat.findMany({
+      where: { userId },
       select: { chatId: true, daily: true, weekly: true },
     });
     const enabled = chats
@@ -65,8 +68,8 @@ export class TelegramConfigService {
     return envChat && chats.length === 0 ? [envChat] : [];
   }
 
-  async getBot(): Promise<TelegramBotView> {
-    const dbSettings = await this.settingsRow();
+  async getBot(userId: number): Promise<TelegramBotView> {
+    const dbSettings = await this.settingsRow(userId);
     const dbToken = dbSettings.telegramBotToken;
     const envToken = envValue('TELEGRAM_BOT_TOKEN');
     const token = dbToken ?? envToken;
@@ -84,7 +87,7 @@ export class TelegramConfigService {
     };
   }
 
-  async setBotToken(token: string): Promise<TelegramBotView> {
+  async setBotToken(userId: number, token: string): Promise<TelegramBotView> {
     const trimmed = token.trim();
     if (!TOKEN_FORMAT.test(trimmed)) {
       throw new BadRequestException('Токен не похож на токен бота: ожидается «123456789:AA…»');
@@ -94,29 +97,30 @@ export class TelegramConfigService {
       throw new BadRequestException('Telegram не принял токен: ' + me.error);
     }
     await this.prisma.settings.update({
-      where: { id: 1 },
+      where: { userId },
       data: { telegramBotToken: trimmed },
     });
-    return this.getBot();
+    return this.getBot(userId);
   }
 
-  async clearBotToken(): Promise<TelegramBotView> {
-    await this.prisma.settings.update({ where: { id: 1 }, data: { telegramBotToken: null } });
-    return this.getBot();
+  async clearBotToken(userId: number): Promise<TelegramBotView> {
+    await this.prisma.settings.update({ where: { userId }, data: { telegramBotToken: null } });
+    return this.getBot(userId);
   }
 
-  async listChats(): Promise<{ chats: unknown[]; envFallback: string | null }> {
+  async listChats(userId: number): Promise<{ chats: unknown[]; envFallback: string | null }> {
     const [chats, count] = await Promise.all([
-      this.prisma.telegramChat.findMany({ orderBy: { id: 'asc' } }),
-      this.prisma.telegramChat.count(),
+      this.prisma.telegramChat.findMany({ where: { userId }, orderBy: { id: 'asc' } }),
+      this.prisma.telegramChat.count({ where: { userId } }),
     ]);
     return { chats, envFallback: count === 0 ? envValue('TELEGRAM_CHAT_ID') : null };
   }
 
-  async createChat(dto: { title: string; chatId: string; daily?: boolean; weekly?: boolean }) {
+  async createChat(userId: number, dto: { title: string; chatId: string; daily?: boolean; weekly?: boolean }) {
     try {
       return await this.prisma.telegramChat.create({
         data: {
+          userId,
           title: dto.title.trim(),
           chatId: dto.chatId.trim(),
           daily: dto.daily ?? true,
@@ -131,8 +135,8 @@ export class TelegramConfigService {
     }
   }
 
-  async updateChat(id: number, dto: { title?: string; daily?: boolean; weekly?: boolean }) {
-    const existing = await this.prisma.telegramChat.findUnique({ where: { id } });
+  async updateChat(userId: number, id: number, dto: { title?: string; daily?: boolean; weekly?: boolean }) {
+    const existing = await this.prisma.telegramChat.findFirst({ where: { id, userId } });
     if (!existing) throw new NotFoundException('Чат не найден');
     return this.prisma.telegramChat.update({
       where: { id },
@@ -144,18 +148,18 @@ export class TelegramConfigService {
     });
   }
 
-  async deleteChat(id: number): Promise<void> {
-    const existing = await this.prisma.telegramChat.findUnique({ where: { id } });
+  async deleteChat(userId: number, id: number): Promise<void> {
+    const existing = await this.prisma.telegramChat.findFirst({ where: { id, userId } });
     if (!existing) throw new NotFoundException('Чат не найден');
     await this.prisma.telegramChat.delete({ where: { id } });
   }
 
-  async testChat(id: number): Promise<void> {
-    const token = await this.resolveToken();
+  async testChat(userId: number, id: number): Promise<void> {
+    const token = await this.resolveToken(userId);
     if (!token) {
       throw new ConflictException('Сначала подключите бота во вкладке «Telegram-бот»');
     }
-    const chat = await this.prisma.telegramChat.findUnique({ where: { id } });
+    const chat = await this.prisma.telegramChat.findFirst({ where: { id, userId } });
     if (!chat) throw new NotFoundException('Чат не найден');
     const result = await this.telegram.sendText(token, chat.chatId, TEST_MESSAGE);
     if (!result.ok) {
@@ -163,12 +167,12 @@ export class TelegramConfigService {
     }
   }
 
-  async discover(): Promise<TelegramChatInfo[]> {
-    const token = await this.resolveToken();
+  async discover(userId: number): Promise<TelegramChatInfo[]> {
+    const token = await this.resolveToken(userId);
     if (!token) {
       throw new ConflictException('Сначала подключите бота во вкладке «Telegram-бот»');
     }
-    const seen = await this.prisma.telegramChat.findMany({ select: { chatId: true } });
+    const seen = await this.prisma.telegramChat.findMany({ where: { userId }, select: { chatId: true } });
     const seenSet = new Set(seen.map((c) => c.chatId));
     const found = await this.telegram.getUpdatesChats(token);
     return found.filter((c) => !seenSet.has(c.chatId));

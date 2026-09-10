@@ -1,6 +1,8 @@
 import { StatsService } from './stats.service';
 
 describe('StatsService.distractionDailyStats', () => {
+  const userId = 1;
+
   beforeEach(() => {
     // Fixed system time so "today" inside the service is deterministic.
     jest.useFakeTimers().setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
@@ -18,7 +20,7 @@ describe('StatsService.distractionDailyStats', () => {
     };
     const service = new StatsService(prisma);
 
-    const result = await service.distractionDailyStats(2);
+    const result = await service.distractionDailyStats(userId, 2);
 
     expect(result).toHaveLength(2);
     expect(result[1].minutes).toBe(25);
@@ -29,6 +31,8 @@ describe('StatsService.distractionDailyStats', () => {
 });
 
 describe('StatsService.distractionWeeklyStats', () => {
+  const userId = 1;
+
   beforeEach(() => {
     // Fixed system time (a Wednesday) so Monday-alignment is deterministic and assertable.
     jest.useFakeTimers().setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
@@ -45,7 +49,7 @@ describe('StatsService.distractionWeeklyStats', () => {
     };
     const service = new StatsService(prisma);
 
-    const result = await service.distractionWeeklyStats(1);
+    const result = await service.distractionWeeklyStats(userId, 1);
 
     expect(result).toHaveLength(1);
     expect(result[0].weekStart).toBe('2026-07-13'); // Monday of the week containing 2026-07-15
@@ -61,13 +65,15 @@ describe('StatsService.distractionWeeklyStats', () => {
     };
     const service = new StatsService(prisma);
 
-    const result = await service.distractionWeeklyStats(1);
+    const result = await service.distractionWeeklyStats(userId, 1);
 
     expect(result[0].weekStart).toBe('2026-07-13'); // Monday of the *same* week, not the next one
   });
 });
 
 describe('StatsService.categoryStats', () => {
+  const userId = 1;
+
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
   });
@@ -91,13 +97,14 @@ describe('StatsService.categoryStats', () => {
     };
     const service = new StatsService(prisma);
 
-    const [entry] = await service.categoryStats(10);
+    const [entry] = await service.categoryStats(userId, 10);
 
     expect(entry).toEqual({ key: 'sport', label: 'Спорт', doneCount: 2, totalDays: 10, pct: 20 });
   });
 });
 
 describe('StatsService.weekStats', () => {
+  const userId = 1;
   const utc = (y: number, m: number, d: number) => new Date(Date.UTC(y, m - 1, d));
 
   function makePrisma(overrides: any = {}) {
@@ -113,7 +120,7 @@ describe('StatsService.weekStats', () => {
   it('spans monday..sunday of the given sunday', async () => {
     const service = new StatsService(makePrisma() as any);
 
-    const result = await service.weekStats('2026-08-02');
+    const result = await service.weekStats(userId, '2026-08-02');
 
     expect(result.weekStart).toBe('2026-07-27');
     expect(result.weekEnd).toBe('2026-08-02');
@@ -125,7 +132,7 @@ describe('StatsService.weekStats', () => {
   it('spans the containing week for a mid-week date', async () => {
     const service = new StatsService(makePrisma() as any);
 
-    const result = await service.weekStats('2026-07-29');
+    const result = await service.weekStats(userId, '2026-07-29');
 
     expect(result.weekStart).toBe('2026-07-27');
     expect(result.weekEnd).toBe('2026-08-02');
@@ -141,7 +148,7 @@ describe('StatsService.weekStats', () => {
     });
     const service = new StatsService(prisma as any);
 
-    const result = await service.weekStats('2026-08-02');
+    const result = await service.weekStats(userId, '2026-08-02');
 
     expect(result.days.map((d) => d.pomodoros)).toEqual([0, 0, 5, 0, 0, 0, 0]);
     expect(result.days[0].closed).toBe(false);
@@ -158,7 +165,7 @@ describe('StatsService.weekStats', () => {
     });
     const service = new StatsService(prisma as any);
 
-    const result = await service.weekStats('2026-08-02');
+    const result = await service.weekStats(userId, '2026-08-02');
 
     expect(result.totalPomodoros).toBe(14);
     expect(result.avgPomodoros).toBe(2);
@@ -176,7 +183,7 @@ describe('StatsService.weekStats', () => {
     });
     const service = new StatsService(prisma as any);
 
-    const result = await service.weekStats('2026-08-02');
+    const result = await service.weekStats(userId, '2026-08-02');
 
     expect(result.avgRating).toBe(7);
     expect(result.ratedDays).toBe(2);
@@ -185,7 +192,7 @@ describe('StatsService.weekStats', () => {
   it('returns null rating and null best day for an empty week', async () => {
     const service = new StatsService(makePrisma() as any);
 
-    const result = await service.weekStats('2026-08-02');
+    const result = await service.weekStats(userId, '2026-08-02');
 
     expect(result.avgRating).toBeNull();
     expect(result.ratedDays).toBe(0);
@@ -203,7 +210,7 @@ describe('StatsService.weekStats', () => {
     });
     const service = new StatsService(prisma as any);
 
-    const result = await service.weekStats('2026-08-02');
+    const result = await service.weekStats(userId, '2026-08-02');
 
     expect(result.bestDay).toEqual({ date: '2026-07-28', weekday: 'Вт', pomodoros: 9 });
   });
@@ -221,7 +228,7 @@ describe('StatsService.weekStats', () => {
     });
     const service = new StatsService(prisma as any);
 
-    const result = await service.weekStats('2026-08-02');
+    const result = await service.weekStats(userId, '2026-08-02');
 
     expect(result.categories).toEqual([{ label: 'Спорт', doneCount: 2 }]);
   });
@@ -236,7 +243,7 @@ describe('StatsService.weekStats', () => {
     });
     const service = new StatsService(prisma as any);
 
-    const result = await service.weekStats('2026-08-02');
+    const result = await service.weekStats(userId, '2026-08-02');
 
     expect(result.distractionAvgMinutes).toBe(10);
     expect(result.distractionBudget).toBe(60);
@@ -248,11 +255,11 @@ describe('StatsService.weekStats', () => {
     });
     const service = new StatsService(prisma as any);
 
-    const result = await service.weekStats('2026-08-02');
+    const result = await service.weekStats(userId, '2026-08-02');
 
     expect(result.distractionLabel).toBe('Шортсы');
 
     prisma.settings.findUnique.mockResolvedValue(null);
-    expect((await service.weekStats('2026-08-02')).distractionLabel).toBe('Залипание');
+    expect((await service.weekStats(userId, '2026-08-02')).distractionLabel).toBe('Залипание');
   });
 });

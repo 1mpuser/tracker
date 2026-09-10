@@ -7,27 +7,27 @@ import { UpdateTaskTemplateDto } from './dto/update-task-template.dto';
 export class TaskTemplatesService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.taskTemplate.findMany({ orderBy: { order: 'asc' } });
+  findAll(userId: number) {
+    return this.prisma.taskTemplate.findMany({ where: { userId }, orderBy: { order: 'asc' } });
   }
 
-  async create(dto: CreateTaskTemplateDto) {
-    const maxOrder = await this.prisma.taskTemplate.aggregate({ _max: { order: true } });
+  async create(userId: number, dto: CreateTaskTemplateDto) {
+    const maxOrder = await this.prisma.taskTemplate.aggregate({ where: { userId }, _max: { order: true } });
     return this.prisma.taskTemplate.create({
-      data: { text: dto.text, order: (maxOrder._max.order ?? -1) + 1 },
+      data: { userId, text: dto.text, order: (maxOrder._max.order ?? -1) + 1 },
     });
   }
 
-  async update(id: number, dto: UpdateTaskTemplateDto) {
-    const existing = await this.prisma.taskTemplate.findUnique({ where: { id } });
+  async update(userId: number, id: number, dto: UpdateTaskTemplateDto) {
+    const existing = await this.prisma.taskTemplate.findFirst({ where: { id, userId } });
     if (!existing) {
       throw new NotFoundException(`Task template ${id} not found`);
     }
     return this.prisma.taskTemplate.update({ where: { id }, data: dto });
   }
 
-  async remove(id: number) {
-    const existing = await this.prisma.taskTemplate.findUnique({ where: { id } });
+  async remove(userId: number, id: number) {
+    const existing = await this.prisma.taskTemplate.findFirst({ where: { id, userId } });
     if (!existing) {
       throw new NotFoundException(`Task template ${id} not found`);
     }

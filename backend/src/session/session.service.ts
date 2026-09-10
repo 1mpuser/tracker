@@ -40,7 +40,9 @@ export class SessionService {
 
   // Число — календарь ответил. null — не настроено или чтение не удалось;
   // вызывающий обязан не трогать счётчик, иначе сетевой сбой обнулил бы день.
-  async syncDate(date: string): Promise<number | null> {
+  // userId пока не используется: учётка iCloud берётся из env (Task 3.3
+  // переведёт на настройки пользователя, а часовой пояс — на user.timezone).
+  async syncDate(userId: number, date: string): Promise<number | null> {
     if (!this.isEnabled()) return null;
     try {
       const calendar = await this.caldav.findCalendar(this.calendarName());

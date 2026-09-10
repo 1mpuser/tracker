@@ -21,30 +21,31 @@ export class TelegramDeliveryService {
     private telegram: TelegramService,
   ) {}
 
-  async isConfigured(kind: 'day' | 'week'): Promise<boolean> {
-    const [token, recipients] = await Promise.all([this.config.resolveToken(), this.config.recipients(kind)]);
+  async isConfigured(userId: number, kind: 'day' | 'week'): Promise<boolean> {
+    const [token, recipients] = await Promise.all([this.config.resolveToken(userId), this.config.recipients(userId, kind)]);
     return Boolean(token) && recipients.length > 0;
   }
 
-  deliverDay(dayId: number, summary: DaySummaryInput): Promise<DeliveryReport> {
-    return this.deliver(dayId, 'day', (token, chatId) => this.telegram.sendDaySummary(token, chatId, summary));
+  deliverDay(userId: number, dayId: number, summary: DaySummaryInput): Promise<DeliveryReport> {
+    return this.deliver(userId, dayId, 'day', (token, chatId) => this.telegram.sendDaySummary(token, chatId, summary));
   }
 
-  deliverWeek(dayId: number, text: string, chartPngBase64: string | null): Promise<DeliveryReport> {
-    return this.deliver(dayId, 'week', (token, chatId) =>
+  deliverWeek(userId: number, dayId: number, text: string, chartPngBase64: string | null): Promise<DeliveryReport> {
+    return this.deliver(userId, dayId, 'week', (token, chatId) =>
       this.telegram.sendWeeklySummary(token, chatId, text, chartPngBase64),
     );
   }
 
   private async deliver(
+    userId: number,
     dayId: number,
     kind: 'day' | 'week',
     send: (token: string, chatId: string) => Promise<TelegramSendResult>,
   ): Promise<DeliveryReport> {
     const report: DeliveryReport = { sent: 0, failed: 0, skipped: 0 };
-    const token = await this.config.resolveToken();
+    const token = await this.config.resolveToken(userId);
     if (!token) return report;
-    const recipients = await this.config.recipients(kind);
+    const recipients = await this.config.recipients(userId, kind);
 
     // Дни, разосланные старым одноканальным кодом, помечены прямо в Day.
     // Кому именно они ушли, неизвестно — считаем, что всем, иначе

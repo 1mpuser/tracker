@@ -17,4 +17,6 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/package.json ./package.json
 EXPOSE 3001
-CMD sh -c "bunx prisma migrate deploy && bunx prisma db seed && bun dist/main.js"
+# seed убран из стартовой команды: глобальных сфер больше нет, дефолтные
+# создаются при регистрации пользователя (UserBootstrapService).
+CMD sh -c "bunx prisma migrate deploy && bun dist/main.js"

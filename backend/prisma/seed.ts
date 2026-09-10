@@ -1,31 +1,24 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { DEFAULT_CATEGORIES } from '../src/auth/default-categories';
 
 const prisma = new PrismaClient({ adapter: new PrismaPg(process.env.DATABASE_URL as string) });
 
-const DEFAULT_CATEGORIES = [
-  { key: 'sport', label: 'Спорт', order: 0 },
-  { key: 'personal', label: 'Общение / свидания', order: 1 },
-  { key: 'family', label: 'Семья', order: 2 },
-  { key: 'learning', label: 'Обучение', order: 3 },
-  { key: 'work', label: 'Работа / финансы', order: 4 },
-];
-
+// Seed для локального dev: создаёт dev-пользователя с дефолтными сферами и
+// настройками, если пользователей ещё нет. Никаких глобальных сфер больше нет —
+// дефолтные сферы создаются при регистрации (UserBootstrapService).
 const DEFAULT_DISTRACTION_BUDGET = parseInt(process.env.DISTRACTION_BUDGET_DEFAULT ?? '60', 10);
 
 async function main() {
-  for (const cat of DEFAULT_CATEGORIES) {
-    await prisma.category.upsert({
-      where: { key: cat.key },
-      update: {},
-      create: cat,
-    });
-  }
+  const users = await prisma.user.count();
+  if (users > 0) return;
 
-  await prisma.settings.upsert({
-    where: { id: 1 },
-    update: {},
-    create: { id: 1, distractionBudget: DEFAULT_DISTRACTION_BUDGET },
+  const user = await prisma.user.create({ data: { email: 'dev@localhost.invalid' } });
+  await prisma.settings.create({
+    data: { userId: user.id, distractionBudget: Number.isFinite(DEFAULT_DISTRACTION_BUDGET) ? DEFAULT_DISTRACTION_BUDGET : 60 },
+  });
+  await prisma.category.createMany({
+    data: DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: user.id })),
   });
 }
 

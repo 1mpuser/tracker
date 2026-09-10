@@ -9,10 +9,12 @@ import { StatsModule } from './stats/stats.module';
 import { GtdModule } from './gtd/gtd.module';
 import { RoutinesModule } from './routines/routines.module';
 import { TelegramModule } from './telegram/telegram.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
     PrismaModule,
+    AuthModule,
     CategoriesModule,
     SettingsModule,
     DaysModule,
