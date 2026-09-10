@@ -21,6 +21,44 @@ model User {
   gtdItems      GtdItem[]
   routines      Routine[]
   telegramChats TelegramChat[]
+  sessions      Session[]
+  passwordResets PasswordReset[]
+}
+
+model PendingSignup {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  tokenHash    String   @unique
+  codeHash     String
+  attempts     Int      @default(0)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+}
+
+model PasswordReset {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Session {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Category {
