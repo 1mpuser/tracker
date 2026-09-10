@@ -10,6 +10,10 @@ import type {
   RoutinesWeek,
   Settings,
   TaskTemplate,
+  TelegramBotView,
+  TelegramChat,
+  TelegramChatInfo,
+  TelegramChatList,
   WeekStats,
   DistractionDayStat,
   DistractionWeekStat,
@@ -210,4 +214,62 @@ export function setRoutineLog(id: number, date: string, count: number): Promise<
 
 export function removeRoutineLog(id: number, date: string): Promise<RoutinesWeek> {
   return request(`/routines/${id}/log/${date}`, { method: 'DELETE' });
+}
+
+// NestJS отдаёт ошибки как {"message": "...", ...}; request() кладёт тело в текст Error.
+export function apiErrorMessage(e: unknown): string {
+  const raw = e instanceof Error ? e.message : String(e);
+  const json = raw.slice(raw.indexOf('{'));
+  try {
+    const message = (JSON.parse(json) as { message?: string | string[] }).message;
+    if (Array.isArray(message)) return message.join('; ');
+    if (message) return message;
+  } catch {
+    // не JSON — отдаём как есть
+  }
+  return raw;
+}
+
+export function getTelegramBot(): Promise<TelegramBotView> {
+  return request('/telegram/bot');
+}
+
+export function setTelegramBotToken(token: string): Promise<TelegramBotView> {
+  return request('/telegram/bot', { method: 'PUT', body: JSON.stringify({ token }) });
+}
+
+export function clearTelegramBotToken(): Promise<TelegramBotView> {
+  return request('/telegram/bot', { method: 'DELETE' });
+}
+
+export function getTelegramChats(): Promise<TelegramChatList> {
+  return request('/telegram/chats');
+}
+
+export function createTelegramChat(data: {
+  title: string;
+  chatId: string;
+  daily?: boolean;
+  weekly?: boolean;
+}): Promise<TelegramChat> {
+  return request('/telegram/chats', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function updateTelegramChat(
+  id: number,
+  data: { title?: string; daily?: boolean; weekly?: boolean },
+): Promise<TelegramChat> {
+  return request(`/telegram/chats/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deleteTelegramChat(id: number): Promise<void> {
+  return request(`/telegram/chats/${id}`, { method: 'DELETE' });
+}
+
+export function testTelegramChat(id: number): Promise<{ ok: boolean }> {
+  return request(`/telegram/chats/${id}/test`, { method: 'POST' });
+}
+
+export function discoverTelegramChats(): Promise<TelegramChatInfo[]> {
+  return request('/telegram/discover');
 }

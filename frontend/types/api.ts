@@ -150,3 +150,30 @@ export interface RoutineHistoryWeek {
   weekStart: string;
   items: { routineId: number; done: number; daysPerWeek: number }[];
 }
+
+export interface TelegramBotView {
+  configured: boolean;
+  source: 'db' | 'env' | null;
+  username: string | null;
+  tokenHint: string | null;
+}
+
+export interface TelegramChat {
+  id: number;
+  title: string;
+  chatId: string;
+  daily: boolean;
+  weekly: boolean;
+  createdAt: string;
+}
+
+export interface TelegramChatList {
+  chats: TelegramChat[];
+  envFallback: string | null;
+}
+
+export interface TelegramChatInfo {
+  chatId: string;
+  title: string;
+  type: string;
+}

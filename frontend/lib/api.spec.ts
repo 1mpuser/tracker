@@ -1,4 +1,4 @@
-import { createGtdItem, getDay, getGtdItems, getWeekStats, planForToday, postWeeklySummary, syncSessionPomodoros, updateDistraction, updateGtdItem, updatePomodoros } from './api';
+import { apiErrorMessage, createGtdItem, deleteTelegramChat, discoverTelegramChats, getDay, getGtdItems, getWeekStats, planForToday, postWeeklySummary, setTelegramBotToken, syncSessionPomodoros, testTelegramChat, updateDistraction, updateGtdItem, updatePomodoros } from './api';
 
 describe('api request helper', () => {
   const originalFetch = global.fetch;
@@ -167,5 +167,59 @@ describe('api request helper', () => {
       'http://localhost:3001/days/2026-09-11/distraction',
       expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ delta: 10 }) }),
     );
+  });
+
+  it('setTelegramBotToken PUTs the token', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ configured: true }),
+    }) as unknown as typeof fetch;
+
+    await setTelegramBotToken('123:abc');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/telegram/bot',
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ token: '123:abc' }) }),
+    );
+  });
+
+  it('deleteTelegramChat handles 204', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 204 }) as unknown as typeof fetch;
+
+    await expect(deleteTelegramChat(5)).resolves.toBeUndefined();
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/telegram/chats/5',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('testTelegramChat POSTs to the test endpoint', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true }) }) as unknown as typeof fetch;
+
+    await testTelegramChat(5);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/telegram/chats/5/test',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('discoverTelegramChats GETs the discover endpoint', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] }) as unknown as typeof fetch;
+
+    await discoverTelegramChats();
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/telegram/discover',
+      expect.objectContaining({ headers: expect.objectContaining({ 'Content-Type': 'application/json' }) }),
+    );
+  });
+
+  it('apiErrorMessage extracts the nest message', () => {
+    expect(
+      apiErrorMessage(new Error('PUT /telegram/bot failed: 400 {"message":"Telegram не принял токен","statusCode":400}')),
+    ).toBe('Telegram не принял токен');
   });
 });

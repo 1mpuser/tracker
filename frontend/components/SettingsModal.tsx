@@ -7,8 +7,10 @@ import { createCategory, getCategories, updateCategory } from '@/lib/api';
 import { transliterate } from '@/lib/transliterate';
 import TaskTemplatesTab from './TaskTemplatesTab';
 import DistractionSettingsTab from './DistractionSettingsTab';
+import TelegramBotTab from './TelegramBotTab';
+import TelegramChatsTab from './TelegramChatsTab';
 
-type Tab = 'categories' | 'templates' | 'distraction';
+type Tab = 'categories' | 'templates' | 'distraction' | 'telegramBot' | 'telegramChats';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -95,6 +97,20 @@ export default function SettingsModal({ onClose, onCategoriesChanged, onSettings
             >
               Залипание
             </button>
+            <button
+              type="button"
+              className={`${styles.tab} ${tab === 'telegramBot' ? styles.tabActive : ''}`}
+              onClick={() => setTab('telegramBot')}
+            >
+              Telegram-бот
+            </button>
+            <button
+              type="button"
+              className={`${styles.tab} ${tab === 'telegramChats' ? styles.tabActive : ''}`}
+              onClick={() => setTab('telegramChats')}
+            >
+              Чаты
+            </button>
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Закрыть">
             ×
@@ -149,6 +165,8 @@ export default function SettingsModal({ onClose, onCategoriesChanged, onSettings
 
         {tab === 'templates' && <TaskTemplatesTab />}
         {tab === 'distraction' && <DistractionSettingsTab onSettingsChanged={onSettingsChanged} />}
+        {tab === 'telegramBot' && <TelegramBotTab />}
+        {tab === 'telegramChats' && <TelegramChatsTab />}
       </div>
     </div>
   );
