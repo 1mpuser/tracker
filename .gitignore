@@ -1,5 +1,7 @@
 caddy/certs/
 /.env
+/.env.prod
+*.dump
 .claude/settings.local.json
 .worktrees/
 graphify-out/

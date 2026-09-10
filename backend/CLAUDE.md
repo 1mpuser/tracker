@@ -18,15 +18,33 @@ bunx jest categories.service.spec.ts       # single test file
 
 Migrations inside the running container: `docker compose exec backend bunx prisma migrate deploy`.
 
+e2e on a real Postgres: `bun run test:e2e` (uses `tracker_test`; `DATABASE_URL_TEST` to override). Unit: `bun run test`.
+
+## Multi-user contracts (обязательно)
+
+- **userId первым аргументом** каждого публичного метода сервиса; где нужен часовой пояс — `AuthUser` (объект `{ id, email, timezone }`) из `auth/auth-user.ts`. Контроллер: `@CurrentUser() user: AuthUser`.
+- Чужая запись → **404**, никогда 403 и никогда чужие данные. По id — `findFirst({ where: { id, userId } })`, по уникальному — `userId_key`/`userId_date`.
+- Ни один секрет (токен бота, пароль приложения iCloud) не возвращается API целиком и не пишется в логи. Секреты в БД зашифрованы AES-256-GCM ключом из `APP_ENCRYPTION_KEY` (`common/crypto.util.ts`).
+- Env-фоллбэков интеграций нет: всё из `Settings` пользователя. `grep -rn "process.env.\(TELEGRAM\|ICLOUD\|SESSION_\)" src` должен быть пуст.
+
 ## Architecture — NestJS modules-by-feature
 
-`backend/src/<feature>/` — each of `categories`, `dailies`, `days`, `settings`, `stats`, `task-templates`, `telegram` has its own `*.controller.ts`, `*.service.ts`, `*.module.ts`, `dto/`, and a `*.service.spec.ts` that mocks `PrismaService` directly (no `@nestjs/testing` TestingModule — plain `new XService(mockPrisma)`). `PrismaModule` (`backend/src/prisma/`) is `@Global()`, so no feature module needs to import it explicitly.
+`backend/src/<feature>/` — each of `categories`, `dailies`, `days`, `settings`, `stats`, `task-templates`, `telegram`, `auth`, `integrations` has its own `*.controller.ts`, `*.service.ts`, `*.module.ts`, `dto/`, and a `*.service.spec.ts` that mocks `PrismaService` directly (no `@nestjs/testing` TestingModule — plain `new XService(mockPrisma)`). `PrismaModule` (`backend/src/prisma/`) is `@Global()`, so no feature module needs to import it explicitly.
 
 ### Telegram module (three services)
 
 - `telegram.service.ts` — dumb HTTP client for the Bot API. Never reads `process.env`; token and chatId are passed to every call. Methods return `TelegramSendResult`/typed errors, never throw; the token is redacted from log messages.
-- `telegram-config.service.ts` — the only place that knows about `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` env fallback. Effective token = DB (`Settings.telegramBotToken`) → env → null. Chats come from the `TelegramChat` table; if the table is empty, `TELEGRAM_CHAT_ID` acts as a single virtual recipient (`envFallback` in `listChats()`). Exposes `/telegram/bot` and `/telegram/chats` endpoints.
+- `telegram-config.service.ts` — токен и чаты из `Settings`/`TelegramChat` пользователя; секрет шифруется (`enc:v1:`). Эндпоинты `/telegram/bot` и `/telegram/chats`.
 - `telegram-delivery.service.ts` — fan-out of day/week summaries to all configured chats with per-chat idempotency via the `TelegramPost` table (`@@unique([dayId, chatId, kind])`, claimed with `messageId: 0`, released on failure). Legacy single-chat sends are detected through `Day.telegramMessageId`/`weeklyTelegramMessageId` and treated as "already sent everywhere".
+
+### Auth + Integrations module
+
+- `auth/` — своя аутентификация: `PendingSignup` → письмо Resend → `User` (scrypt-хэш пароля, `auth/password.util.ts`), серверные сессии в Postgres (`Session`, cookie `sid` через `SessionGuard`), сброс пароля. `@Public()` на `/auth/*` и `/health`.
+- `integrations/` — пер-пользовательские учётные данные iCloud/Session (`IntegrationsService`, шифрование пароля приложения), `ICloudService` и `SessionService` читают их отсюда. Эндпоинты `/integrations/*`.
+
+### Время
+
+«Сегодня» на бэкенде — только `todayFor(user.timezone)` (`common/date.util.ts`); контейнер всегда в `TZ=UTC`. `todayDate()` остаётся только как утилита (без пояса пользователя её не используйте).
 
 `backend/src/common/date.util.ts` is the single source of truth for date handling — the `Day.date` column is `@db.Date`, and every date-taking function goes through UTC-safe helpers (`todayDate()`, `addDays()`, `formatDate()`, `parseDateParam()`). `parseDateParam` round-trips the parsed date back through `formatDate` and compares against the input specifically to catch JS's silent calendar rollover (e.g. `2026-02-30` → `2026-03-02`) — don't "simplify" that check away.
 

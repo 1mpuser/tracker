@@ -31,7 +31,13 @@ Backend and frontend commands and architecture: see `backend/CLAUDE.md` and `fro
 
 ### CORS / origins
 
-`backend/src/main.ts` allows exactly two origins: `http://localhost:4887` and `https://tracker.performance:4888`. If you add another way to reach the frontend, it needs an entry in this CORS origin list or every API call will silently fail client-side.
+CORS-список задаёт `CORS_ORIGINS` (через запятую); по умолчанию `http://localhost:4887` и `https://tracker.performance:4888` (см. `backend/src/bootstrap.ts`). Если добавляете ещё один способ доступа к фронту — добавьте origin в эту переменную, иначе все API-запросы будут молча падать на клиенте.
+
+### Продакшен (VPS)
+
+- Прод-стек — `docker-compose.prod.yml` + `caddy/Caddyfile.prod` (Let's Encrypt, наружу только 80/443, фронт и API за одним доменом — `/api` проксируется на backend). Публичный домен и почта настраиваются в `.env.prod` (см. `.env.prod.example` и `docs/deploy.md`).
+- Бэкенд в проде не стартует без `RESEND_API_KEY`, `MAIL_FROM`, `APP_URL`, `APP_ENCRYPTION_KEY`, `POSTGRES_PASSWORD`.
+- Деплой: `./deploy/deploy.sh` (pull → бэкап → build → health).
 
 ### HTTPS / tracker.performance
 

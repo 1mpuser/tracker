@@ -16,6 +16,9 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/package.json ./package.json
+# Скрипты обслуживания (set-owner, reset-password) и исходники, которые они импортируют.
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/src ./src
 EXPOSE 3001
 # seed убран из стартовой команды: глобальных сфер больше нет, дефолтные
 # создаются при регистрации пользователя (UserBootstrapService).

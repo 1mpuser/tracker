@@ -1,0 +1,69 @@
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tracker
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD}
+      POSTGRES_DB: tracker
+    # Никаких ports: Docker публикует порты в обход UFW.
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tracker -d tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://tracker:${POSTGRES_PASSWORD}@postgres:5432/tracker
+      PORT: "3001"
+      APP_URL: https://${DOMAIN:?задайте DOMAIN}
+      CORS_ORIGINS: https://${DOMAIN}
+      COOKIE_SECURE: "true"
+      SIGNUP_MODE: ${SIGNUP_MODE:-open}
+      ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:?задайте RESEND_API_KEY}
+      MAIL_FROM: ${MAIL_FROM:?задайте MAIL_FROM}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?задайте APP_ENCRYPTION_KEY}
+      DISTRACTION_BUDGET_DEFAULT: "60"
+      TZ: UTC
+    depends_on:
+      postgres: { condition: service_healthy }
+    logging: *logging
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: /api
+    restart: unless-stopped
+    depends_on: [backend]
+    logging: *logging
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?задайте ACME_EMAIL}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [frontend, backend]
+    logging: *logging
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

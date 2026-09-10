@@ -30,6 +30,13 @@ bunx jest streak.spec.ts                   # single test file
 
 Design tokens are fixed CSS custom properties in `app/globals.css` (`--bg`, `--panel`, `--accent`, `--accent-glow`, etc.) — every component's CSS Module reads from these, no hardcoded colors, no UI-kit library. `recharts` is the sole exception to "no library," used only in `DistractionWeeklyChart`.
 
+## Auth
+
+- Страницы входа/регистрации/сброса — `app/{login,register,register/confirm,forgot,reset}/page.tsx` (client компоненты, общий `app/Auth.module.css`).
+- `lib/api.ts` ходит с `credentials: 'include'`; при 401 на не-auth-странице делает `window.location.href = '/login'` и не резолвится.
+- `NEXT_PUBLIC_API_URL`, начинающийся с `/`, трактуется как путь на своём origin (прод: фронт и API за одним доменом, `/api` проксируется Caddy).
+- Настройки → «Аккаунт» (`AccountTab.tsx`): почта, часовой пояс, смена пароля, выход/выход везде.
+
 ## Settings modal tabs
 
-`SettingsModal` is a tabbed client component. Tabs: «Категории» (`categories`), «Шаблоны задач» (`TaskTemplatesTab`), «Залипание» (`DistractionSettingsTab` — настраиваемое название и дневной бюджет), «Telegram-бот» (`TelegramBotTab` — токен бота), «Чаты» (`TelegramChatsTab` — куда уходят сводки). The Telegram tabs read/write `/telegram/*` endpoints; bot token is never returned in full by the API, only `tokenHint`. Errors surface through `apiErrorMessage` from `lib/api.ts`.
+`SettingsModal` is a tabbed client component. Tabs: «Категории» (`categories`), «Шаблоны задач» (`TaskTemplatesTab`), «Залипание» (`DistractionSettingsTab` — настраиваемое название и дневной бюджет), «Telegram-бот» (`TelegramBotTab` — токен бота), «Чаты» (`TelegramChatsTab` — куда уходят сводки), «iCloud» (`ICloudTab`), «Session» (`SessionTab`), «Аккаунт» (`AccountTab`). The integration tabs read/write `/telegram/*`, `/integrations/*`, `/auth/*` endpoints; bot token and iCloud app password are never returned in full by the API, only hints. Errors surface through `apiErrorMessage` from `lib/api.ts`.
