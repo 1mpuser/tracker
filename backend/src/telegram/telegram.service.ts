@@ -181,31 +181,4 @@ export class TelegramService {
     }
     return { ok: true, messageId: body.result.message_id };
   }
-
-  // ↓ Временные обёртки над новым клиентом с env-учёткой — сохраняют зелёным
-  // `days.service.ts` до Task 5 (рассылка по чатам). Удаляются в Task 5.
-  isConfigured(): boolean {
-    return Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
-  }
-
-  private envCreds(): { token: string; chatId: string } | null {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
-    if (!token || !chatId) return null;
-    return { token, chatId };
-  }
-
-  async postDaySummary(day: DaySummaryInput): Promise<number | null> {
-    const creds = this.envCreds();
-    if (!creds) return null;
-    const result = await this.sendDaySummary(creds.token, creds.chatId, day);
-    return result.ok ? result.messageId : null;
-  }
-
-  async postWeeklySummary(text: string, chartPngBase64?: string | null): Promise<number | null> {
-    const creds = this.envCreds();
-    if (!creds) return null;
-    const result = await this.sendWeeklySummary(creds.token, creds.chatId, text, chartPngBase64 ?? null);
-    return result.ok ? result.messageId : null;
-  }
 }

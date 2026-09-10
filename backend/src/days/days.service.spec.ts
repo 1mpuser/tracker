@@ -183,23 +183,21 @@ describe('DaysService.getHistory', () => {
 describe('DaysService.updateDay telegram posting', () => {
   let service: DaysService;
   let prisma: any;
-  let telegram: any;
+  let delivery: any;
 
   beforeEach(() => {
     prisma = {
       day: {
         findUnique: jest.fn(),
         update: jest.fn().mockResolvedValue({}),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-        create: jest.fn(),
       },
     };
-    telegram = { postDaySummary: jest.fn().mockResolvedValue(555) };
+    delivery = { deliverDay: jest.fn().mockResolvedValue({ sent: 1, failed: 0, skipped: 0 }), deliverWeek: jest.fn() };
     service = new DaysService(
       prisma,
       { findActive: jest.fn().mockResolvedValue([]) } as any,
       { getForDate: jest.fn().mockResolvedValue([]) } as any,
-      telegram,
+      delivery,
       {} as any,
     );
   });
@@ -221,71 +219,30 @@ describe('DaysService.updateDay telegram posting', () => {
     };
   }
 
-  it('posts the summary and stores the returned message id when the day is closed', async () => {
+  it('delivers the day summary when the day is closed', async () => {
     prisma.day.findUnique.mockResolvedValue(dayRow());
 
     await service.updateDay('2026-08-01', { eveningClosed: true });
 
-    expect(prisma.day.updateMany).toHaveBeenCalledWith({
-      where: { id: 1, telegramMessageId: null },
-      data: { telegramMessageId: 0 },
-    });
-    expect(telegram.postDaySummary).toHaveBeenCalledTimes(1);
-    expect(telegram.postDaySummary.mock.calls[0][0]).toMatchObject({ date: '2026-08-01', pomodoros: 7 });
-    expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { telegramMessageId: 555 } });
+    expect(delivery.deliverDay).toHaveBeenCalledTimes(1);
+    expect(delivery.deliverDay.mock.calls[0][0]).toBe(1);
+    expect(delivery.deliverDay.mock.calls[0][1]).toMatchObject({ date: '2026-08-01', pomodoros: 7 });
   });
 
-  it('does not post again for a day that was already posted (updateMany claims nothing)', async () => {
-    prisma.day.findUnique.mockResolvedValue(dayRow({ telegramMessageId: 555 }));
-    prisma.day.updateMany.mockResolvedValue({ count: 0 });
-
-    await service.updateDay('2026-08-01', { eveningClosed: true });
-
-    expect(telegram.postDaySummary).not.toHaveBeenCalled();
-  });
-
-  it('does not post and does not write when a concurrent close already claimed the row', async () => {
-    // Двойной клик: обе заявки видят один и тот же день, но updateMany
-    // атомарно достаётся только одному конкурентному запросу.
-    prisma.day.findUnique.mockResolvedValue(dayRow());
-    prisma.day.updateMany.mockResolvedValue({ count: 0 });
-
-    await service.updateDay('2026-08-01', { eveningClosed: true });
-
-    expect(telegram.postDaySummary).not.toHaveBeenCalled();
-    // Единственный update() в этом сценарии — сам апдейт дня в начале updateDay();
-    // никакой записи telegramMessageId после проигранной заявки быть не должно.
-    expect(prisma.day.update).toHaveBeenCalledTimes(1);
-    expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { eveningClosed: true } });
-  });
-
-  it('does not store anything when the post failed, but resets the claim to null for retry', async () => {
-    prisma.day.findUnique.mockResolvedValue(dayRow());
-    telegram.postDaySummary.mockResolvedValue(null);
-
-    await expect(service.updateDay('2026-08-01', { eveningClosed: true })).resolves.toMatchObject({
-      date: '2026-08-01',
-    });
-
-    expect(prisma.day.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { telegramMessageId: null } });
-  });
-
-  it('does not post when only rating or comment changed', async () => {
-    prisma.day.findUnique.mockResolvedValue(dayRow());
-
-    await service.updateDay('2026-08-01', { rating: 9 });
-
-    expect(prisma.day.updateMany).not.toHaveBeenCalled();
-    expect(telegram.postDaySummary).not.toHaveBeenCalled();
-  });
-
-  it('does not post when the day is being reopened', async () => {
+  it('does not deliver when the day is reopened', async () => {
     prisma.day.findUnique.mockResolvedValue(dayRow({ eveningClosed: true }));
 
     await service.updateDay('2026-08-01', { eveningClosed: false });
 
-    expect(prisma.day.updateMany).not.toHaveBeenCalled();
-    expect(telegram.postDaySummary).not.toHaveBeenCalled();
+    expect(delivery.deliverDay).not.toHaveBeenCalled();
+  });
+
+  it('does not deliver when only rating or comment changed', async () => {
+    prisma.day.findUnique.mockResolvedValue(dayRow());
+
+    await service.updateDay('2026-08-01', { rating: 9 });
+
+    expect(delivery.deliverDay).not.toHaveBeenCalled();
   });
 });
 
@@ -298,10 +255,9 @@ describe('DaysService.updateDay', () => {
       day: {
         findUnique: jest.fn().mockResolvedValue({ id: 7 }),
         update: jest.fn().mockResolvedValue({}),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
-    service = new DaysService(prisma, {} as any, {} as any, { postDaySummary: jest.fn().mockResolvedValue(null) } as any, {} as any);
+    service = new DaysService(prisma, {} as any, {} as any, { deliverDay: jest.fn() } as any, {} as any);
   });
 
   it('forwards only the provided fields to the Prisma update, not a merged full-day object', async () => {
@@ -401,7 +357,7 @@ describe('DaysService.setPomodoros', () => {
 
 describe('DaysService.postWeeklySummary', () => {
   let prisma: any;
-  let telegram: any;
+  let delivery: any;
   let stats: any;
   let service: DaysService;
 
@@ -424,73 +380,58 @@ describe('DaysService.postWeeklySummary', () => {
     prisma = {
       day: {
         findUnique: jest.fn().mockResolvedValue({ id: 1, eveningClosed: true }),
-        create: jest.fn(),
-        update: jest.fn(),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
-    telegram = { postWeeklySummary: jest.fn().mockResolvedValue(42) };
+    delivery = { deliverWeek: jest.fn().mockResolvedValue({ sent: 1, failed: 0, skipped: 0 }) };
     stats = { weekStats: jest.fn().mockResolvedValue(weekStats) };
     service = new DaysService(
       prisma,
       { findActive: jest.fn().mockResolvedValue([]) } as any,
       { getForDate: jest.fn().mockResolvedValue([]) } as any,
-      telegram,
+      delivery,
       stats,
     );
   });
 
-  it('claims the row and posts once', async () => {
+  it('reports posted when at least one chat received the summary', async () => {
     const result = await service.postWeeklySummary('2026-08-02', 'AAAA');
 
-    expect(prisma.day.updateMany).toHaveBeenCalledWith({
-      where: { id: 1, weeklyTelegramMessageId: null },
-      data: { weeklyTelegramMessageId: 0 },
-    });
-    expect(telegram.postWeeklySummary).toHaveBeenCalledTimes(1);
-    expect(prisma.day.update).toHaveBeenCalledWith({
-      where: { id: 1 },
-      data: { weeklyTelegramMessageId: 42 },
-    });
+    expect(delivery.deliverWeek).toHaveBeenCalledTimes(1);
+    expect(delivery.deliverWeek.mock.calls[0][0]).toBe(1);
+    expect(delivery.deliverWeek.mock.calls[0][1]).toContain('📊 Неделя');
+    expect(delivery.deliverWeek.mock.calls[0][2]).toBe('AAAA');
     expect(result).toEqual({ posted: true, withChart: true });
   });
 
-  it('does not post twice for the same week', async () => {
-    prisma.day.updateMany.mockResolvedValue({ count: 0 });
+  it('reports send-failed when attempts were made and all failed', async () => {
+    delivery.deliverWeek.mockResolvedValue({ sent: 0, failed: 2, skipped: 0 });
 
     const result = await service.postWeeklySummary('2026-08-02', 'AAAA');
 
-    expect(telegram.postWeeklySummary).not.toHaveBeenCalled();
-    expect(result).toEqual({ posted: false, withChart: false, reason: 'already-posted' });
+    expect(result).toEqual({ posted: false, withChart: true, reason: 'send-failed' });
   });
 
-  it('releases the claim when sending fails', async () => {
-    telegram.postWeeklySummary.mockResolvedValue(null);
+  it('reports already-posted when every chat already got this week', async () => {
+    delivery.deliverWeek.mockResolvedValue({ sent: 0, failed: 0, skipped: 2 });
 
     const result = await service.postWeeklySummary('2026-08-02', 'AAAA');
 
-    expect(prisma.day.update).toHaveBeenCalledWith({
-      where: { id: 1 },
-      data: { weeklyTelegramMessageId: null },
-    });
-    expect(result).toEqual({ posted: false, withChart: true, reason: 'send-failed' });
+    expect(result).toEqual({ posted: false, withChart: false, reason: 'already-posted' });
   });
 
   it('reports withChart false when no image was supplied', async () => {
     const result = await service.postWeeklySummary('2026-08-02', null);
 
-    expect(telegram.postWeeklySummary).toHaveBeenCalledWith(expect.any(String), null);
+    expect(delivery.deliverWeek.mock.calls[0][2]).toBeNull();
     expect(result).toEqual({ posted: true, withChart: false });
   });
 
-  it('rejects a day that was never closed, without creating a row or claiming it', async () => {
+  it('rejects a day that was never closed, without creating a row or delivering', async () => {
     prisma.day.findUnique.mockResolvedValue(null);
 
     await expect(service.postWeeklySummary('2026-08-02', 'AAAA')).rejects.toThrow(BadRequestException);
 
-    expect(prisma.day.create).not.toHaveBeenCalled();
-    expect(prisma.day.updateMany).not.toHaveBeenCalled();
-    expect(telegram.postWeeklySummary).not.toHaveBeenCalled();
+    expect(delivery.deliverWeek).not.toHaveBeenCalled();
   });
 
   it('rejects a day that exists but is not evening-closed', async () => {
@@ -498,31 +439,30 @@ describe('DaysService.postWeeklySummary', () => {
 
     await expect(service.postWeeklySummary('2026-08-02', 'AAAA')).rejects.toThrow(BadRequestException);
 
-    expect(prisma.day.updateMany).not.toHaveBeenCalled();
-    expect(telegram.postWeeklySummary).not.toHaveBeenCalled();
+    expect(delivery.deliverWeek).not.toHaveBeenCalled();
   });
 
-  it('reads week stats before claiming the row, so a thrown aggregate never leaves the claim stuck', async () => {
+  it('reads week stats before delivering the summary', async () => {
     const calls: string[] = [];
     stats.weekStats.mockImplementation(async () => {
       calls.push('weekStats');
       return weekStats;
     });
-    prisma.day.updateMany.mockImplementation(async () => {
-      calls.push('updateMany');
-      return { count: 1 };
+    delivery.deliverWeek.mockImplementation(async () => {
+      calls.push('deliverWeek');
+      return { sent: 1, failed: 0, skipped: 0 };
     });
 
     await service.postWeeklySummary('2026-08-02', 'AAAA');
 
-    expect(calls).toEqual(['weekStats', 'updateMany']);
+    expect(calls).toEqual(['weekStats', 'deliverWeek']);
   });
 
-  it('never claims the row when weekStats throws, so the week is not stuck as already-posted', async () => {
+  it('never delivers when weekStats throws', async () => {
     stats.weekStats.mockRejectedValue(new Error('db is down'));
 
     await expect(service.postWeeklySummary('2026-08-02', 'AAAA')).rejects.toThrow('db is down');
 
-    expect(prisma.day.updateMany).not.toHaveBeenCalled();
+    expect(delivery.deliverWeek).not.toHaveBeenCalled();
   });
 });

@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CategoriesService } from '../categories/categories.service';
 import { GtdService, GtdItemView } from '../gtd/gtd.service';
-import { TelegramService } from '../telegram/telegram.service';
+import { TelegramDeliveryService } from '../telegram/telegram-delivery.service';
 import { StatsService } from '../stats/stats.service';
 import { buildWeekSummary } from '../telegram/weekly.helpers';
 import { addDays, formatDate, parseDateParam, todayDate } from '../common/date.util';
@@ -39,17 +39,13 @@ export interface UpdateDayData {
   comment?: string;
 }
 
-// Telegram message_id всегда положителен, поэтому 0 безопасен как временная
-// заявка «пост в процессе отправки», занимающая слот перед реальным запросом.
-const TELEGRAM_CLAIMED = 0;
-
 @Injectable()
 export class DaysService {
   constructor(
     private prisma: PrismaService,
     private categoriesService: CategoriesService,
     private gtdService: GtdService,
-    private telegram: TelegramService,
+    private delivery: TelegramDeliveryService,
     private stats: StatsService,
   ) {}
 
@@ -138,24 +134,10 @@ export class DaysService {
     const view = await this.getDay(dateStr);
 
     if (data.eveningClosed === true) {
-      // Атомарная заявка на публикацию: строку захватывает ровно один
-      // конкурентный запрос (updateMany с условием в where — не read-then-write),
-      // остальные получают count 0 и молчат. Ключ идемпотентности — сам
-      // telegramMessageId, а не предыдущее значение eveningClosed: так
-      // «один пост на дату» переживает переоткрытие дня.
-      const claim = await this.prisma.day.updateMany({
-        where: { id: dayId, telegramMessageId: null },
-        data: { telegramMessageId: TELEGRAM_CLAIMED },
-      });
-      if (claim.count === 1) {
-        const messageId = await this.telegram.postDaySummary(view);
-        // Если процесс упадёт между заявкой и этой записью, строка так и
-        // останется на сентинеле и эта дата больше никогда не запостится —
-        // приемлемо для однопользовательского локального инструмента.
-        // Отправка не удалась -> messageId null, сбрасываем обратно на null,
-        // чтобы следующее закрытие этого дня попробовало снова.
-        await this.prisma.day.update({ where: { id: dayId }, data: { telegramMessageId: messageId } });
-      }
+      // Идемпотентность «один пост на день на чат» обеспечивает
+      // TelegramDeliveryService через таблицу TelegramPost. Отчёт игнорируем:
+      // закрытие дня не должно падать из-за Telegram.
+      await this.delivery.deliverDay(dayId, view);
     }
 
     return view;
@@ -181,35 +163,16 @@ export class DaysService {
     const dayId = day.id;
     const withChart = Boolean(chartPngBase64);
 
-    // Чтение и сборка текста — до захвата, а не внутри него: weekStats() это
-    // четыре параллельных запроса в БД, каждый из которых может бросить.
-    // Если бы это было внутри захваченного окна, брошенное исключение
-    // оставило бы строку на сентинеле TELEGRAM_CLAIMED навсегда — «уже
-    // опубликовано» на все последующие попытки без единого реального поста.
-    // Внутри захвата остаётся только отправка в Telegram — она обёрнута в
-    // собственный try/catch и не бросает.
     const stats = await this.stats.weekStats(dateStr);
     const text = buildWeekSummary(stats);
 
-    // Тот же атомарный захват, что у дневной сводки: строку занимает ровно
-    // один конкурентный запрос, остальные получают count 0 и молчат.
-    const claim = await this.prisma.day.updateMany({
-      where: { id: dayId, weeklyTelegramMessageId: null },
-      data: { weeklyTelegramMessageId: TELEGRAM_CLAIMED },
-    });
-    if (claim.count !== 1) {
-      return { posted: false, withChart: false, reason: 'already-posted' };
-    }
+    // Идемпотентность «один пост на неделю на чат» обеспечивает
+    // TelegramDeliveryService через таблицу TelegramPost.
+    const report = await this.delivery.deliverWeek(day.id, text, chartPngBase64 ?? null);
 
-    const messageId = await this.telegram.postWeeklySummary(text, chartPngBase64 ?? null);
-
-    // Не отправилось -> сбрасываем захват обратно в null, чтобы следующее
-    // закрытие этого воскресенья попробовало снова.
-    await this.prisma.day.update({ where: { id: dayId }, data: { weeklyTelegramMessageId: messageId } });
-
-    return messageId === null
-      ? { posted: false, withChart, reason: 'send-failed' }
-      : { posted: true, withChart };
+    if (report.sent > 0) return { posted: true, withChart };
+    if (report.failed > 0) return { posted: false, withChart, reason: 'send-failed' };
+    return { posted: false, withChart: false, reason: 'already-posted' };
   }
 
   async getHistory(limit: number, endDateStr?: string): Promise<HistoryEntry[]> {
