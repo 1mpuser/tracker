@@ -14,7 +14,9 @@ export default defineConfig({
   datasource: {
     url: process.env.DATABASE_URL,
     // Нужна для `migrate diff` и `migrate dev`: временная БД, куда Prisma
-    // примеряет миграции, не трогая рабочую.
-    shadowDatabaseUrl: process.env.SHADOW_DATABASE_URL ?? 'postgresql://tracker:tracker@localhost:5434/tracker_test',
+    // примеряет миграции, не трогая рабочую. По умолчанию отдельная от всех
+    // рабочих БД (tracker, tracker_copy, tracker_test) БД-«черновик».
+    shadowDatabaseUrl:
+      process.env.SHADOW_DATABASE_URL ?? 'postgresql://tracker:tracker@localhost:5434/tracker_shadow',
   },
 });

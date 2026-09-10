@@ -6,7 +6,8 @@
     "build": "bun run --bun nest build",
     "start": "bun dist/main.js",
     "start:dev": "bun run --bun nest start --watch",
-    "test": "jest"
+    "test": "jest",
+    "test:e2e": "DATABASE_URL=${DATABASE_URL_TEST:-postgresql://tracker:tracker@localhost:5434/tracker_test} jest -c test/jest-e2e.config.ts"
   },
   "dependencies": {
     "@nestjs/common": "11.1.28",
@@ -28,10 +29,13 @@
     "@types/jest": "30.0.0",
     "@types/node": "26.1.2",
     "@types/pg": "^8.20.0",
+    "@types/supertest": "^7.2.1",
     "dotenv": "^17.4.2",
     "jest": "30.4.2",
     "prisma": "7.9.1",
+    "supertest": "^7.2.2",
     "ts-jest": "29.4.12",
+    "ts-node": "^10.9.2",
     "typescript": "6.0.3"
   },
   "jest": {

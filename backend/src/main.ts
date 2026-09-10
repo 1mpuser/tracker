@@ -1,20 +1,15 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { configureApp } from './bootstrap';
 import { GtdService } from './gtd/gtd.service';
 import { ObsidianService } from './obsidian/obsidian.service';
 import { ICloudService } from './icloud/icloud.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.enableCors({ origin: ['http://localhost:4887', 'https://tracker.performance:4888'] });
-  // PNG графика приезжает base64-строкой в JSON; дефолтные 100 КБ его не пускают.
-  // Обязательно до app.listen(): иначе дефолтный json-парсер на 100 КБ успеет
-  // зарегистрироваться первым, и запросы с картинкой будут отбиваться 413.
-  app.useBodyParser('json', { limit: '2mb' });
+  configureApp(app);
   await app.listen(process.env.PORT ?? 3001);
 
   try {
