@@ -10,11 +10,14 @@ import { GtdModule } from './gtd/gtd.module';
 import { RoutinesModule } from './routines/routines.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { AuthModule } from './auth/auth.module';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
     PrismaModule,
     AuthModule,
+    // Глобальный мягкий лимит; жёсткие @Throttle — на /auth-эндпоинтах.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     CategoriesModule,
     SettingsModule,
     DaysModule,

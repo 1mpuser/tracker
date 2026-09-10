@@ -31,6 +31,8 @@ model PendingSignup {
   passwordHash String
   tokenHash    String   @unique
   codeHash     String
+  // Пояс, который пользователь прислал при регистрации; применяется при подтверждении.
+  timezone     String?
   attempts     Int      @default(0)
   expiresAt    DateTime
   createdAt    DateTime @default(now())

@@ -1,16 +1,25 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { UserBootstrapService } from './user-bootstrap.service';
-import { SingleUserGuard } from './single-user.guard';
+import { AuthService } from './auth.service';
+import { MailerService } from './mailer.service';
+import { SessionGuard } from './session.guard';
+import { AuthController } from './auth.controller';
+import { AUTH_CONFIG, loadAuthConfig } from './auth.config';
 
 @Module({
+  controllers: [AuthController],
   providers: [
     UserBootstrapService,
-    SingleUserGuard,
-    // useExisting, а не useClass: e2e может переопределить SingleUserGuard
-    // через overrideProvider и подменить глобальный guard целиком.
-    { provide: APP_GUARD, useExisting: SingleUserGuard },
+    AuthService,
+    MailerService,
+    SessionGuard,
+    // AUTH_CONFIG грузится фабрикой: loadAuthConfig() бросает в production без
+    // обязательных переменных — приложение упадёт при старте, а не в момент
+    // первой регистрации.
+    { provide: AUTH_CONFIG, useFactory: () => loadAuthConfig() },
+    { provide: APP_GUARD, useClass: SessionGuard },
   ],
-  exports: [UserBootstrapService],
+  exports: [UserBootstrapService, AuthService],
 })
 export class AuthModule {}
