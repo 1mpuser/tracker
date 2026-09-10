@@ -28,6 +28,7 @@ model Day {
   weeklyTelegramMessageId Int?
   categories        DayCategoryStatus[]
   dailies           DailyTask[]
+  telegramPosts     TelegramPost[]
   createdAt         DateTime @default(now())
 }
 
@@ -65,6 +66,7 @@ model Settings {
   distractionBudget    Int     @default(60)
   distractionLabel     String  @default("Залипание")
   notificationsEnabled Boolean @default(false)
+  telegramBotToken     String?
 }
 
 enum GtdStatus {
@@ -124,4 +126,34 @@ model RoutineLog {
   count     Int      @default(1)
 
   @@unique([routineId, date])
+}
+
+model TelegramChat {
+  id        Int      @id @default(autoincrement())
+  title     String
+  chatId    String   @unique
+  daily     Boolean  @default(true)
+  weekly    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+enum TelegramPostKind {
+  day
+  week
+}
+
+// Факт публикации конкретной сводки в конкретный чат. chatId — строка, а не FK
+// на TelegramChat: удаление чата из настроек не должно стирать историю отправок,
+// иначе вернув чат обратно, получим повторную рассылку старых дней.
+model TelegramPost {
+  id        Int              @id @default(autoincrement())
+  dayId     Int
+  day       Day              @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  chatId    String
+  kind      TelegramPostKind
+  messageId Int
+  createdAt DateTime         @default(now())
+
+  @@index([dayId])
+  @@unique([dayId, chatId, kind])
 }
