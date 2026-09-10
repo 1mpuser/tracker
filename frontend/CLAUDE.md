@@ -17,8 +17,8 @@ bunx jest streak.spec.ts                   # single test file
 ## Architecture — single client-fetched screen
 
 `frontend/app/page.tsx` renders one component, `Dashboard.tsx`, which is `'use client'` and owns essentially all top-level state (today's `day`, 84-day `history`, `settings`, modal-open flags). Every other component is either:
-- a pure prop/callback component with no `'use client'` and no hooks (`Header`, `SpheresPanel`, `YoutubePanel`, `StatsPanel`, `CategoryHeatmap`, `StreakHeatmap`), or
-- a small self-contained `'use client'` component that owns its own fetch-on-mount for stats endpoints Dashboard doesn't already have (`CategoryBars`, `YoutubeWeeklyChart`, `YoutubeDailyHeatmap`, `TaskTemplatesTab`).
+- a pure prop/callback component with no `'use client'` and no hooks (`Header`, `SpheresPanel`, `DistractionPanel`, `StatsPanel`, `CategoryHeatmap`, `StreakHeatmap`), or
+- a small self-contained `'use client'` component that owns its own fetch-on-mount for stats endpoints Dashboard doesn't already have (`CategoryBars`, `DistractionWeeklyChart`, `DistractionDailyHeatmap`, `TaskTemplatesTab`).
 
 **Nothing is server-rendered with real data** — `Dashboard` fetches everything inside `useEffect`, so curl/SSR only ever sees the pre-hydration "загрузка…" shell. This is expected, not a bug; verify UI behavior in an actual browser.
 
@@ -28,4 +28,8 @@ bunx jest streak.spec.ts                   # single test file
 
 `SpheresPanel` and `DailiesPanel` are reused verbatim (identical props, no branching) inside both the main screen and `DayDetailModal` — the modal just points their callbacks at a selected past date instead of today. Don't add a `disabled`/`readOnly` prop to them for the modal's read-only view state; that view is rendered as separate plain markup instead, to keep these two components' interfaces stable.
 
-Design tokens are fixed CSS custom properties in `app/globals.css` (`--bg`, `--panel`, `--accent`, `--accent-glow`, etc.) — every component's CSS Module reads from these, no hardcoded colors, no UI-kit library. `recharts` is the sole exception to "no library," used only in `YoutubeWeeklyChart`.
+Design tokens are fixed CSS custom properties in `app/globals.css` (`--bg`, `--panel`, `--accent`, `--accent-glow`, etc.) — every component's CSS Module reads from these, no hardcoded colors, no UI-kit library. `recharts` is the sole exception to "no library," used only in `DistractionWeeklyChart`.
+
+## Settings modal tabs
+
+`SettingsModal` is a tabbed client component. Tabs: «Категории» (`categories`), «Шаблоны задач» (`TaskTemplatesTab`), «Залипание» (`DistractionSettingsTab` — настраиваемое название и дневной бюджет), «Telegram-бот» (`TelegramBotTab` — токен бота), «Чаты» (`TelegramChatsTab` — куда уходят сводки). The Telegram tabs read/write `/telegram/*` endpoints; bot token is never returned in full by the API, only `tokenHint`. Errors surface through `apiErrorMessage` from `lib/api.ts`.

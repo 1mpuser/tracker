@@ -4,6 +4,8 @@
 
 ## Зачем это существует (не техническая, а личная мотивация)
 
+> Примечание: в коде сущность «YouTube» называется «залипание» (`distraction*`) с настраиваемым названием — у владельца в интерфейсе оно выставлено в «YouTube». Мотивационная история ниже остаётся личной историей владельца, не переписывается.
+
 Это не абстрактный pet-project — это инструмент самоуправления, выросший из конкретной личной задачи, и его стоит оценивать по тому, решает ли он эту задачу, а не по тому, насколько он архитектурно красив.
 
 **Изначальная идея (трекер сфер):** дисциплина и привычка — ежедневная фиксация "сделал / не сделал" по сферам жизни, чтобы не терять регулярность. Из этого же корня растут два конкретных механизма контроля:
@@ -31,11 +33,13 @@
 
 ### 1. Ежедневный трекер (изначальная часть)
 - **Category** — сфера жизни (напр. "спорт", "чтение") с `key`/`label`/`order`/`archived` (soft-delete).
-- **Day** — один день: `date` (уникальная), `youtubeMinutes`, `pomodoros`, `eveningClosed`, `rating`, `comment`.
+- **Day** — один день: `date` (уникальная), `distractionMinutes`, `pomodoros`, `eveningClosed`, `rating`, `comment`.
 - **DayCategoryStatus** — булево "сделано/не сделано" сферы X в день Y.
 - **DailyTask** — легаси-модель для задач дня (текст, done, order, carry-over). **UI на неё уже не опирается** — заменена GTD-плитой (`plannedDate`), но модель и `/tasks` эндпоинт в БД остались (backend модуль `dailies` уже выпилен — см. коммит `retire dailies module`).
 - **TaskTemplate** — шаблоны повторяющихся задач.
-- **Settings** — синглтон-строка настроек (youtube budget, notifications on/off).
+- **Settings** — синглтон-строка настроек (distraction budget + настраиваемое название «залипания», notifications on/off, токен Telegram-бота).
+- **TelegramChat** — чат, куда уходят сводки (может быть несколько: `daily`/`weekly` флаги).
+- **TelegramPost** — факт публикации сводки в чат (`@@unique([dayId, chatId, kind])`) — идемпотентность «один пост на день/неделю на чат».
 
 ### 2. GTD-система (новая, активно растущая часть)
 - **GtdItem** — универсальная запись GTD со статусом-конечным-автоматом:
@@ -49,8 +53,9 @@ GTD де-факто заменила механизм ежедневных за�
 `backend/src/<feature>/` — NestJS-модули по фичам, каждый со своим `*.controller.ts`/`*.service.ts`/`*.module.ts`/`dto/` и unit-тестом сервиса (мокается `PrismaService` напрямую, без `@nestjs/testing`).
 
 - **categories** — CRUD сфер (`GET/POST /categories`, `PATCH /categories/:key`).
-- **days** — `GET/PATCH /days/:date`, `PATCH /days/:date/categories/:key`, `/youtube`, `/pomodoros`, `GET /history`. Каждый эндпоинт принимает произвольную дату, не только "сегодня" — это то, что позволяет `DayDetailModal` работать с прошлыми днями без изменений в бэкенде.
-- **stats** — агрегаты для графиков: `GET /stats/categories`, `/stats/youtube`, `/stats/youtube-daily`.
+- **days** — `GET/PATCH /days/:date`, `PATCH /days/:date/categories/:key`, `/distraction`, `/pomodoros`, `GET /history`. Каждый эндпоинт принимает произвольную дату, не только "сегодня" — это то, что позволяет `DayDetailModal` работать с прошлыми днями без изменений в бэкенде.
+- **stats** — агрегаты для графиков: `GET /stats/categories`, `/stats/distraction`, `/stats/distraction-daily`, `/stats/week`.
+- **telegram** — три сервиса: dumb HTTP-клиент Bot API (`TelegramService`), конфиг токена и чатов с env-фоллбэком (`TelegramConfigService`, эндпоинты `/telegram/bot`, `/telegram/chats`, `/telegram/discover`) и рассылка сводок по чатам с идемпотентностью (`TelegramDeliveryService)`.
 - **task-templates** — CRUD шаблонов повторяющихся задач.
 - **settings** — синглтон настроек.
 - **gtd** — ядро GTD: `GET /gtd/items?status=`, `POST /gtd/items`, `POST /gtd/items/today` (создать сразу с `plannedDate`), `PATCH/DELETE /gtd/items/:id`. При обновлении статуса на `reference` — синк заметки в Obsidian; при появлении/пропадании "эффективного дедлайна" — синк/удаление напоминания в iCloud (см. ниже).
@@ -63,7 +68,7 @@ GTD де-факто заменила механизм ежедневных за�
 
 Next.js App Router, но фактически SPA: `app/page.tsx` рендерит один компонент `Dashboard.tsx` (`'use client'`), который владеет почти всем верхнеуровневым состоянием и всё тянет через `useEffect` (никакого серверного рендеринга реальных данных — curl всегда увидит только "загрузка…").
 
-Два таба в `Dashboard`: **Главный** (сферы дня, Today-панель = срез GTD, YouTube/Pomodoro-панели, статистика) и **GTD** (`GtdScreen`).
+Два таба в `Dashboard`: **Главный** (сферы дня, Today-панель = срез GTD, панели «залипания»/Pomodoro, статистика) и **GTD** (`GtdScreen`).
 
 Ключевые компоненты GTD-раздела:
 - **GtdScreen** — табы по статусам-корзинам (Inbox, Backlog, Calendar, Someday, Waiting, Project, Reference, а Done/Archived подгружаются лениво), поиск, счётчики, единственное открытое контекстное меню строки одновременно.
@@ -73,7 +78,7 @@ Next.js App Router, но фактически SPA: `app/page.tsx` рендери
 - **WeeklyReview** — управляемый модал еженедельного ревью, проводит по бакетам (backlog/projects/waiting/someday). Триггерится напоминанием по воскресеньям после 11:00 (локальное время, `isWeeklyReviewWindow`).
 - **TodayPanel** — плитка "сегодня" на главном экране, теперь читает GTD (`plannedDate == today`), а не старую DailyTask-модель.
 
-Прочие компоненты главного экрана (`SpheresPanel`, `YoutubePanel`, `PomodoroPanel`, `StatsPanel`, `CategoryHeatmap`, `StreakHeatmap`, `DayDetailModal` и т.д.) — из изначального трекера, устройство подробно описано в `CLAUDE.md`.
+Прочие компоненты главного экрана (`SpheresPanel`, `DistractionPanel`, `PomodoroPanel`, `StatsPanel`, `CategoryHeatmap`, `StreakHeatmap`, `DayDetailModal` и т.д.) — из изначального трекера, устройство подробно описано в `CLAUDE.md`. Настройки — модал с вкладками (сферы, шаблоны задач, «Залипание», Telegram-бот, Чаты).
 
 `frontend/lib/*.ts` — вся чистая логика, TDD-покрыта: `api.ts` (типизированный fetch-клиент), `date.ts` (`todayLocal()` — единственный источник "какой сегодня день" для всего приложения, специально локальный, не UTC), `streak.ts` (порог засчитывания дня — `completed >= 2` сферы), `heatmap.ts`, `transliterate.ts`, `notifications.ts`, `gtd.ts` (сортировка/бакеты GTD), `pomodoro.ts`.
 
