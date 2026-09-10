@@ -1,7 +1,7 @@
 import { BadGatewayException, BadRequestException, Body, ConflictException, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { DaysService } from './days.service';
 import { UpdateCategoryStatusDto } from './dto/update-category-status.dto';
-import { UpdateYoutubeDto } from './dto/update-youtube.dto';
+import { UpdateDistractionDto } from './dto/update-distraction.dto';
 import { UpdatePomodorosDto } from './dto/update-pomodoros.dto';
 import { UpdateDayDto } from './dto/update-day.dto';
 import { WeeklySummaryDto } from './dto/weekly-summary.dto';
@@ -31,9 +31,9 @@ export class DaysController {
     return this.daysService.setCategoryStatus(date, key, dto.done);
   }
 
-  @Patch('days/:date/youtube')
-  updateYoutube(@Param('date') date: string, @Body() dto: UpdateYoutubeDto) {
-    return this.daysService.updateYoutube(date, dto.delta, dto.reset);
+  @Patch('days/:date/distraction')
+  updateDistraction(@Param('date') date: string, @Body() dto: UpdateDistractionDto) {
+    return this.daysService.updateDistraction(date, dto.delta, dto.reset);
   }
 
   @Patch('days/:date/pomodoros')

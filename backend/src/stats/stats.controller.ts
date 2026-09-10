@@ -11,16 +11,16 @@ export class StatsController {
     return this.statsService.categoryStats(Number.isNaN(parsed) ? 30 : parsed);
   }
 
-  @Get('youtube')
-  youtubeWeekly(@Query('weeks') weeks?: string) {
+  @Get('distraction')
+  distractionWeekly(@Query('weeks') weeks?: string) {
     const parsed = weeks ? parseInt(weeks, 10) : 8;
-    return this.statsService.youtubeWeeklyStats(Number.isNaN(parsed) ? 8 : parsed);
+    return this.statsService.distractionWeeklyStats(Number.isNaN(parsed) ? 8 : parsed);
   }
 
-  @Get('youtube-daily')
-  youtubeDaily(@Query('days') days?: string) {
+  @Get('distraction-daily')
+  distractionDaily(@Query('days') days?: string) {
     const parsed = days ? parseInt(days, 10) : 30;
-    return this.statsService.youtubeDailyStats(Number.isNaN(parsed) ? 30 : parsed);
+    return this.statsService.distractionDailyStats(Number.isNaN(parsed) ? 30 : parsed);
   }
 
   @Get('week')

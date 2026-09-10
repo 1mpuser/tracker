@@ -1,6 +1,6 @@
 import { StatsService } from './stats.service';
 
-describe('StatsService.youtubeDailyStats', () => {
+describe('StatsService.distractionDailyStats', () => {
   beforeEach(() => {
     // Fixed system time so "today" inside the service is deterministic.
     jest.useFakeTimers().setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
@@ -13,12 +13,12 @@ describe('StatsService.youtubeDailyStats', () => {
   it('computes pct as minutes-over-budget, defaulting missing days to 0', async () => {
     const today = new Date(Date.UTC(2026, 6, 15));
     const prisma: any = {
-      settings: { findUnique: jest.fn().mockResolvedValue({ youtubeBudget: 50 }) },
-      day: { findMany: jest.fn().mockResolvedValue([{ date: today, youtubeMinutes: 25 }]) },
+      settings: { findUnique: jest.fn().mockResolvedValue({ distractionBudget: 50 }) },
+      day: { findMany: jest.fn().mockResolvedValue([{ date: today, distractionMinutes: 25 }]) },
     };
     const service = new StatsService(prisma);
 
-    const result = await service.youtubeDailyStats(2);
+    const result = await service.distractionDailyStats(2);
 
     expect(result).toHaveLength(2);
     expect(result[1].minutes).toBe(25);
@@ -28,7 +28,7 @@ describe('StatsService.youtubeDailyStats', () => {
   });
 });
 
-describe('StatsService.youtubeWeeklyStats', () => {
+describe('StatsService.distractionWeeklyStats', () => {
   beforeEach(() => {
     // Fixed system time (a Wednesday) so Monday-alignment is deterministic and assertable.
     jest.useFakeTimers().setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
@@ -40,12 +40,12 @@ describe('StatsService.youtubeWeeklyStats', () => {
 
   it('averages minutes across all 7 days of each week, treating gaps as 0, aligned to Monday', async () => {
     const prisma: any = {
-      settings: { findUnique: jest.fn().mockResolvedValue({ youtubeBudget: 60 }) },
+      settings: { findUnique: jest.fn().mockResolvedValue({ distractionBudget: 60 }) },
       day: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const service = new StatsService(prisma);
 
-    const result = await service.youtubeWeeklyStats(1);
+    const result = await service.distractionWeeklyStats(1);
 
     expect(result).toHaveLength(1);
     expect(result[0].weekStart).toBe('2026-07-13'); // Monday of the week containing 2026-07-15
@@ -56,12 +56,12 @@ describe('StatsService.youtubeWeeklyStats', () => {
   it('aligns to Monday even when "today" is itself a Sunday', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-07-19T12:00:00.000Z')); // Sunday
     const prisma: any = {
-      settings: { findUnique: jest.fn().mockResolvedValue({ youtubeBudget: 60 }) },
+      settings: { findUnique: jest.fn().mockResolvedValue({ distractionBudget: 60 }) },
       day: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const service = new StatsService(prisma);
 
-    const result = await service.youtubeWeeklyStats(1);
+    const result = await service.distractionWeeklyStats(1);
 
     expect(result[0].weekStart).toBe('2026-07-13'); // Monday of the *same* week, not the next one
   });
@@ -102,7 +102,7 @@ describe('StatsService.weekStats', () => {
 
   function makePrisma(overrides: any = {}) {
     return {
-      settings: { findUnique: jest.fn().mockResolvedValue({ youtubeBudget: 60 }) },
+      settings: { findUnique: jest.fn().mockResolvedValue({ distractionBudget: 60 }) },
       category: { findMany: jest.fn().mockResolvedValue([]) },
       dayCategoryStatus: { findMany: jest.fn().mockResolvedValue([]) },
       day: { findMany: jest.fn().mockResolvedValue([]) },
@@ -135,7 +135,7 @@ describe('StatsService.weekStats', () => {
     const prisma = makePrisma({
       day: {
         findMany: jest.fn().mockResolvedValue([
-          { date: utc(2026, 7, 29), pomodoros: 5, rating: 8, eveningClosed: true, youtubeMinutes: 0 },
+          { date: utc(2026, 7, 29), pomodoros: 5, rating: 8, eveningClosed: true, distractionMinutes: 0 },
         ]),
       },
     });
@@ -151,8 +151,8 @@ describe('StatsService.weekStats', () => {
     const prisma = makePrisma({
       day: {
         findMany: jest.fn().mockResolvedValue([
-          { date: utc(2026, 7, 27), pomodoros: 7, rating: null, eveningClosed: true, youtubeMinutes: 0 },
-          { date: utc(2026, 7, 28), pomodoros: 7, rating: null, eveningClosed: true, youtubeMinutes: 0 },
+          { date: utc(2026, 7, 27), pomodoros: 7, rating: null, eveningClosed: true, distractionMinutes: 0 },
+          { date: utc(2026, 7, 28), pomodoros: 7, rating: null, eveningClosed: true, distractionMinutes: 0 },
         ]),
       },
     });
@@ -168,9 +168,9 @@ describe('StatsService.weekStats', () => {
     const prisma = makePrisma({
       day: {
         findMany: jest.fn().mockResolvedValue([
-          { date: utc(2026, 7, 27), pomodoros: 0, rating: 8, eveningClosed: true, youtubeMinutes: 0 },
-          { date: utc(2026, 7, 28), pomodoros: 0, rating: 6, eveningClosed: true, youtubeMinutes: 0 },
-          { date: utc(2026, 7, 29), pomodoros: 0, rating: null, eveningClosed: false, youtubeMinutes: 0 },
+          { date: utc(2026, 7, 27), pomodoros: 0, rating: 8, eveningClosed: true, distractionMinutes: 0 },
+          { date: utc(2026, 7, 28), pomodoros: 0, rating: 6, eveningClosed: true, distractionMinutes: 0 },
+          { date: utc(2026, 7, 29), pomodoros: 0, rating: null, eveningClosed: false, distractionMinutes: 0 },
         ]),
       },
     });
@@ -196,8 +196,8 @@ describe('StatsService.weekStats', () => {
     const prisma = makePrisma({
       day: {
         findMany: jest.fn().mockResolvedValue([
-          { date: utc(2026, 7, 28), pomodoros: 9, rating: null, eveningClosed: true, youtubeMinutes: 0 },
-          { date: utc(2026, 7, 31), pomodoros: 9, rating: null, eveningClosed: true, youtubeMinutes: 0 },
+          { date: utc(2026, 7, 28), pomodoros: 9, rating: null, eveningClosed: true, distractionMinutes: 0 },
+          { date: utc(2026, 7, 31), pomodoros: 9, rating: null, eveningClosed: true, distractionMinutes: 0 },
         ]),
       },
     });
@@ -226,11 +226,11 @@ describe('StatsService.weekStats', () => {
     expect(result.categories).toEqual([{ label: 'Спорт', doneCount: 2 }]);
   });
 
-  it('averages youtube minutes over seven days', async () => {
+  it('averages distraction minutes over seven days', async () => {
     const prisma = makePrisma({
       day: {
         findMany: jest.fn().mockResolvedValue([
-          { date: utc(2026, 7, 27), pomodoros: 0, rating: null, eveningClosed: false, youtubeMinutes: 70 },
+          { date: utc(2026, 7, 27), pomodoros: 0, rating: null, eveningClosed: false, distractionMinutes: 70 },
         ]),
       },
     });
@@ -238,7 +238,21 @@ describe('StatsService.weekStats', () => {
 
     const result = await service.weekStats('2026-08-02');
 
-    expect(result.youtubeAvgMinutes).toBe(10);
-    expect(result.youtubeBudget).toBe(60);
+    expect(result.distractionAvgMinutes).toBe(10);
+    expect(result.distractionBudget).toBe(60);
+  });
+
+  it('uses the configured distraction label, defaulting to «Залипание»', async () => {
+    const prisma = makePrisma({
+      settings: { findUnique: jest.fn().mockResolvedValue({ distractionBudget: 60, distractionLabel: 'Шортсы' }) },
+    });
+    const service = new StatsService(prisma as any);
+
+    const result = await service.weekStats('2026-08-02');
+
+    expect(result.distractionLabel).toBe('Шортсы');
+
+    prisma.settings.findUnique.mockResolvedValue(null);
+    expect((await service.weekStats('2026-08-02')).distractionLabel).toBe('Залипание');
   });
 });

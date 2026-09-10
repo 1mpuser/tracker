@@ -17,7 +17,7 @@ describe('DaysService.getDay', () => {
   it('exposes the pomodoro count from the day row', async () => {
     prisma.day.findUnique.mockResolvedValue({
       date: new Date('2026-07-15T00:00:00.000Z'),
-      youtubeMinutes: 0,
+      distractionMinutes: 0,
       pomodoros: 2,
       eveningClosed: false,
       rating: null,
@@ -33,7 +33,7 @@ describe('DaysService.getDay', () => {
   it('returns today\'s gtd slice from getForDate', async () => {
     prisma.day.findUnique.mockResolvedValue({
       date: new Date('2026-07-15T00:00:00.000Z'),
-      youtubeMinutes: 0, pomodoros: 0, eveningClosed: false, rating: null, comment: null,
+      distractionMinutes: 0, pomodoros: 0, eveningClosed: false, rating: null, comment: null,
       categories: [],
     });
     gtdService.getForDate.mockResolvedValue([{ id: 9, title: 'Из бэклога', status: 'backlog', plannedDate: '2026-07-15' }]);
@@ -72,7 +72,7 @@ describe('DaysService.getHistory', () => {
       { id: 1, key: 'sport', archived: false },
       { id: 2, key: 'family', archived: false },
     ]);
-    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+    prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
     const [entry] = await service.getHistory(1);
 
@@ -85,7 +85,7 @@ describe('DaysService.getHistory', () => {
     prisma.day.findMany.mockResolvedValue([
       {
         date: today,
-        youtubeMinutes: 10,
+        distractionMinutes: 10,
         categories: [{ categoryId: 3, done: true }],
       },
     ]);
@@ -93,7 +93,7 @@ describe('DaysService.getHistory', () => {
       { id: 1, key: 'sport', archived: false },
       { id: 3, key: 'old', archived: true },
     ]);
-    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+    prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
     const [entry] = await service.getHistory(1);
 
@@ -107,31 +107,31 @@ describe('DaysService.getHistory', () => {
       { id: 1, key: 'sport', archived: false },
       { id: 3, key: 'old', archived: true },
     ]);
-    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+    prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
     const [entry] = await service.getHistory(1);
 
     expect(entry.total).toBe(1);
   });
 
-  it('flags ytOver when minutes exceed the current budget', async () => {
+  it('flags distractionOver when minutes exceed the current budget', async () => {
     const today = new Date(Date.UTC(2026, 6, 15));
     prisma.day.findMany.mockResolvedValue([
-      { date: today, youtubeMinutes: 90, categories: [] },
+      { date: today, distractionMinutes: 90, categories: [] },
     ]);
     prisma.category.findMany.mockResolvedValue([]);
-    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+    prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
     const [entry] = await service.getHistory(1);
 
-    expect(entry.ytOver).toBe(true);
+    expect(entry.distractionOver).toBe(true);
   });
 
   it('exposes the day row\'s rating', async () => {
     const today = new Date(Date.UTC(2026, 6, 15));
-    prisma.day.findMany.mockResolvedValue([{ date: today, youtubeMinutes: 0, rating: 7, categories: [] }]);
+    prisma.day.findMany.mockResolvedValue([{ date: today, distractionMinutes: 0, rating: 7, categories: [] }]);
     prisma.category.findMany.mockResolvedValue([]);
-    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+    prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
     const [entry] = await service.getHistory(1);
 
@@ -141,7 +141,7 @@ describe('DaysService.getHistory', () => {
   it('defaults rating to null when there is no history record for the day', async () => {
     prisma.day.findMany.mockResolvedValue([]);
     prisma.category.findMany.mockResolvedValue([]);
-    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+    prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
     const [entry] = await service.getHistory(1);
 
@@ -151,7 +151,7 @@ describe('DaysService.getHistory', () => {
   it('anchors the range on the real clock when no end date is given', async () => {
     prisma.day.findMany.mockResolvedValue([]);
     prisma.category.findMany.mockResolvedValue([]);
-    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+    prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
     const [entry] = await service.getHistory(1);
 
@@ -161,7 +161,7 @@ describe('DaysService.getHistory', () => {
   it('anchors the range on the given end date instead of the real clock', async () => {
     prisma.day.findMany.mockResolvedValue([]);
     prisma.category.findMany.mockResolvedValue([]);
-    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+    prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
     const [entry] = await service.getHistory(1, '2026-07-20');
 
@@ -170,9 +170,9 @@ describe('DaysService.getHistory', () => {
 
   it('exposes the day row\'s pomodoro count, defaulting to 0', async () => {
     const today = new Date(Date.UTC(2026, 6, 15));
-    prisma.day.findMany.mockResolvedValue([{ date: today, youtubeMinutes: 0, pomodoros: 6, categories: [] }]);
+    prisma.day.findMany.mockResolvedValue([{ date: today, distractionMinutes: 0, pomodoros: 6, categories: [] }]);
     prisma.category.findMany.mockResolvedValue([]);
-    prisma.settings.findUnique.mockResolvedValue({ youtubeBudget: 60 });
+    prisma.settings.findUnique.mockResolvedValue({ distractionBudget: 60 });
 
     const [entry] = await service.getHistory(1);
 
@@ -210,7 +210,7 @@ describe('DaysService.updateDay telegram posting', () => {
     return {
       id: 1,
       date: new Date('2026-08-01T00:00:00.000Z'),
-      youtubeMinutes: 0,
+      distractionMinutes: 0,
       pomodoros: 7,
       eveningClosed: false,
       rating: 8,
@@ -368,7 +368,7 @@ describe('DaysService.setPomodoros', () => {
         findUnique: jest.fn().mockResolvedValue({
           id: 1,
           date: new Date('2026-08-04T00:00:00.000Z'),
-          youtubeMinutes: 0,
+          distractionMinutes: 0,
           pomodoros: 7,
           eveningClosed: false,
           rating: null,
@@ -415,8 +415,9 @@ describe('DaysService.postWeeklySummary', () => {
     avgRating: null,
     ratedDays: 0,
     categories: [],
-    youtubeAvgMinutes: 0,
-    youtubeBudget: 60,
+    distractionAvgMinutes: 0,
+    distractionBudget: 60,
+    distractionLabel: 'Залипание',
   };
 
   beforeEach(() => {

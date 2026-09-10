@@ -21,8 +21,9 @@ function makeStats(overrides: Partial<WeekStats> = {}): WeekStats {
     avgRating: 7.4,
     ratedDays: 6,
     categories: [{ label: 'Спорт', doneCount: 5 }],
-    youtubeAvgMinutes: 42,
-    youtubeBudget: 60,
+    distractionAvgMinutes: 42,
+    distractionBudget: 60,
+    distractionLabel: 'Залипание',
     ...overrides,
   };
 }
@@ -180,7 +181,7 @@ describe('buildWeekSummary rating line', () => {
 });
 
 describe('buildWeekSummary', () => {
-  it('includes totals, best day, rating, spheres and youtube', () => {
+  it('includes totals, best day, rating, spheres and the distraction line', () => {
     const text = buildWeekSummary(makeStats());
 
     expect(text).toContain('📊 Неделя 27 июля — 2 августа 2026');
@@ -188,7 +189,19 @@ describe('buildWeekSummary', () => {
     expect(text).toContain('🔥 Лучший день: среда — 8');
     expect(text).toContain('⭐ Средняя оценка: 7.4/10 (по 6 дням)');
     expect(text).toContain('✅ Спорт 5/7');
-    expect(text).toContain('📺 YouTube: 42 мин/день при бюджете 60');
+    expect(text).toContain('📺 Залипание: 42 мин/день при бюджете 60');
+  });
+
+  it('uses the configured distraction label in the summary line', () => {
+    const text = buildWeekSummary(
+      makeStats({ distractionAvgMinutes: 42.5, distractionBudget: 60, distractionLabel: 'Шортсы' }),
+    );
+    expect(text).toContain('📺 Шортсы: 42.5 мин/день при бюджете 60');
+  });
+
+  it('escapes html in the distraction label', () => {
+    const text = buildWeekSummary(makeStats({ distractionLabel: '<b>Reels</b>' }));
+    expect(text).toContain('📺 &lt;b&gt;Reels&lt;/b&gt;:');
   });
 
   it('omits the rating line when nothing was rated', () => {

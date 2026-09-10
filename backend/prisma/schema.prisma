@@ -19,7 +19,7 @@ model Category {
 model Day {
   id                Int      @id @default(autoincrement())
   date              DateTime @unique @db.Date
-  youtubeMinutes    Int      @default(0)
+  distractionMinutes Int     @default(0)
   pomodoros         Int      @default(0)
   eveningClosed     Boolean  @default(false)
   rating            Int?
@@ -62,7 +62,8 @@ model TaskTemplate {
 
 model Settings {
   id                   Int     @id @default(1)
-  youtubeBudget        Int     @default(60)
+  distractionBudget    Int     @default(60)
+  distractionLabel     String  @default("Залипание")
   notificationsEnabled Boolean @default(false)
 }
 

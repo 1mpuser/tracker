@@ -15,7 +15,7 @@ export interface DayCategoryView {
 
 export interface DayView {
   date: string;
-  youtubeMinutes: number;
+  distractionMinutes: number;
   pomodoros: number;
   eveningClosed: boolean;
   rating: number | null;
@@ -29,7 +29,7 @@ export interface HistoryEntry {
   completed: number;
   total: number;
   pomodoros: number;
-  ytOver: boolean;
+  distractionOver: boolean;
   rating: number | null;
 }
 
@@ -80,7 +80,7 @@ export class DaysService {
 
     return {
       date: formatDate(day.date),
-      youtubeMinutes: day.youtubeMinutes,
+      distractionMinutes: day.distractionMinutes,
       pomodoros: day.pomodoros,
       eveningClosed: day.eveningClosed,
       rating: day.rating,
@@ -108,11 +108,11 @@ export class DaysService {
     return this.getDay(dateStr);
   }
 
-  async updateYoutube(dateStr: string, delta?: number, reset?: boolean): Promise<DayView> {
+  async updateDistraction(dateStr: string, delta?: number, reset?: boolean): Promise<DayView> {
     const dayId = await this.getOrCreateDayId(dateStr);
     const day = await this.prisma.day.findUniqueOrThrow({ where: { id: dayId } });
-    const nextMinutes = reset ? 0 : Math.max(0, day.youtubeMinutes + (delta ?? 0));
-    await this.prisma.day.update({ where: { id: dayId }, data: { youtubeMinutes: nextMinutes } });
+    const nextMinutes = reset ? 0 : Math.max(0, day.distractionMinutes + (delta ?? 0));
+    await this.prisma.day.update({ where: { id: dayId }, data: { distractionMinutes: nextMinutes } });
     return this.getDay(dateStr);
   }
 
@@ -225,7 +225,7 @@ export class DaysService {
       this.prisma.settings.findUnique({ where: { id: 1 } }),
     ]);
 
-    const budget = settings?.youtubeBudget ?? 60;
+    const budget = settings?.distractionBudget ?? 60;
     const dayByDate = new Map(days.map((d) => [formatDate(d.date), d]));
 
     const result: HistoryEntry[] = [];
@@ -235,13 +235,13 @@ export class DaysService {
       const statusByCategoryId = new Map((day?.categories ?? []).map((s) => [s.categoryId, s]));
       const activeSet = categories.filter((c) => !c.archived || statusByCategoryId.has(c.id));
       const completed = activeSet.filter((c) => statusByCategoryId.get(c.id)?.done).length;
-      const youtubeMinutes = day?.youtubeMinutes ?? 0;
+      const distractionMinutes = day?.distractionMinutes ?? 0;
       result.push({
         date,
         completed,
         total: activeSet.length,
         pomodoros: day?.pomodoros ?? 0,
-        ytOver: youtubeMinutes > budget,
+        distractionOver: distractionMinutes > budget,
         rating: day?.rating ?? null,
       });
     }

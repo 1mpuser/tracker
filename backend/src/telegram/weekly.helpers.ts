@@ -93,7 +93,7 @@ export function buildWeekSummary(stats: WeekStats): string {
     }
   }
 
-  lines.push('', `📺 YouTube: ${stats.youtubeAvgMinutes} мин/день при бюджете ${stats.youtubeBudget}`);
+  lines.push('', `📺 ${escapeHtml(stats.distractionLabel)}: ${stats.distractionAvgMinutes} мин/день при бюджете ${stats.distractionBudget}`);
 
   return lines.join('\n');
 }

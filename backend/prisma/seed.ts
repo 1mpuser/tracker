@@ -11,7 +11,7 @@ const DEFAULT_CATEGORIES = [
   { key: 'work', label: 'Работа / финансы', order: 4 },
 ];
 
-const DEFAULT_YOUTUBE_BUDGET = parseInt(process.env.YOUTUBE_BUDGET_DEFAULT ?? '60', 10);
+const DEFAULT_DISTRACTION_BUDGET = parseInt(process.env.DISTRACTION_BUDGET_DEFAULT ?? '60', 10);
 
 async function main() {
   for (const cat of DEFAULT_CATEGORIES) {
@@ -25,7 +25,7 @@ async function main() {
   await prisma.settings.upsert({
     where: { id: 1 },
     update: {},
-    create: { id: 1, youtubeBudget: DEFAULT_YOUTUBE_BUDGET },
+    create: { id: 1, distractionBudget: DEFAULT_DISTRACTION_BUDGET },
   });
 }
 

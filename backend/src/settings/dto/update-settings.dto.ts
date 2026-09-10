@@ -1,10 +1,18 @@
-import { IsBoolean, IsInt, IsOptional, Min } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class UpdateSettingsDto {
   @IsOptional()
   @IsInt()
   @Min(0)
-  youtubeBudget?: number;
+  distractionBudget?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(32)
+  distractionLabel?: string;
 
   @IsOptional()
   @IsBoolean()

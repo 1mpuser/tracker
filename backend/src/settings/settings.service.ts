@@ -5,7 +5,8 @@ import { SessionService } from '../session/session.service';
 
 interface SettingsRow {
   id: number;
-  youtubeBudget: number;
+  distractionBudget: number;
+  distractionLabel: string;
   notificationsEnabled: boolean;
 }
 

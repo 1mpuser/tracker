@@ -8,9 +8,19 @@ describe('SettingsService', () => {
   beforeEach(() => {
     prisma = {
       settings: {
-        findUnique: jest.fn().mockResolvedValue({ id: 1, youtubeBudget: 60, notificationsEnabled: false }),
+        findUnique: jest.fn().mockResolvedValue({
+          id: 1,
+          distractionBudget: 60,
+          distractionLabel: 'Залипание',
+          notificationsEnabled: false,
+        }),
         create: jest.fn(),
-        update: jest.fn().mockResolvedValue({ id: 1, youtubeBudget: 90, notificationsEnabled: false }),
+        update: jest.fn().mockResolvedValue({
+          id: 1,
+          distractionBudget: 90,
+          distractionLabel: 'Залипание',
+          notificationsEnabled: false,
+        }),
       },
     };
     session = { isEnabled: jest.fn().mockReturnValue(true) };
@@ -20,7 +30,8 @@ describe('SettingsService', () => {
   it('exposes sessionSyncEnabled from the session service on get', async () => {
     expect(await service.get()).toEqual({
       id: 1,
-      youtubeBudget: 60,
+      distractionBudget: 60,
+      distractionLabel: 'Залипание',
       notificationsEnabled: false,
       sessionSyncEnabled: true,
     });
@@ -32,27 +43,52 @@ describe('SettingsService', () => {
   });
 
   it('keeps the flag on the update response', async () => {
-    const result = await service.update({ youtubeBudget: 90 });
+    const result = await service.update({ distractionBudget: 90 });
     expect(result.sessionSyncEnabled).toBe(true);
-    expect(result.youtubeBudget).toBe(90);
+    expect(result.distractionBudget).toBe(90);
+  });
+
+  it('passes distractionLabel through on update', async () => {
+    prisma.settings.update.mockResolvedValue({
+      id: 1,
+      distractionBudget: 60,
+      distractionLabel: 'Шортсы',
+      notificationsEnabled: false,
+    });
+    const result = await service.update({ distractionLabel: 'Шортсы' });
+    expect(prisma.settings.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { distractionLabel: 'Шортсы' },
+    });
+    expect(result.distractionLabel).toBe('Шортсы');
   });
 
   it('creates the row with defaults if it does not exist yet', async () => {
     prisma.settings.findUnique.mockResolvedValue(null);
-    prisma.settings.create.mockResolvedValue({ id: 1, youtubeBudget: 60, notificationsEnabled: false });
+    prisma.settings.create.mockResolvedValue({
+      id: 1,
+      distractionBudget: 60,
+      distractionLabel: 'Залипание',
+      notificationsEnabled: false,
+    });
 
     const result = await service.get();
 
     expect(prisma.settings.create).toHaveBeenCalledWith({ data: { id: 1 } });
-    expect(result.youtubeBudget).toBe(60);
+    expect(result.distractionBudget).toBe(60);
   });
 
   it('returns the existing row without creating a new one', async () => {
-    prisma.settings.findUnique.mockResolvedValue({ id: 1, youtubeBudget: 90, notificationsEnabled: true });
+    prisma.settings.findUnique.mockResolvedValue({
+      id: 1,
+      distractionBudget: 90,
+      distractionLabel: 'Залипание',
+      notificationsEnabled: true,
+    });
 
     const result = await service.get();
 
     expect(prisma.settings.create).not.toHaveBeenCalled();
-    expect(result.youtubeBudget).toBe(90);
+    expect(result.distractionBudget).toBe(90);
   });
 });

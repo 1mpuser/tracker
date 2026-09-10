@@ -23,8 +23,9 @@ export interface WeekStats {
   avgRating: number | null;
   ratedDays: number;
   categories: { label: string; doneCount: number }[];
-  youtubeAvgMinutes: number;
-  youtubeBudget: number;
+  distractionAvgMinutes: number;
+  distractionBudget: number;
+  distractionLabel: string;
 }
 
 @Injectable()
@@ -62,18 +63,18 @@ export class StatsService {
     });
   }
 
-  async youtubeWeeklyStats(weeks: number) {
+  async distractionWeeklyStats(weeks: number) {
     const settings = await this.prisma.settings.findUnique({ where: { id: 1 } });
-    const budget = settings?.youtubeBudget ?? 60;
+    const budget = settings?.distractionBudget ?? 60;
 
     const todayMonday = mondayOf(todayDate());
     const firstMonday = addDays(todayMonday, -(weeks - 1) * 7);
 
     const days = await this.prisma.day.findMany({
       where: { date: { gte: firstMonday, lte: addDays(todayMonday, 6) } },
-      select: { date: true, youtubeMinutes: true },
+      select: { date: true, distractionMinutes: true },
     });
-    const minutesByDate = new Map(days.map((d) => [formatDate(d.date), d.youtubeMinutes]));
+    const minutesByDate = new Map(days.map((d) => [formatDate(d.date), d.distractionMinutes]));
 
     const result = [];
     for (let w = 0; w < weeks; w++) {
@@ -91,7 +92,7 @@ export class StatsService {
     return result;
   }
 
-  async youtubeDailyStats(days: number) {
+  async distractionDailyStats(days: number) {
     const end = todayDate();
     const start = addDays(end, -(days - 1));
 
@@ -99,11 +100,11 @@ export class StatsService {
       this.prisma.settings.findUnique({ where: { id: 1 } }),
       this.prisma.day.findMany({
         where: { date: { gte: start, lte: end } },
-        select: { date: true, youtubeMinutes: true },
+        select: { date: true, distractionMinutes: true },
       }),
     ]);
-    const budget = settings?.youtubeBudget ?? 60;
-    const minutesByDate = new Map(dayRows.map((d) => [formatDate(d.date), d.youtubeMinutes]));
+    const budget = settings?.distractionBudget ?? 60;
+    const minutesByDate = new Map(dayRows.map((d) => [formatDate(d.date), d.distractionMinutes]));
 
     const result = [];
     for (let i = 0; i < days; i++) {
@@ -128,7 +129,7 @@ export class StatsService {
       this.prisma.category.findMany({ where: { archived: false }, orderBy: { order: 'asc' } }),
       this.prisma.day.findMany({
         where: { date: { gte: monday, lte: sunday } },
-        select: { date: true, pomodoros: true, rating: true, eveningClosed: true, youtubeMinutes: true },
+        select: { date: true, pomodoros: true, rating: true, eveningClosed: true, distractionMinutes: true },
       }),
       this.prisma.dayCategoryStatus.findMany({
         where: { day: { date: { gte: monday, lte: sunday } } },
@@ -170,7 +171,7 @@ export class StatsService {
       if (s.done) doneByCategory.set(s.categoryId, (doneByCategory.get(s.categoryId) ?? 0) + 1);
     }
 
-    const youtubeTotal = dayRows.reduce((sum, d) => sum + d.youtubeMinutes, 0);
+    const distractionTotal = dayRows.reduce((sum, d) => sum + d.distractionMinutes, 0);
 
     return {
       weekStart: formatDate(monday),
@@ -187,8 +188,9 @@ export class StatsService {
           : null,
       ratedDays: rated.length,
       categories: categories.map((c) => ({ label: c.label, doneCount: doneByCategory.get(c.id) ?? 0 })),
-      youtubeAvgMinutes: Math.round((youtubeTotal / 7) * 10) / 10,
-      youtubeBudget: settings?.youtubeBudget ?? 60,
+      distractionAvgMinutes: Math.round((distractionTotal / 7) * 10) / 10,
+      distractionBudget: settings?.distractionBudget ?? 60,
+      distractionLabel: settings?.distractionLabel ?? 'Залипание',
     };
   }
 }

@@ -1,6 +1,6 @@
 import { IsBoolean, IsInt, IsOptional } from 'class-validator';
 
-export class UpdateYoutubeDto {
+export class UpdateDistractionDto {
   @IsOptional()
   @IsInt()
   delta?: number;
