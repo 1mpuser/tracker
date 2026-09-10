@@ -49,7 +49,6 @@ export default function TelegramBotTab() {
         {bot?.configured && (
           <>
             Подключён {bot.username ? <b>@{bot.username}</b> : 'бот (Telegram сейчас не ответил)'} · токен {bot.tokenHint}
-            {bot.source === 'env' && ' · из .env'}
           </>
         )}
       </div>
@@ -80,9 +79,6 @@ export default function TelegramBotTab() {
           </button>
         )}
       </div>
-      {bot?.source === 'env' && (
-        <div className={styles.hint}>Токен из .env используется, пока здесь не задан свой.</div>
-      )}
       {error && <div className={styles.error}>{error}</div>}
     </div>
   );

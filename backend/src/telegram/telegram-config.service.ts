@@ -3,85 +3,87 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService, TelegramChatInfo } from './telegram.service';
 import { isUniqueViolation } from '../common/prisma-errors';
+import { decryptSecret, encryptSecret, isEncrypted, loadEncryptionKey } from '../common/crypto.util';
 
 export interface TelegramBotView {
   configured: boolean;
-  source: 'db' | 'env' | null;
+  source: 'db' | null;
   username: string | null;
   tokenHint: string | null;
-}
-
-export interface TelegramRecipient {
-  chatId: string;
-  daily: boolean;
-  weekly: boolean;
 }
 
 const TOKEN_FORMAT = /^\d+:[A-Za-z0-9_-]{30,}$/;
 const TEST_MESSAGE = '✅ Трекер подключён к этому чату';
 
-// Пустая строка в env — это «не задано»: docker-compose подставляет '' через ${VAR:-}.
-function envValue(name: string): string | null {
-  const v = process.env[name]?.trim();
-  return v ? v : null;
-}
-
 @Injectable()
-export class TelegramConfigService {
+export class TelegramConfigService implements OnModuleInit {
+  private readonly logger = new Logger(TelegramConfigService.name);
+  private readonly encKey = loadEncryptionKey();
+
   constructor(
     private prisma: PrismaService,
     private telegram: TelegramService,
   ) {}
 
-  // Внимание: env-фоллбэки ниже — только на время Фазы 1 (однопользовательской
-  // разработки). В многопользовательском режиме (Task 3.2) они удаляются:
-  // иначе чужие действия уходили бы в Telegram владельца.
+  // Одноразовая миграция при старте: открытые токены (оставшиеся от
+  // однопользовательской версии) шифруются. Значение в логи не пишется.
+  async onModuleInit() {
+    const withToken = await this.prisma.settings.findMany({
+      where: { telegramBotToken: { not: null } },
+      select: { id: true, userId: true, telegramBotToken: true },
+    });
+    for (const row of withToken) {
+      const value = row.telegramBotToken;
+      if (value && !isEncrypted(value)) {
+        await this.prisma.settings.update({
+          where: { userId: row.userId },
+          data: { telegramBotToken: encryptSecret(value, this.encKey) },
+        });
+        this.logger.log(`Токен Telegram пользователя #${row.userId} зашифрован`);
+      }
+    }
+  }
+
   private async settingsRow(userId: number) {
     const settings = await this.prisma.settings.findUnique({ where: { userId } });
     if (settings) return settings;
     return this.prisma.settings.create({ data: { userId } });
   }
 
-  // Токен из БД → из env → null.
+  // Токен только из настроек пользователя. Env-фоллбэков нет: в
+  // многопользовательском режиме чужие действия шли бы в Telegram владельца.
   async resolveToken(userId: number): Promise<string | null> {
-    const dbToken = (await this.settingsRow(userId)).telegramBotToken;
-    return dbToken ?? envValue('TELEGRAM_BOT_TOKEN');
+    const stored = (await this.settingsRow(userId)).telegramBotToken;
+    if (!stored) return null;
+    return isEncrypted(stored) ? decryptSecret(stored, this.encKey) : stored;
   }
 
-  // chatId всех чатов пользователя с видом kind=true; env-фоллбэк — только
-  // если у пользователя таблица пуста.
   async recipients(userId: number, kind: 'day' | 'week'): Promise<string[]> {
     const chats = await this.prisma.telegramChat.findMany({
       where: { userId },
       select: { chatId: true, daily: true, weekly: true },
     });
-    const enabled = chats
+    return chats
       .filter((c) => (kind === 'day' ? c.daily : c.weekly))
       .map((c) => c.chatId);
-    if (enabled.length > 0) return enabled;
-    const envChat = envValue('TELEGRAM_CHAT_ID');
-    return envChat && chats.length === 0 ? [envChat] : [];
   }
 
   async getBot(userId: number): Promise<TelegramBotView> {
-    const dbSettings = await this.settingsRow(userId);
-    const dbToken = dbSettings.telegramBotToken;
-    const envToken = envValue('TELEGRAM_BOT_TOKEN');
-    const token = dbToken ?? envToken;
+    const token = await this.resolveToken(userId);
     if (!token) {
       return { configured: false, source: null, username: null, tokenHint: null };
     }
-
-    const source: TelegramBotView['source'] = dbToken ? 'db' : 'env';
     const me = await this.telegram.getMe(token);
     return {
       configured: true,
-      source,
+      source: 'db',
       username: me.ok ? me.username : null,
       tokenHint: `…${token.slice(-4)}`,
     };
@@ -98,7 +100,7 @@ export class TelegramConfigService {
     }
     await this.prisma.settings.update({
       where: { userId },
-      data: { telegramBotToken: trimmed },
+      data: { telegramBotToken: encryptSecret(trimmed, this.encKey) },
     });
     return this.getBot(userId);
   }
@@ -108,12 +110,9 @@ export class TelegramConfigService {
     return this.getBot(userId);
   }
 
-  async listChats(userId: number): Promise<{ chats: unknown[]; envFallback: string | null }> {
-    const [chats, count] = await Promise.all([
-      this.prisma.telegramChat.findMany({ where: { userId }, orderBy: { id: 'asc' } }),
-      this.prisma.telegramChat.count({ where: { userId } }),
-    ]);
-    return { chats, envFallback: count === 0 ? envValue('TELEGRAM_CHAT_ID') : null };
+  async listChats(userId: number): Promise<{ chats: unknown[] }> {
+    const chats = await this.prisma.telegramChat.findMany({ where: { userId }, orderBy: { id: 'asc' } });
+    return { chats };
   }
 
   async createChat(userId: number, dto: { title: string; chatId: string; daily?: boolean; weekly?: boolean }) {

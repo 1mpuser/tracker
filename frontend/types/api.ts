@@ -153,7 +153,7 @@ export interface RoutineHistoryWeek {
 
 export interface TelegramBotView {
   configured: boolean;
-  source: 'db' | 'env' | null;
+  source: 'db' | null;
   username: string | null;
   tokenHint: string | null;
 }
@@ -169,7 +169,6 @@ export interface TelegramChat {
 
 export interface TelegramChatList {
   chats: TelegramChat[];
-  envFallback: string | null;
 }
 
 export interface TelegramChatInfo {

@@ -101,13 +101,6 @@ export default function TelegramChatsTab() {
 
   return (
     <div className={styles.body}>
-      {list?.envFallback && (
-        <div className={styles.banner}>
-          Сейчас сводки уходят в чат из .env: <code>{list.envFallback}</code>. Как только добавишь чат здесь, .env
-          перестанет использоваться.
-        </div>
-      )}
-
       {list?.chats.map((c) => (
         <div key={c.id} className={styles.chatRow}>
           <input
