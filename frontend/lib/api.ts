@@ -23,20 +23,35 @@ import type {
 // http://localhost:3001 target — that's mixed active content, which Safari
 // blocks outright (Chromium exempts localhost targets, Safari doesn't).
 // Route through Caddy's same-origin /api proxy instead on that hostname.
+// Значение, начинающееся с '/', — путь на своём origin (прод: фронт и API
+// за одним доменом, API проксируется Caddy в /api).
 function resolveApiUrl(): string {
   if (typeof window !== 'undefined' && window.location.hostname === 'tracker.performance') {
     return 'https://tracker.performance:4888/api';
   }
-  return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+  const url = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+  if (url.startsWith('/')) return url;
+  return url;
 }
 
 const API_URL = resolveApiUrl();
 
+// Эндпоинты аутентификации, на которых 401 не должен уводить на /login
+// (иначе «Неверная почта или пароль» кидало бы на страницу входа).
+const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/register/confirm', '/auth/register/resend', '/auth/forgot', '/auth/reset'];
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
+  if (res.status === 401 && !AUTH_PATHS.some((p) => path.startsWith(p)) && typeof window !== 'undefined') {
+    // Сессия протухла: уводим на вход и никогда не резолвимся — кода ниже
+    // в этой сессии уже быть не должно.
+    window.location.href = '/login';
+    return new Promise<T>(() => {});
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`${init?.method ?? 'GET'} ${path} failed: ${res.status} ${body}`);
@@ -214,6 +229,60 @@ export function setRoutineLog(id: number, date: string, count: number): Promise<
 
 export function removeRoutineLog(id: number, date: string): Promise<RoutinesWeek> {
   return request(`/routines/${id}/log/${date}`, { method: 'DELETE' });
+}
+
+export interface AuthUser {
+  id: number;
+  email: string;
+  timezone: string;
+}
+
+export function register(data: { email: string; password: string; timezone?: string }): Promise<void> {
+  return request('/auth/register', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function confirmSignupByToken(token: string): Promise<{ user: AuthUser }> {
+  return request('/auth/register/confirm', { method: 'POST', body: JSON.stringify({ token }) });
+}
+
+export function confirmSignupByCode(email: string, code: string): Promise<{ user: AuthUser }> {
+  return request('/auth/register/confirm', { method: 'POST', body: JSON.stringify({ email, code }) });
+}
+
+export function resendSignup(email: string): Promise<void> {
+  return request('/auth/register/resend', { method: 'POST', body: JSON.stringify({ email }) });
+}
+
+export function login(email: string, password: string): Promise<{ user: AuthUser }> {
+  return request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+}
+
+export function forgotPassword(email: string): Promise<void> {
+  return request('/auth/forgot', { method: 'POST', body: JSON.stringify({ email }) });
+}
+
+export function resetPassword(token: string, password: string): Promise<{ user: AuthUser }> {
+  return request('/auth/reset', { method: 'POST', body: JSON.stringify({ token, password }) });
+}
+
+export function getMe(): Promise<{ user: AuthUser }> {
+  return request('/auth/me');
+}
+
+export function updateMe(timezone: string): Promise<{ user: AuthUser }> {
+  return request('/auth/me', { method: 'PATCH', body: JSON.stringify({ timezone }) });
+}
+
+export function changePassword(current: string, next: string): Promise<void> {
+  return request('/auth/password', { method: 'POST', body: JSON.stringify({ current, next }) });
+}
+
+export function logout(): Promise<void> {
+  return request('/auth/logout', { method: 'POST' });
+}
+
+export function logoutAll(): Promise<void> {
+  return request('/auth/logout-all', { method: 'POST' });
 }
 
 // NestJS отдаёт ошибки как {"message": "...", ...}; request() кладёт тело в текст Error.

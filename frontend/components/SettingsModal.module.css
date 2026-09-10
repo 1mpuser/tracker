@@ -147,3 +147,48 @@
   cursor: pointer;
   white-space: nowrap;
 }
+
+.addRow select {
+  flex: 1;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.addRow .primaryBtn {
+  background: var(--accent2-soft);
+  border: 1px solid var(--accent2);
+  color: var(--accent2);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.addRow .secondaryBtn {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.addRow button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.notice {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.error {
+  font-size: 12px;
+  color: var(--pom);
+}

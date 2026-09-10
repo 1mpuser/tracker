@@ -1,4 +1,4 @@
-import { apiErrorMessage, createGtdItem, deleteTelegramChat, discoverTelegramChats, getDay, getGtdItems, getWeekStats, planForToday, postWeeklySummary, setTelegramBotToken, syncSessionPomodoros, testTelegramChat, updateDistraction, updateGtdItem, updatePomodoros } from './api';
+import { apiErrorMessage, createGtdItem, deleteTelegramChat, discoverTelegramChats, getDay, getGtdItems, getWeekStats, login, logout, planForToday, postWeeklySummary, register, setTelegramBotToken, syncSessionPomodoros, testTelegramChat, updateDistraction, updateGtdItem, updatePomodoros } from './api';
 
 describe('api request helper', () => {
   const originalFetch = global.fetch;
@@ -221,5 +221,47 @@ describe('api request helper', () => {
     expect(
       apiErrorMessage(new Error('PUT /telegram/bot failed: 400 {"message":"Telegram не принял токен","statusCode":400}')),
     ).toBe('Telegram не принял токен');
+  });
+
+  it('register posts credentials with cookies enabled', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 204 }) as unknown as typeof fetch;
+
+    await register({ email: 'a@b.c', password: 'password123', timezone: 'Europe/Moscow' });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/auth/register',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({ email: 'a@b.c', password: 'password123', timezone: 'Europe/Moscow' }),
+      }),
+    );
+  });
+
+  it('login posts to /auth/login', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ user: { id: 1, email: 'a@b.c', timezone: 'UTC' } }),
+    }) as unknown as typeof fetch;
+
+    const result = await login('a@b.c', 'password123');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/auth/login',
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    );
+    expect(result.user.email).toBe('a@b.c');
+  });
+
+  it('logout posts to /auth/logout', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 204 }) as unknown as typeof fetch;
+
+    await logout();
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/auth/logout',
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    );
   });
 });

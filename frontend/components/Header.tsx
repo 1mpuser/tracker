@@ -9,6 +9,7 @@ interface HeaderProps {
   pomodoroStreakMin: number;
   pomodoroStreakOpt: number;
   notificationsEnabled: boolean;
+  email: string;
   onEnableNotifications: () => void;
   onOpenSettings: () => void;
 }
@@ -41,6 +42,7 @@ export default function Header({
   pomodoroStreakMin,
   pomodoroStreakOpt,
   notificationsEnabled,
+  email,
   onEnableNotifications,
   onOpenSettings,
 }: HeaderProps) {
@@ -57,6 +59,7 @@ export default function Header({
               Включить уведомления
             </button>
           )}
+          <span className={styles.email}>{email}</span>
           <button type="button" className={styles.gearBtn} onClick={onOpenSettings} aria-label="Настройки">
             <GearIcon className={styles.gearIcon} />
           </button>

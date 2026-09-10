@@ -35,6 +35,12 @@
   gap: 12px;
 }
 
+.email {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
 .iconBtn {
   background: var(--panel-alt);
   border: 1px solid var(--border);

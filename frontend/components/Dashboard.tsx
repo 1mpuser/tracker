@@ -5,6 +5,7 @@ import type { DayView, GtdItem, HistoryEntry, Settings } from '@/types/api';
 import {
   getDay,
   getHistory,
+  getMe,
   getSettings,
   planForToday,
   setCategoryDone,
@@ -47,6 +48,7 @@ export default function Dashboard() {
   const [day, setDay] = useState<DayView | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -58,10 +60,11 @@ export default function Dashboard() {
   const { sendIfSunday, chartNode } = useWeeklySummary();
 
   const loadCore = useCallback(async () => {
-    const [d, h, s] = await Promise.all([getDay(date), getHistory(HISTORY_LIMIT, date), getSettings()]);
+    const [d, h, s, me] = await Promise.all([getDay(date), getHistory(HISTORY_LIMIT, date), getSettings(), getMe()]);
     setDay(d);
     setHistory(h);
     setSettings(s);
+    setEmail(me.user.email);
   }, [date]);
 
   useEffect(() => {
@@ -269,6 +272,7 @@ export default function Dashboard() {
             pomodoroStreakMin={pomodoroStreakMin}
             pomodoroStreakOpt={pomodoroStreakOpt}
             notificationsEnabled={notificationsActive}
+            email={email}
             onEnableNotifications={enableNotifications}
             onOpenSettings={() => setSettingsOpen(true)}
           />
