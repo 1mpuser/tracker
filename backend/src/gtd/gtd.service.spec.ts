@@ -1,3 +1,5 @@
+const user = { id: 1, email: 'a@b.c', timezone: 'UTC' };
+
 const userId = 1;
 
 import { GtdService } from './gtd.service';
@@ -18,7 +20,7 @@ describe('GtdService.create', () => {
     prisma.gtdItem.aggregate.mockResolvedValue({ _max: { order: 4 } });
     prisma.gtdItem.create.mockResolvedValue({ id: 1 });
 
-    await service.create(userId, 'Позвонить в банк');
+    await service.create(user, 'Позвонить в банк');
 
     expect(prisma.gtdItem.create).toHaveBeenCalledWith({
       data: { userId: 1, title: 'Позвонить в банк', status: 'inbox', order: 5, parentId: undefined, decidedAt: expect.any(Date) },
@@ -30,7 +32,7 @@ describe('GtdService.create', () => {
     prisma.gtdItem.aggregate.mockResolvedValue({ _max: { order: null } });
     prisma.gtdItem.create.mockResolvedValue({ id: 2 });
 
-    await service.create(userId, 'Первый шаг', 7);
+    await service.create(user, 'Первый шаг', 7);
 
     expect(prisma.gtdItem.create).toHaveBeenCalledWith({
       data: { userId: 1, title: 'Первый шаг', status: 'inbox', order: 0, parentId: 7, decidedAt: expect.any(Date) },
@@ -41,7 +43,7 @@ describe('GtdService.create', () => {
     prisma.gtdItem.aggregate.mockResolvedValue({ _max: { order: 0 } });
     prisma.gtdItem.create.mockResolvedValue({ id: 3 });
 
-    await service.create(userId, 'Что-то');
+    await service.create(user, 'Что-то');
 
     expect(prisma.gtdItem.create.mock.calls[0][0].data.decidedAt).toBeInstanceOf(Date);
   });
@@ -61,7 +63,7 @@ describe('GtdService.getItems', () => {
   it('excludes done and archived when no status filter is given', async () => {
     prisma.gtdItem.findMany.mockResolvedValue([]);
 
-    await service.getItems(userId);
+    await service.getItems(user);
 
     expect(prisma.gtdItem.findMany).toHaveBeenCalledWith({
       where: { userId: 1, status: { notIn: ['done', 'archived'] } },
@@ -78,7 +80,7 @@ describe('GtdService.getItems', () => {
       },
     ]);
 
-    const result = await service.getItems(userId, 'calendar');
+    const result = await service.getItems(user, 'calendar');
 
     expect(prisma.gtdItem.findMany).toHaveBeenCalledWith({
       where: { userId: 1, status: 'calendar' },
@@ -112,7 +114,7 @@ describe('GtdService.update', () => {
       scheduledDate: null, waitingFor: null, order: 0, completedAt: new Date('2026-07-23T10:00:00.000Z'),
     });
 
-    const result = await service.update(userId, 1, { status: 'done' });
+    const result = await service.update(user, 1, { status: 'done' });
 
     const arg = prisma.gtdItem.update.mock.calls[0][0];
     expect(arg.where).toEqual({ id: 1 });
@@ -128,7 +130,7 @@ describe('GtdService.update', () => {
       scheduledDate: null, waitingFor: null, order: 0, completedAt: null,
     });
 
-    await service.update(userId, 1, { status: 'backlog' });
+    await service.update(user, 1, { status: 'backlog' });
 
     expect(prisma.gtdItem.update.mock.calls[0][0].data.completedAt).toBeNull();
   });
@@ -140,7 +142,7 @@ describe('GtdService.update', () => {
       scheduledDate: new Date('2026-07-30T00:00:00.000Z'), waitingFor: null, order: 0, completedAt: null,
     });
 
-    await service.update(userId, 1, { status: 'calendar', scheduledDate: '2026-07-30' });
+    await service.update(user, 1, { status: 'calendar', scheduledDate: '2026-07-30' });
 
     expect(prisma.gtdItem.update.mock.calls[0][0].data.scheduledDate).toEqual(
       new Date('2026-07-30T00:00:00.000Z'),
@@ -149,12 +151,12 @@ describe('GtdService.update', () => {
 
   it('throws NotFoundException for a missing item', async () => {
     prisma.gtdItem.findFirst.mockResolvedValue(null);
-    await expect(service.update(userId, 999, { title: 'x' })).rejects.toThrow(NotFoundException);
+    await expect(service.update(user, 999, { title: 'x' })).rejects.toThrow(NotFoundException);
   });
 
   it('rejects an invalid calendar date (no silent rollover)', async () => {
     prisma.gtdItem.findFirst.mockResolvedValue({ id: 1, status: 'inbox' });
-    await expect(service.update(userId, 1, { status: 'calendar', scheduledDate: '2026-02-30' })).rejects.toThrow(
+    await expect(service.update(user, 1, { status: 'calendar', scheduledDate: '2026-02-30' })).rejects.toThrow(
       BadRequestException,
     );
   });
@@ -173,14 +175,14 @@ describe('GtdService.remove', () => {
 
   it('throws NotFoundException for a missing item', async () => {
     prisma.gtdItem.findFirst.mockResolvedValue(null);
-    await expect(service.remove(userId, 999)).rejects.toThrow(NotFoundException);
+    await expect(service.remove(user, 999)).rejects.toThrow(NotFoundException);
   });
 
   it('deletes an existing item', async () => {
     prisma.gtdItem.findFirst.mockResolvedValue({ id: 5 });
     prisma.gtdItem.delete.mockResolvedValue({ id: 5 });
 
-    const result = await service.remove(userId, 5);
+    const result = await service.remove(user, 5);
 
     expect(prisma.gtdItem.delete).toHaveBeenCalledWith({ where: { id: 5 } });
     expect(result).toEqual({ id: 5 });
@@ -201,7 +203,7 @@ describe('GtdService.getForDate', () => {
   it('queries planned-for-date OR calendar-scheduled-for-date, excluding archived', async () => {
     prisma.gtdItem.findMany.mockResolvedValue([]);
 
-    await service.getForDate(userId, '2026-07-23');
+    await service.getForDate(user, '2026-07-23');
 
     const date = new Date('2026-07-23T00:00:00.000Z');
     expect(prisma.gtdItem.findMany).toHaveBeenCalledWith({
@@ -223,7 +225,7 @@ describe('GtdService.getForDate', () => {
       },
     ]);
 
-    const result = await service.getForDate(userId, '2026-07-23');
+    const result = await service.getForDate(user, '2026-07-23');
 
     expect(result[0].plannedDate).toBe('2026-07-23');
   });
@@ -244,7 +246,7 @@ describe('GtdService.createForDate', () => {
     prisma.gtdItem.aggregate.mockResolvedValue({ _max: { order: 2 } });
     prisma.gtdItem.create.mockResolvedValue({ id: 1 });
 
-    await service.createForDate(userId, 'Сделать презу', '2026-07-23');
+    await service.createForDate(user, 'Сделать презу', '2026-07-23');
 
     expect(prisma.gtdItem.create).toHaveBeenCalledWith({
       data: {
@@ -262,7 +264,7 @@ describe('GtdService.createForDate', () => {
     prisma.gtdItem.aggregate.mockResolvedValue({ _max: { order: 2 } });
     prisma.gtdItem.create.mockResolvedValue({ id: 1 });
 
-    await service.createForDate(userId, 'Сделать презу', '2026-07-23');
+    await service.createForDate(user, 'Сделать презу', '2026-07-23');
 
     expect(prisma.gtdItem.create.mock.calls[0][0].data.decidedAt).toBeInstanceOf(Date);
   });
@@ -287,7 +289,7 @@ describe('GtdService.update plannedDate', () => {
       waitingFor: null, order: 0, completedAt: null,
     });
 
-    await service.update(userId, 1, { plannedDate: '2026-07-23' });
+    await service.update(user, 1, { plannedDate: '2026-07-23' });
 
     expect(prisma.gtdItem.update.mock.calls[0][0].data.plannedDate).toEqual(
       new Date('2026-07-23T00:00:00.000Z'),
@@ -301,7 +303,7 @@ describe('GtdService.update plannedDate', () => {
       scheduledDate: null, plannedDate: null, waitingFor: null, order: 0, completedAt: null,
     });
 
-    await service.update(userId, 1, { plannedDate: null });
+    await service.update(user, 1, { plannedDate: null });
 
     expect(prisma.gtdItem.update.mock.calls[0][0].data.plannedDate).toBeNull();
   });
@@ -326,7 +328,7 @@ describe('GtdService.update due/priority', () => {
       priority: true, waitingFor: null, order: 0, completedAt: null,
     });
 
-    const result = await service.update(userId, 1, { dueDate: '2026-07-30', priority: true });
+    const result = await service.update(user, 1, { dueDate: '2026-07-30', priority: true });
 
     const data = prisma.gtdItem.update.mock.calls[0][0].data;
     expect(data.dueDate).toEqual(new Date('2026-07-30T00:00:00.000Z'));
@@ -343,7 +345,7 @@ describe('GtdService.update due/priority', () => {
       waitingFor: null, order: 0, completedAt: null,
     });
 
-    await service.update(userId, 1, { dueDate: null });
+    await service.update(user, 1, { dueDate: null });
 
     expect(prisma.gtdItem.update.mock.calls[0][0].data.dueDate).toBeNull();
   });
@@ -368,7 +370,7 @@ describe('GtdService.update scheduledTime', () => {
       waitingFor: null, order: 0, completedAt: null, scheduledTime: '14:30',
     });
 
-    const result = await service.update(userId, 1, { scheduledTime: '14:30' });
+    const result = await service.update(user, 1, { scheduledTime: '14:30' });
 
     expect(prisma.gtdItem.update.mock.calls[0][0].data.scheduledTime).toBe('14:30');
     expect(result.scheduledTime).toBe('14:30');
@@ -382,7 +384,7 @@ describe('GtdService.update scheduledTime', () => {
       waitingFor: null, order: 0, completedAt: null, scheduledTime: null,
     });
 
-    await service.update(userId, 1, { scheduledTime: '' });
+    await service.update(user, 1, { scheduledTime: '' });
 
     expect(prisma.gtdItem.update.mock.calls[0][0].data.scheduledTime).toBeNull();
   });
@@ -408,7 +410,7 @@ describe('GtdService.update acceptanceCriteria/discussWith', () => {
       order: 0, completedAt: null,
     });
 
-    const result = await service.update(userId, 1, {
+    const result = await service.update(user, 1, {
       acceptanceCriteria: 'Готово, когда деплой на проде',
       discussWith: 'Маша',
     });
@@ -429,7 +431,7 @@ describe('GtdService.update acceptanceCriteria/discussWith', () => {
       order: 0, completedAt: null,
     });
 
-    await service.update(userId, 1, { acceptanceCriteria: null, discussWith: null });
+    await service.update(user, 1, { acceptanceCriteria: null, discussWith: null });
 
     const data = prisma.gtdItem.update.mock.calls[0][0].data;
     expect(data.acceptanceCriteria).toBeNull();
@@ -457,9 +459,9 @@ describe('GtdService reference -> obsidian', () => {
       waitingFor: null, order: 0, completedAt: null,
     });
 
-    await service.update(userId, 1, { status: 'reference' });
+    await service.update(user, 1, { status: 'reference' });
 
-    expect(obsidian.syncNote).toHaveBeenCalledWith(userId, expect.objectContaining({ id: 1, status: 'reference' }));
+    expect(obsidian.syncNote).toHaveBeenCalledWith(user, expect.objectContaining({ id: 1, status: 'reference' }));
     expect(obsidian.removeNote).not.toHaveBeenCalled();
   });
 
@@ -471,9 +473,9 @@ describe('GtdService reference -> obsidian', () => {
       waitingFor: null, order: 0, completedAt: null,
     });
 
-    await service.update(userId, 2, { status: 'backlog' });
+    await service.update(user, 2, { status: 'backlog' });
 
-    expect(obsidian.removeNote).toHaveBeenCalledWith(userId, 2);
+    expect(obsidian.removeNote).toHaveBeenCalledWith(user, 2);
     expect(obsidian.syncNote).not.toHaveBeenCalled();
   });
 
@@ -481,9 +483,9 @@ describe('GtdService reference -> obsidian', () => {
     prisma.gtdItem.findFirst.mockResolvedValue({ id: 3, status: 'reference' });
     prisma.gtdItem.delete.mockResolvedValue({ id: 3 });
 
-    await service.remove(userId, 3);
+    await service.remove(user, 3);
 
-    expect(obsidian.removeNote).toHaveBeenCalledWith(userId, 3);
+    expect(obsidian.removeNote).toHaveBeenCalledWith(user, 3);
   });
 });
 
@@ -513,10 +515,10 @@ describe('GtdService reminders (effectiveDue-driven)', () => {
     prisma.gtdItem.findFirst.mockResolvedValue(row({ status: 'backlog' }));
     prisma.gtdItem.update.mockResolvedValue(row({ status: 'backlog', dueDate: new Date('2026-08-01T00:00:00.000Z') }));
 
-    await service.update(userId, 1, { dueDate: '2026-08-01' });
+    await service.update(user, 1, { dueDate: '2026-08-01' });
 
     expect(icloud.syncReminder).toHaveBeenCalledWith(
-      userId,
+      user,
       expect.objectContaining({ id: 1, dueDate: '2026-08-01' }),
       { date: '2026-08-01', time: null },
     );
@@ -530,10 +532,10 @@ describe('GtdService reminders (effectiveDue-driven)', () => {
       row({ status: 'calendar', scheduledDate: new Date('2026-08-02T00:00:00.000Z'), scheduledTime: '10:00' }),
     );
 
-    await service.update(userId, 1, { status: 'calendar', scheduledDate: '2026-08-02', scheduledTime: '10:00' });
+    await service.update(user, 1, { status: 'calendar', scheduledDate: '2026-08-02', scheduledTime: '10:00' });
 
     expect(icloud.syncReminder).toHaveBeenCalledWith(
-      userId,
+      user,
       expect.objectContaining({ id: 1, status: 'calendar' }),
       { date: '2026-08-02', time: '10:00' },
     );
@@ -547,10 +549,10 @@ describe('GtdService reminders (effectiveDue-driven)', () => {
       row({ status: 'done', dueDate: new Date('2026-08-01T00:00:00.000Z'), completedAt: new Date() }),
     );
 
-    await service.update(userId, 1, { status: 'done' });
+    await service.update(user, 1, { status: 'done' });
 
     expect(icloud.completeReminder).toHaveBeenCalledWith(
-      userId, 1,
+      user, 1,
       expect.objectContaining({ status: 'done' }),
       { date: '2026-08-01', time: null },
     );
@@ -564,9 +566,9 @@ describe('GtdService reminders (effectiveDue-driven)', () => {
     );
     prisma.gtdItem.update.mockResolvedValue(row({ status: 'backlog', dueDate: null }));
 
-    await service.update(userId, 1, { dueDate: null });
+    await service.update(user, 1, { dueDate: null });
 
-    expect(icloud.removeReminder).toHaveBeenCalledWith(userId, 1);
+    expect(icloud.removeReminder).toHaveBeenCalledWith(user, 1);
     expect(icloud.syncReminder).not.toHaveBeenCalled();
     expect(icloud.completeReminder).not.toHaveBeenCalled();
   });
@@ -579,9 +581,9 @@ describe('GtdService reminders (effectiveDue-driven)', () => {
       row({ status: 'archived', dueDate: new Date('2026-08-01T00:00:00.000Z') }),
     );
 
-    await service.update(userId, 1, { status: 'archived' });
+    await service.update(user, 1, { status: 'archived' });
 
-    expect(icloud.removeReminder).toHaveBeenCalledWith(userId, 1);
+    expect(icloud.removeReminder).toHaveBeenCalledWith(user, 1);
     expect(icloud.syncReminder).not.toHaveBeenCalled();
     expect(icloud.completeReminder).not.toHaveBeenCalled();
   });
@@ -594,9 +596,9 @@ describe('GtdService reminders (effectiveDue-driven)', () => {
       row({ status: 'archived', scheduledDate: new Date('2026-08-06T00:00:00.000Z') }),
     );
 
-    await service.update(userId, 1, { status: 'archived' });
+    await service.update(user, 1, { status: 'archived' });
 
-    expect(icloud.removeReminder).toHaveBeenCalledWith(userId, 1);
+    expect(icloud.removeReminder).toHaveBeenCalledWith(user, 1);
     expect(icloud.syncReminder).not.toHaveBeenCalled();
   });
 
@@ -606,25 +608,25 @@ describe('GtdService reminders (effectiveDue-driven)', () => {
     );
     prisma.gtdItem.delete.mockResolvedValue({ id: 1 });
 
-    await service.remove(userId, 1);
+    await service.remove(user, 1);
 
-    expect(icloud.removeReminder).toHaveBeenCalledWith(userId, 1);
+    expect(icloud.removeReminder).toHaveBeenCalledWith(user, 1);
   });
 
   it('removes the reminder on delete when the item was done (had a completed reminder)', async () => {
     prisma.gtdItem.findFirst.mockResolvedValue(row({ status: 'done' }));
     prisma.gtdItem.delete.mockResolvedValue({ id: 1 });
 
-    await service.remove(userId, 1);
+    await service.remove(user, 1);
 
-    expect(icloud.removeReminder).toHaveBeenCalledWith(userId, 1);
+    expect(icloud.removeReminder).toHaveBeenCalledWith(user, 1);
   });
 
   it('does not touch icloud on delete for an item with no due and not done', async () => {
     prisma.gtdItem.findFirst.mockResolvedValue(row({ status: 'someday' }));
     prisma.gtdItem.delete.mockResolvedValue({ id: 1 });
 
-    await service.remove(userId, 1);
+    await service.remove(user, 1);
 
     expect(icloud.removeReminder).not.toHaveBeenCalled();
   });
@@ -657,7 +659,7 @@ describe('GtdService.update — decidedAt и deferCount', () => {
     prisma.gtdItem.findFirst.mockResolvedValue(existing({ status: 'inbox' }));
     prisma.gtdItem.update.mockResolvedValue(existing({ status: 'backlog' }));
 
-    await service.update(userId, 1, { status: 'backlog' });
+    await service.update(user, 1, { status: 'backlog' });
 
     expect(prisma.gtdItem.update.mock.calls[0][0].data.decidedAt).toBeInstanceOf(Date);
   });
@@ -666,7 +668,7 @@ describe('GtdService.update — decidedAt и deferCount', () => {
     prisma.gtdItem.findFirst.mockResolvedValue(existing());
     prisma.gtdItem.update.mockResolvedValue(existing({ title: 'Новое' }));
 
-    await service.update(userId, 1, { title: 'Новое' });
+    await service.update(user, 1, { title: 'Новое' });
 
     const data = prisma.gtdItem.update.mock.calls[0][0].data;
     expect(data.decidedAt).toBeUndefined();
@@ -677,7 +679,7 @@ describe('GtdService.update — decidedAt и deferCount', () => {
     prisma.gtdItem.findFirst.mockResolvedValue(existing({ status: 'backlog', deferCount: 2 }));
     prisma.gtdItem.update.mockResolvedValue(existing({ status: 'backlog', deferCount: 3 }));
 
-    await service.update(userId, 1, { status: 'backlog' });
+    await service.update(user, 1, { status: 'backlog' });
 
     expect(prisma.gtdItem.update.mock.calls[0][0].data.deferCount).toBe(3);
   });
@@ -686,7 +688,7 @@ describe('GtdService.update — decidedAt и deferCount', () => {
     prisma.gtdItem.findFirst.mockResolvedValue(existing({ status: 'someday', deferCount: 2 }));
     prisma.gtdItem.update.mockResolvedValue(existing({ status: 'backlog', deferCount: 2 }));
 
-    await service.update(userId, 1, { status: 'backlog' });
+    await service.update(user, 1, { status: 'backlog' });
 
     expect(prisma.gtdItem.update.mock.calls[0][0].data.deferCount).toBeUndefined();
   });
@@ -697,7 +699,7 @@ describe('GtdService.update — decidedAt и deferCount', () => {
       existing({ deferCount: 3, decidedAt: new Date('2026-08-01T09:00:00Z') }),
     );
 
-    const view = await service.update(userId, 1, { title: 'x' });
+    const view = await service.update(user, 1, { title: 'x' });
 
     expect(view.decidedAt).toBe('2026-08-01T09:00:00.000Z');
     expect(view.deferCount).toBe(3);
@@ -707,7 +709,7 @@ describe('GtdService.update — decidedAt и deferCount', () => {
     prisma.gtdItem.findFirst.mockResolvedValue(existing());
     prisma.gtdItem.update.mockResolvedValue(existing({ decidedAt: null }));
 
-    const view = await service.update(userId, 1, { title: 'x' });
+    const view = await service.update(user, 1, { title: 'x' });
 
     expect(view.decidedAt).toBeNull();
   });

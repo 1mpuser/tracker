@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ObsidianService } from '../obsidian/obsidian.service';
 import { ICloudService } from '../icloud/icloud.service';
 import { effectiveDue } from '../icloud/icloud.helpers';
+import { AuthUser } from '../auth/auth-user';
 import { formatDate, parseDateParam } from '../common/date.util';
 
 export interface GtdItemView {
@@ -57,36 +58,36 @@ export class GtdService {
     };
   }
 
-  async create(userId: number, title: string, parentId?: number) {
+  async create(user: AuthUser, title: string, parentId?: number) {
     if (parentId != null) {
-      const parent = await this.prisma.gtdItem.findFirst({ where: { id: parentId, userId } });
+      const parent = await this.prisma.gtdItem.findFirst({ where: { id: parentId, userId: user.id } });
       if (!parent) {
         throw new NotFoundException(`GtdItem ${parentId} not found`);
       }
     }
-    const maxOrder = await this.prisma.gtdItem.aggregate({ where: { userId }, _max: { order: true } });
+    const maxOrder = await this.prisma.gtdItem.aggregate({ where: { userId: user.id }, _max: { order: true } });
     return this.prisma.gtdItem.create({
       // Создание — тоже решение о судьбе задачи, поэтому decidedAt проставляется
       // сразу. Для inbox это не наблюдаемо (входящие не протухают), но так поле
       // никогда не остаётся NULL и staleDays не может вернуть Infinity.
-      data: { userId, title, status: 'inbox', order: (maxOrder._max.order ?? -1) + 1, parentId, decidedAt: new Date() },
+      data: { userId: user.id, title, status: 'inbox', order: (maxOrder._max.order ?? -1) + 1, parentId, decidedAt: new Date() },
     });
   }
 
-  async getItems(userId: number, status?: string): Promise<GtdItemView[]> {
+  async getItems(user: AuthUser, status?: string): Promise<GtdItemView[]> {
     const where = status
-      ? { userId, status }
-      : { userId, status: { notIn: ACTIVE_EXCLUDED } };
+      ? { userId: user.id, status }
+      : { userId: user.id, status: { notIn: ACTIVE_EXCLUDED } };
     const items = await this.prisma.gtdItem.findMany({ where: where as any, orderBy: { order: 'asc' } });
     return items.map((i) => this.toView(i));
   }
 
   async update(
-    userId: number,
+    user: AuthUser,
     id: number,
     patch: { title?: string; notes?: string; status?: string; scheduledDate?: string | null; scheduledTime?: string | null; waitingFor?: string | null; plannedDate?: string | null; dueDate?: string | null; priority?: boolean; acceptanceCriteria?: string | null; discussWith?: string | null },
   ): Promise<GtdItemView> {
-    const existing = await this.prisma.gtdItem.findFirst({ where: { id, userId } });
+    const existing = await this.prisma.gtdItem.findFirst({ where: { id, userId: user.id } });
     if (!existing) {
       throw new NotFoundException(`GtdItem ${id} not found`);
     }
@@ -128,46 +129,46 @@ export class GtdService {
     const updatedView = this.toView(updated);
 
     if (updatedView.status === 'reference') {
-      await this.obsidian.syncNote(userId, updatedView);
+      await this.obsidian.syncNote(user, updatedView);
     } else if (existingView.status === 'reference') {
-      await this.obsidian.removeNote(userId, id);
+      await this.obsidian.removeNote(user, id);
     }
 
     const dueBefore = effectiveDue(existingView);
     const dueAfter = effectiveDue(updatedView);
 
     if (updatedView.status === 'done' && dueBefore) {
-      await this.icloud.completeReminder(userId, id, updatedView, dueBefore);
+      await this.icloud.completeReminder(user, id, updatedView, dueBefore);
     } else if (dueAfter) {
-      await this.icloud.syncReminder(userId, updatedView, dueAfter);
+      await this.icloud.syncReminder(user, updatedView, dueAfter);
     } else if (dueBefore) {
-      await this.icloud.removeReminder(userId, id);
+      await this.icloud.removeReminder(user, id);
     }
 
     return updatedView;
   }
 
-  async remove(userId: number, id: number): Promise<{ id: number }> {
-    const existing = await this.prisma.gtdItem.findFirst({ where: { id, userId } });
+  async remove(user: AuthUser, id: number): Promise<{ id: number }> {
+    const existing = await this.prisma.gtdItem.findFirst({ where: { id, userId: user.id } });
     if (!existing) {
       throw new NotFoundException(`GtdItem ${id} not found`);
     }
     const existingView = this.toView(existing);
     if (existingView.status === 'reference') {
-      await this.obsidian.removeNote(userId, id);
+      await this.obsidian.removeNote(user, id);
     }
     if (effectiveDue(existingView) || existingView.status === 'done') {
-      await this.icloud.removeReminder(userId, id);
+      await this.icloud.removeReminder(user, id);
     }
     await this.prisma.gtdItem.delete({ where: { id } });
     return { id };
   }
 
-  async getForDate(userId: number, dateStr: string): Promise<GtdItemView[]> {
+  async getForDate(user: AuthUser, dateStr: string): Promise<GtdItemView[]> {
     const date = parseDateParam(dateStr);
     const items = await this.prisma.gtdItem.findMany({
       where: {
-        userId,
+        userId: user.id,
         status: { not: 'archived' },
         OR: [{ plannedDate: date }, { status: 'calendar', scheduledDate: date }],
       } as any,
@@ -176,14 +177,14 @@ export class GtdService {
     return items.map((i) => this.toView(i));
   }
 
-  async createForDate(userId: number, title: string, dateStr: string) {
+  async createForDate(user: AuthUser, title: string, dateStr: string) {
     const date = parseDateParam(dateStr);
-    const maxOrder = await this.prisma.gtdItem.aggregate({ where: { userId }, _max: { order: true } });
+    const maxOrder = await this.prisma.gtdItem.aggregate({ where: { userId: user.id }, _max: { order: true } });
     return this.prisma.gtdItem.create({
       // Постановка задачи на дату — решение о её судьбе. Без decidedAt задача,
       // у которой потом снимут plannedDate, осталась бы вообще без даты решения.
       data: {
-        userId,
+        userId: user.id,
         title,
         status: 'backlog',
         order: (maxOrder._max.order ?? -1) + 1,

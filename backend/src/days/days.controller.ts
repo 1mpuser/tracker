@@ -21,7 +21,7 @@ export class DaysController {
 
   @Get('days/:date')
   getDay(@CurrentUser() user: AuthUser, @Param('date') date: string) {
-    return this.daysService.getDay(user.id, date);
+    return this.daysService.getDay(user, date);
   }
 
   @Patch('days/:date/categories/:key')
@@ -31,17 +31,17 @@ export class DaysController {
     @Param('key') key: string,
     @Body() dto: UpdateCategoryStatusDto,
   ) {
-    return this.daysService.setCategoryStatus(user.id, date, key, dto.done);
+    return this.daysService.setCategoryStatus(user, date, key, dto.done);
   }
 
   @Patch('days/:date/distraction')
   updateDistraction(@CurrentUser() user: AuthUser, @Param('date') date: string, @Body() dto: UpdateDistractionDto) {
-    return this.daysService.updateDistraction(user.id, date, dto.delta, dto.reset);
+    return this.daysService.updateDistraction(user, date, dto.delta, dto.reset);
   }
 
   @Patch('days/:date/pomodoros')
   updatePomodoros(@CurrentUser() user: AuthUser, @Param('date') date: string, @Body() dto: UpdatePomodorosDto) {
-    return this.daysService.updatePomodoros(user.id, date, dto.delta, dto.reset);
+    return this.daysService.updatePomodoros(user, date, dto.delta, dto.reset);
   }
 
   @Post('days/:date/pomodoros/sync-session')
@@ -55,7 +55,7 @@ export class DaysController {
     if (count === null) {
       throw new BadGatewayException('Не удалось прочитать календарь Session');
     }
-    return this.daysService.setPomodoros(user.id, date, count);
+    return this.daysService.setPomodoros(user, date, count);
   }
 
   @Post('days/:date/weekly-summary')
@@ -72,7 +72,7 @@ export class DaysController {
       throw new ConflictException('Telegram не настроен: задайте токен бота и хотя бы один чат для недельной сводки в настройках');
     }
 
-    const result = await this.daysService.postWeeklySummary(user.id, date, dto.chartPng ?? null);
+    const result = await this.daysService.postWeeklySummary(user, date, dto.chartPng ?? null);
 
     if (result.reason === 'already-posted') {
       return { posted: false, reason: 'already-posted' };
@@ -85,12 +85,12 @@ export class DaysController {
 
   @Patch('days/:date')
   updateDay(@CurrentUser() user: AuthUser, @Param('date') date: string, @Body() dto: UpdateDayDto) {
-    return this.daysService.updateDay(user.id, date, dto);
+    return this.daysService.updateDay(user, date, dto);
   }
 
   @Get('history')
   getHistory(@CurrentUser() user: AuthUser, @Query('limit') limit?: string, @Query('end') end?: string) {
     const parsed = limit ? parseInt(limit, 10) : 21;
-    return this.daysService.getHistory(user.id, Number.isNaN(parsed) ? 21 : parsed, end);
+    return this.daysService.getHistory(user, Number.isNaN(parsed) ? 21 : parsed, end);
   }
 }

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DAVCalendar } from 'tsdav';
 import { CalDavClient } from './caldav.client';
+import { AuthUser } from '../auth/auth-user';
 import { EffectiveDue, buildReminderIcs, effectiveDue, reminderUid } from './icloud.helpers';
 
 interface ReminderItem {
@@ -33,10 +34,10 @@ export class ICloudService {
     await client.createCalendarObject({ calendar, filename, iCalString });
   }
 
-  // userId пока не используется: учётка берётся из env (Task 3.3 переведёт
+  // user пока не используется: учётка берётся из env (Task 3.3 переведёт
   // на настройки пользователя). Параметр уже здесь, чтобы сигнатуры не
   // менялись дважды.
-  async syncReminder(userId: number, item: ReminderItem, due: EffectiveDue): Promise<void> {
+  async syncReminder(user: AuthUser, item: ReminderItem, due: EffectiveDue): Promise<void> {
     if (!this.caldav.hasCredentials()) return;
     try {
       const uid = reminderUid(item.id);
@@ -47,7 +48,7 @@ export class ICloudService {
     }
   }
 
-  async completeReminder(userId: number, id: number, item: ReminderItem, due: EffectiveDue): Promise<void> {
+  async completeReminder(user: AuthUser, id: number, item: ReminderItem, due: EffectiveDue): Promise<void> {
     if (!this.caldav.hasCredentials()) return;
     try {
       const uid = reminderUid(id);
@@ -58,7 +59,7 @@ export class ICloudService {
     }
   }
 
-  async removeReminder(userId: number, id: number): Promise<void> {
+  async removeReminder(user: AuthUser, id: number): Promise<void> {
     const calendar = await this.getRemindersCalendar();
     const client = await this.caldav.getClient();
     if (!calendar || !client) return;
@@ -70,10 +71,10 @@ export class ICloudService {
     }
   }
 
-  async syncAllOnStartup(userId: number, items: ReminderItem[]): Promise<void> {
+  async syncAllOnStartup(user: AuthUser, items: ReminderItem[]): Promise<void> {
     for (const item of items) {
       const due = effectiveDue(item);
-      if (due) await this.syncReminder(userId, item, due);
+      if (due) await this.syncReminder(user, item, due);
     }
   }
 }

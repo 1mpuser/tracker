@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { noteContent, noteFilename } from './obsidian.helpers';
-import { formatDate, todayDate } from '../common/date.util';
+import { formatDate, todayFor } from '../common/date.util';
+import { AuthUser } from '../auth/auth-user';
 
 interface RefItem {
   id: number;
@@ -27,22 +28,22 @@ export class ObsidianService {
     );
   }
 
-  // userId в сигнатуре уже есть, но папка экспорта пока одна на всех
-  // (Obsidian-экспорт в многопользовательском режиме выключен — Task 3.3).
-  async syncNote(userId: number, item: RefItem): Promise<void> {
+  // Дата в шапке заметки — «сегодня» в поясе пользователя: экспорт делается
+  // на его машине (или вовсе выключен на сервере).
+  async syncNote(user: AuthUser, item: RefItem): Promise<void> {
     const dir = this.dir();
     if (!dir) return;
     try {
       await fs.mkdir(dir, { recursive: true });
       await this.removeById(dir, item.id);
       const file = path.join(dir, noteFilename(item));
-      await fs.writeFile(file, noteContent(item, formatDate(todayDate())), 'utf8');
+      await fs.writeFile(file, noteContent(item, formatDate(todayFor(user.timezone))), 'utf8');
     } catch (e) {
       this.logger.warn(`Obsidian syncNote(${item.id}) failed: ${e}`);
     }
   }
 
-  async removeNote(userId: number, id: number): Promise<void> {
+  async removeNote(user: AuthUser, id: number): Promise<void> {
     const dir = this.dir();
     if (!dir) return;
     try {
@@ -52,9 +53,9 @@ export class ObsidianService {
     }
   }
 
-  async syncAllReference(userId: number, items: RefItem[]): Promise<void> {
+  async syncAllReference(user: AuthUser, items: RefItem[]): Promise<void> {
     for (const item of items) {
-      await this.syncNote(userId, item);
+      await this.syncNote(user, item);
     }
   }
 }

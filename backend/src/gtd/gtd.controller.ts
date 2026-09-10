@@ -12,26 +12,26 @@ export class GtdController {
 
   @Get('items')
   getItems(@CurrentUser() user: AuthUser, @Query('status') status?: string) {
-    return this.gtdService.getItems(user.id, status);
+    return this.gtdService.getItems(user, status);
   }
 
   @Post('items')
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateGtdItemDto) {
-    return this.gtdService.create(user.id, dto.title, dto.parentId);
+    return this.gtdService.create(user, dto.title, dto.parentId);
   }
 
   @Post('items/today')
   createForDate(@CurrentUser() user: AuthUser, @Body() dto: CreateTodayDto) {
-    return this.gtdService.createForDate(user.id, dto.title, dto.date);
+    return this.gtdService.createForDate(user, dto.title, dto.date);
   }
 
   @Patch('items/:id')
   update(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateGtdItemDto) {
-    return this.gtdService.update(user.id, id, dto);
+    return this.gtdService.update(user, id, dto);
   }
 
   @Delete('items/:id')
   remove(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number) {
-    return this.gtdService.remove(user.id, id);
+    return this.gtdService.remove(user, id);
   }
 }

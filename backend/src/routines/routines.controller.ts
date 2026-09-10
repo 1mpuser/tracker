@@ -15,12 +15,12 @@ export class RoutinesController {
   @Get('history')
   getHistory(@CurrentUser() user: AuthUser, @Query('weeks') weeks?: string, @Query('anchor') anchor?: string) {
     const parsed = weeks ? parseInt(weeks, 10) : NaN;
-    return this.routinesService.getHistory(user.id, Number.isNaN(parsed) ? undefined : parsed, anchor);
+    return this.routinesService.getHistory(user, Number.isNaN(parsed) ? undefined : parsed, anchor);
   }
 
   @Get()
   getWeek(@CurrentUser() user: AuthUser, @Query('week') week?: string) {
-    return this.routinesService.getWeek(user.id, week);
+    return this.routinesService.getWeek(user, week);
   }
 
   @Post()
@@ -40,11 +40,11 @@ export class RoutinesController {
 
   @Post(':id/log')
   setLog(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number, @Body() dto: RoutineLogDto) {
-    return this.routinesService.setLog(user.id, id, dto.date, dto.count);
+    return this.routinesService.setLog(user, id, dto.date, dto.count);
   }
 
   @Delete(':id/log/:date')
   removeLog(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number, @Param('date') date: string) {
-    return this.routinesService.removeLog(user.id, id, date);
+    return this.routinesService.removeLog(user, id, date);
   }
 }

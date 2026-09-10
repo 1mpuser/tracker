@@ -29,6 +29,19 @@ export function todayDate(): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
+// «Сегодня» в часовом поясе пользователя: единственный источник «какого дня
+// сейчас» после Task 3.1. Контейнер всегда в UTC, поэтому Date#getUTCDay()
+// на бэкенде бесполезен для пользователя в другом поясе.
+export function todayFor(timezone: string): Date {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  return parseDateParam(parts);
+}
+
 /** Понедельник той недели, в которую попадает date. Неделя в проекте — пн–вс. */
 export function mondayOf(date: Date): Date {
   const day = date.getUTCDay();

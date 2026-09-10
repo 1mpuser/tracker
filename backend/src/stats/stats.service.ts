@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { addDays, formatDate, mondayOf, parseDateParam, todayDate } from '../common/date.util';
+import { AuthUser } from '../auth/auth-user';
+import { addDays, formatDate, mondayOf, parseDateParam, todayFor } from '../common/date.util';
 
 // Индексация как у Date#getUTCDay(): 0 — воскресенье.
 const WEEKDAY_SHORT = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -32,14 +33,14 @@ export interface WeekStats {
 export class StatsService {
   constructor(private prisma: PrismaService) {}
 
-  async categoryStats(userId: number, days: number) {
-    const end = todayDate();
+  async categoryStats(user: AuthUser, days: number) {
+    const end = todayFor(user.timezone);
     const start = addDays(end, -(days - 1));
 
     const [categories, statuses] = await Promise.all([
-      this.prisma.category.findMany({ where: { userId, archived: false }, orderBy: { order: 'asc' } }),
+      this.prisma.category.findMany({ where: { userId: user.id, archived: false }, orderBy: { order: 'asc' } }),
       this.prisma.dayCategoryStatus.findMany({
-        where: { day: { userId, date: { gte: start, lte: end } } },
+        where: { day: { userId: user.id, date: { gte: start, lte: end } } },
         select: { categoryId: true, done: true },
       }),
     ]);
@@ -63,15 +64,15 @@ export class StatsService {
     });
   }
 
-  async distractionWeeklyStats(userId: number, weeks: number) {
-    const settings = await this.prisma.settings.findUnique({ where: { userId } });
+  async distractionWeeklyStats(user: AuthUser, weeks: number) {
+    const settings = await this.prisma.settings.findUnique({ where: { userId: user.id } });
     const budget = settings?.distractionBudget ?? 60;
 
-    const todayMonday = mondayOf(todayDate());
+    const todayMonday = mondayOf(todayFor(user.timezone));
     const firstMonday = addDays(todayMonday, -(weeks - 1) * 7);
 
     const days = await this.prisma.day.findMany({
-      where: { userId, date: { gte: firstMonday, lte: addDays(todayMonday, 6) } },
+      where: { userId: user.id, date: { gte: firstMonday, lte: addDays(todayMonday, 6) } },
       select: { date: true, distractionMinutes: true },
     });
     const minutesByDate = new Map(days.map((d) => [formatDate(d.date), d.distractionMinutes]));
@@ -92,14 +93,14 @@ export class StatsService {
     return result;
   }
 
-  async distractionDailyStats(userId: number, days: number) {
-    const end = todayDate();
+  async distractionDailyStats(user: AuthUser, days: number) {
+    const end = todayFor(user.timezone);
     const start = addDays(end, -(days - 1));
 
     const [settings, dayRows] = await Promise.all([
-      this.prisma.settings.findUnique({ where: { userId } }),
+      this.prisma.settings.findUnique({ where: { userId: user.id } }),
       this.prisma.day.findMany({
-        where: { userId, date: { gte: start, lte: end } },
+        where: { userId: user.id, date: { gte: start, lte: end } },
         select: { date: true, distractionMinutes: true },
       }),
     ]);
@@ -120,19 +121,19 @@ export class StatsService {
     return result;
   }
 
-  async weekStats(userId: number, endDateStr: string): Promise<WeekStats> {
+  async weekStats(user: AuthUser, endDateStr: string): Promise<WeekStats> {
     const monday = mondayOf(parseDateParam(endDateStr));
     const sunday = addDays(monday, 6);
 
     const [settings, categories, dayRows, statuses] = await Promise.all([
-      this.prisma.settings.findUnique({ where: { userId } }),
-      this.prisma.category.findMany({ where: { userId, archived: false }, orderBy: { order: 'asc' } }),
+      this.prisma.settings.findUnique({ where: { userId: user.id } }),
+      this.prisma.category.findMany({ where: { userId: user.id, archived: false }, orderBy: { order: 'asc' } }),
       this.prisma.day.findMany({
-        where: { userId, date: { gte: monday, lte: sunday } },
+        where: { userId: user.id, date: { gte: monday, lte: sunday } },
         select: { date: true, pomodoros: true, rating: true, eveningClosed: true, distractionMinutes: true },
       }),
       this.prisma.dayCategoryStatus.findMany({
-        where: { day: { userId, date: { gte: monday, lte: sunday } } },
+        where: { day: { userId: user.id, date: { gte: monday, lte: sunday } } },
         select: { categoryId: true, done: true },
       }),
     ]);

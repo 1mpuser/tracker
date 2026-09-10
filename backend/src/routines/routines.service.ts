@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DaysService } from '../days/days.service';
-import { addDays, formatDate, mondayOf, parseDateParam, todayDate } from '../common/date.util';
+import { AuthUser } from '../auth/auth-user';
+import { addDays, formatDate, mondayOf, parseDateParam, todayFor } from '../common/date.util';
 import { closedDays } from './routines.helpers';
 
 export interface RoutineView {
@@ -35,13 +36,13 @@ export class RoutinesService {
     private days: DaysService,
   ) {}
 
-  async getWeek(userId: number, weekParam?: string): Promise<RoutinesWeekView> {
-    const anchor = weekParam ? parseDateParam(weekParam) : todayDate();
+  async getWeek(user: AuthUser, weekParam?: string): Promise<RoutinesWeekView> {
+    const anchor = weekParam ? parseDateParam(weekParam) : todayFor(user.timezone);
     const weekStart = mondayOf(anchor);
     const weekEnd = addDays(weekStart, 6);
 
     const routines = await this.prisma.routine.findMany({
-      where: { userId, archived: false },
+      where: { userId: user.id, archived: false },
       orderBy: { order: 'asc' },
       include: {
         logs: { where: { date: { gte: weekStart, lte: weekEnd } }, orderBy: { date: 'asc' } },
@@ -134,8 +135,8 @@ export class RoutinesService {
    * Инкрементальный протокол накручивался бы двойным кликом; здесь повтор
    * запроса с тем же числом ничего не меняет.
    */
-  async setLog(userId: number, id: number, dateStr: string, count: number): Promise<RoutinesWeekView> {
-    const routine = await this.prisma.routine.findFirst({ where: { id, userId } });
+  async setLog(user: AuthUser, id: number, dateStr: string, count: number): Promise<RoutinesWeekView> {
+    const routine = await this.prisma.routine.findFirst({ where: { id, userId: user.id } });
     if (!routine || routine.archived) {
       throw new NotFoundException(`Routine ${id} not found`);
     }
@@ -147,7 +148,7 @@ export class RoutinesService {
 
     if (count === 0) {
       await this.prisma.routineLog.deleteMany({ where: { routineId: id, date } });
-      return this.getWeek(userId, dateStr);
+      return this.getWeek(user, dateStr);
     }
 
     await this.prisma.routineLog.upsert({
@@ -157,7 +158,7 @@ export class RoutinesService {
     });
 
     if (routine.categoryId !== null) {
-      const dayId = await this.days.getOrCreateDayId(userId, dateStr);
+      const dayId = await this.days.getOrCreateDayId(user.id, dateStr);
       await this.prisma.dayCategoryStatus.upsert({
         where: { dayId_categoryId: { dayId, categoryId: routine.categoryId } },
         update: { done: true },
@@ -165,25 +166,25 @@ export class RoutinesService {
       });
     }
 
-    return this.getWeek(userId, dateStr);
+    return this.getWeek(user, dateStr);
   }
 
   // Галочку сферы намеренно не снимаем: сферу могли закрыть и по другой
   // причине (пробежка вместо качалки), и снятие отметки рутины не даёт
   // системе права стирать этот факт.
-  async removeLog(userId: number, id: number, dateStr: string): Promise<RoutinesWeekView> {
-    const routine = await this.prisma.routine.findFirst({ where: { id, userId } });
+  async removeLog(user: AuthUser, id: number, dateStr: string): Promise<RoutinesWeekView> {
+    const routine = await this.prisma.routine.findFirst({ where: { id, userId: user.id } });
     if (!routine || routine.archived) {
       throw new NotFoundException(`Routine ${id} not found`);
     }
     const date = parseDateParam(dateStr);
     await this.prisma.routineLog.deleteMany({ where: { routineId: id, date } });
-    return this.getWeek(userId, dateStr);
+    return this.getWeek(user, dateStr);
   }
 
   /** Вынесено отдельным методом, чтобы тесты могли зафиксировать «сегодня». */
-  private currentMonday(): Date {
-    return mondayOf(todayDate());
+  private currentMonday(user: AuthUser): Date {
+    return mondayOf(todayFor(user.timezone));
   }
 
   /**
@@ -191,15 +192,15 @@ export class RoutinesService {
    * своё локальное «сегодня»: без якоря последняя неделя бралась бы от UTC-даты
    * сервера, и в ночные часы история разъезжалась бы с показанной неделей.
    */
-  async getHistory(userId: number, weeks = 8, anchor?: string): Promise<RoutineHistoryWeek[]> {
+  async getHistory(user: AuthUser, weeks = 8, anchor?: string): Promise<RoutineHistoryWeek[]> {
     // Число недель приходит из строки запроса: дробное или мусорное значение
     // ушло бы в границы диапазона дат и уронило бы запрос к базе.
     const count = Math.min(52, Math.max(1, Math.trunc(Number(weeks)) || 8));
-    const lastMonday = anchor ? mondayOf(parseDateParam(anchor)) : this.currentMonday();
+    const lastMonday = anchor ? mondayOf(parseDateParam(anchor)) : this.currentMonday(user);
     const firstMonday = addDays(lastMonday, -(count - 1) * 7);
 
     const routines = await this.prisma.routine.findMany({
-      where: { userId, archived: false },
+      where: { userId: user.id, archived: false },
       orderBy: { order: 'asc' },
     });
     const logs = await this.prisma.routineLog.findMany({

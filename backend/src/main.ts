@@ -23,8 +23,9 @@ async function bootstrap() {
     const icloud = app.get(ICloudService);
     const users = await prisma.user.findMany();
     for (const user of users) {
-      await obsidian.syncAllReference(user.id, await gtd.getItems(user.id, 'reference'));
-      await icloud.syncAllOnStartup(user.id, await gtd.getItems(user.id));
+      const current = { id: user.id, email: user.email, timezone: user.timezone };
+      await obsidian.syncAllReference(current, await gtd.getItems(current, 'reference'));
+      await icloud.syncAllOnStartup(current, await gtd.getItems(current));
     }
   } catch (e) {
     // startup export/sync is best-effort; never block boot

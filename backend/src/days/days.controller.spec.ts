@@ -34,7 +34,7 @@ describe('DaysController.syncSessionPomodoros', () => {
   it('writes the synced count and returns the resulting DayView', async () => {
     const result = await controller.syncSessionPomodoros(user, '2026-08-04');
 
-    expect(daysService.setPomodoros).toHaveBeenCalledWith(1, '2026-08-04', 3);
+    expect(daysService.setPomodoros).toHaveBeenCalledWith(user, '2026-08-04', 3);
     expect(result).toEqual({ date: '2026-08-04', pomodoros: 3 });
   });
 
@@ -43,7 +43,7 @@ describe('DaysController.syncSessionPomodoros', () => {
 
     await controller.syncSessionPomodoros(user, '2026-08-04');
 
-    expect(daysService.setPomodoros).toHaveBeenCalledWith(1, '2026-08-04', 0);
+    expect(daysService.setPomodoros).toHaveBeenCalledWith(user, '2026-08-04', 0);
   });
 });
 
@@ -68,14 +68,14 @@ describe('DaysController.postWeeklySummary', () => {
   it('posts for a sunday and passes the chart through', async () => {
     const result = await controller.postWeeklySummary(user, '2026-08-02', { chartPng: 'AAAA' });
 
-    expect(daysService.postWeeklySummary).toHaveBeenCalledWith(1, '2026-08-02', 'AAAA');
+    expect(daysService.postWeeklySummary).toHaveBeenCalledWith(user, '2026-08-02', 'AAAA');
     expect(result).toEqual({ posted: true, withChart: true });
   });
 
   it('passes null when no chart was supplied', async () => {
     await controller.postWeeklySummary(user, '2026-08-02', {});
 
-    expect(daysService.postWeeklySummary).toHaveBeenCalledWith(1, '2026-08-02', null);
+    expect(daysService.postWeeklySummary).toHaveBeenCalledWith(user, '2026-08-02', null);
   });
 
   it('reports an already-posted week without throwing', async () => {
