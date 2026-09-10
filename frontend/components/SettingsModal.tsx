@@ -2,19 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import styles from './SettingsModal.module.css';
-import type { Category } from '@/types/api';
+import type { Category, Settings } from '@/types/api';
 import { createCategory, getCategories, updateCategory } from '@/lib/api';
 import { transliterate } from '@/lib/transliterate';
 import TaskTemplatesTab from './TaskTemplatesTab';
+import DistractionSettingsTab from './DistractionSettingsTab';
 
-type Tab = 'categories' | 'templates';
+type Tab = 'categories' | 'templates' | 'distraction';
 
 interface SettingsModalProps {
   onClose: () => void;
   onCategoriesChanged: () => void;
+  onSettingsChanged: (settings: Settings) => void;
 }
 
-export default function SettingsModal({ onClose, onCategoriesChanged }: SettingsModalProps) {
+export default function SettingsModal({ onClose, onCategoriesChanged, onSettingsChanged }: SettingsModalProps) {
   const [tab, setTab] = useState<Tab>('categories');
   const [categories, setCategories] = useState<Category[]>([]);
   const [newLabel, setNewLabel] = useState('');
@@ -86,6 +88,13 @@ export default function SettingsModal({ onClose, onCategoriesChanged }: Settings
             >
               Шаблоны задач
             </button>
+            <button
+              type="button"
+              className={`${styles.tab} ${tab === 'distraction' ? styles.tabActive : ''}`}
+              onClick={() => setTab('distraction')}
+            >
+              Залипание
+            </button>
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Закрыть">
             ×
@@ -139,6 +148,7 @@ export default function SettingsModal({ onClose, onCategoriesChanged }: Settings
         )}
 
         {tab === 'templates' && <TaskTemplatesTab />}
+        {tab === 'distraction' && <DistractionSettingsTab onSettingsChanged={onSettingsChanged} />}
       </div>
     </div>
   );

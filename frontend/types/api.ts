@@ -6,7 +6,7 @@ export interface CategoryView {
 
 export interface DayView {
   date: string;
-  youtubeMinutes: number;
+  distractionMinutes: number;
   pomodoros: number;
   eveningClosed: boolean;
   rating: number | null;
@@ -20,7 +20,7 @@ export interface HistoryEntry {
   completed: number;
   total: number;
   pomodoros: number;
-  ytOver: boolean;
+  distractionOver: boolean;
   rating: number | null;
 }
 
@@ -40,7 +40,8 @@ export interface TaskTemplate {
 
 export interface Settings {
   id: number;
-  youtubeBudget: number;
+  distractionBudget: number;
+  distractionLabel: string;
   notificationsEnabled: boolean;
   sessionSyncEnabled: boolean;
 }
@@ -53,13 +54,13 @@ export interface CategoryStat {
   pct: number;
 }
 
-export interface YoutubeWeekStat {
+export interface DistractionWeekStat {
   weekStart: string;
   avgMinutes: number;
   budget: number;
 }
 
-export interface YoutubeDayStat {
+export interface DistractionDayStat {
   date: string;
   minutes: number;
   budget: number;
@@ -84,8 +85,9 @@ export interface WeekStats {
   avgRating: number | null;
   ratedDays: number;
   categories: { label: string; doneCount: number }[];
-  youtubeAvgMinutes: number;
-  youtubeBudget: number;
+  distractionAvgMinutes: number;
+  distractionBudget: number;
+  distractionLabel: string;
 }
 
 export type GtdStatus =

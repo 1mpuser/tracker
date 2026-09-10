@@ -20,8 +20,9 @@ function makeStats(overrides: Partial<WeekStats> = {}): WeekStats {
     avgRating: null,
     ratedDays: 0,
     categories: [],
-    youtubeAvgMinutes: 0,
-    youtubeBudget: 60,
+    distractionAvgMinutes: 0,
+    distractionBudget: 60,
+    distractionLabel: 'Залипание',
     ...overrides,
   };
 }

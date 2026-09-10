@@ -11,15 +11,15 @@ export function categoryHeatmapColor(completed: number, total: number): string {
   return 'var(--panel-alt)';
 }
 
-export function youtubeHeatmapColor(minutes: number, budget: number): string {
+export function distractionHeatmapColor(minutes: number, budget: number): string {
   // Under budget stays calm steel; over budget escalates bordo -> red -> hottest.
   if (minutes <= 0) return 'var(--panel-alt)';
   const pct = budget > 0 ? (minutes / budget) * 100 : 0;
   if (pct > 180) return 'var(--pom-hot)'; // far over — hottest red
   if (pct > 140) return 'var(--pom)'; // well over — red
   if (pct > 100) return 'var(--pom-deep)'; // just over budget — bordo
-  if (pct >= 60) return 'var(--yt)'; // nearing budget — steel
-  return 'var(--yt-soft)'; // comfortably under — faint steel
+  if (pct >= 60) return 'var(--distraction)'; // nearing budget — steel
+  return 'var(--distraction-soft)'; // comfortably under — faint steel
 }
 
 export function mondayOffset(dateStr: string): number {

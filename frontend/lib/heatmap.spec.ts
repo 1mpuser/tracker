@@ -1,4 +1,4 @@
-import { categoryHeatmapColor, mondayOffset, pomodoroHeatmapColor, thresholdHeatmapColor, youtubeHeatmapColor } from './heatmap';
+import { categoryHeatmapColor, mondayOffset, pomodoroHeatmapColor, thresholdHeatmapColor, distractionHeatmapColor } from './heatmap';
 
 describe('categoryHeatmapColor', () => {
   it('returns the empty panel color for a day with no active categories', () => {
@@ -15,24 +15,24 @@ describe('categoryHeatmapColor', () => {
   });
 });
 
-describe('youtubeHeatmapColor', () => {
+describe('distractionHeatmapColor', () => {
   it('returns the empty panel color when no minutes were logged', () => {
-    expect(youtubeHeatmapColor(0, 60)).toBe('var(--panel-alt)');
+    expect(distractionHeatmapColor(0, 60)).toBe('var(--panel-alt)');
   });
   it('returns the faint steel tone comfortably under budget', () => {
-    expect(youtubeHeatmapColor(10, 60)).toBe('var(--yt-soft)');
+    expect(distractionHeatmapColor(10, 60)).toBe('var(--distraction-soft)');
   });
   it('returns solid steel while nearing the budget', () => {
-    expect(youtubeHeatmapColor(45, 60)).toBe('var(--yt)');
+    expect(distractionHeatmapColor(45, 60)).toBe('var(--distraction)');
   });
   it('escalates to bordo just over budget', () => {
-    expect(youtubeHeatmapColor(70, 60)).toBe('var(--pom-deep)');
+    expect(distractionHeatmapColor(70, 60)).toBe('var(--pom-deep)');
   });
   it('escalates to red well over budget', () => {
-    expect(youtubeHeatmapColor(100, 60)).toBe('var(--pom)');
+    expect(distractionHeatmapColor(100, 60)).toBe('var(--pom)');
   });
   it('escalates to the hottest red far over budget', () => {
-    expect(youtubeHeatmapColor(120, 60)).toBe('var(--pom-hot)');
+    expect(distractionHeatmapColor(120, 60)).toBe('var(--pom-hot)');
   });
 });
 

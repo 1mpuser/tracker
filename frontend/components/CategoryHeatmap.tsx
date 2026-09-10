@@ -6,9 +6,10 @@ import { todayLocal } from '@/lib/date';
 interface CategoryHeatmapProps {
   history: HistoryEntry[];
   onSelectDate: (date: string) => void;
+  distractionLabel: string;
 }
 
-export default function CategoryHeatmap({ history, onSelectDate }: CategoryHeatmapProps) {
+export default function CategoryHeatmap({ history, onSelectDate, distractionLabel }: CategoryHeatmapProps) {
   if (history.length === 0) return null;
   const leadingBlanks = mondayOffset(history[0].date);
   const cells: (HistoryEntry | null)[] = [...Array(leadingBlanks).fill(null), ...history];
@@ -26,16 +27,18 @@ export default function CategoryHeatmap({ history, onSelectDate }: CategoryHeatm
               className={`${styles.cell} ${isToday ? '' : styles.clickable}`}
               style={{ background: categoryHeatmapColor(entry.completed, entry.total) }}
               title={`${entry.date}: ${entry.completed}/${entry.total} сфер${
-                entry.ytOver ? ', YouTube — перебор' : ''
+                entry.distractionOver ? `, ${distractionLabel} — перебор` : ''
               }`}
               onClick={isToday ? undefined : () => onSelectDate(entry.date)}
             >
-              {entry.ytOver && <span className={styles.ytOver} />}
+              {entry.distractionOver && <span className={styles.distractionOver} />}
             </div>
           );
         })}
       </div>
-      <div className={styles.legend}>закрашено = доля закрытых сфер · красная черта = перебор по YouTube</div>
+      <div className={styles.legend}>
+        закрашено = доля закрытых сфер · красная черта = перебор: {distractionLabel}
+      </div>
     </div>
   );
 }

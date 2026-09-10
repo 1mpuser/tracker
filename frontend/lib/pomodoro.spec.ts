@@ -2,7 +2,7 @@ import { POMODORO_MIN, POMODORO_OPT, computePomodoroStreak } from './pomodoro';
 import type { HistoryEntry } from '@/types/api';
 
 function entry(date: string, pomodoros: number): HistoryEntry {
-  return { date, completed: 0, total: 6, pomodoros, ytOver: false, rating: null };
+  return { date, completed: 0, total: 6, pomodoros, distractionOver: false, rating: null };
 }
 
 describe('pomodoro thresholds', () => {

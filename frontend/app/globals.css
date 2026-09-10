@@ -18,9 +18,9 @@
   --pom-glow: rgba(224, 87, 78, 0.5);
   --fire-grad: linear-gradient(175deg, #ffcf4d 0%, #ff8a3d 48%, #e5433b 100%);
   --ember: rgba(255, 138, 60, 0.6);
-  /* youtube — muted steel (a limit, not an achievement) */
-  --yt: #6d7a8c;
-  --yt-soft: rgba(109, 122, 140, 0.16);
+  /* залипание — приглушённая сталь (лимит, а не достижение) */
+  --distraction: #6d7a8c;
+  --distraction-soft: rgba(109, 122, 140, 0.16);
   /* legacy aliases kept so any stray reference still resolves */
   --accent2: #6d7a8c;
   --accent2-soft: rgba(109, 122, 140, 0.16);

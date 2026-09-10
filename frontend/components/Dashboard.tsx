@@ -10,10 +10,10 @@ import {
   setCategoryDone,
   syncSessionPomodoros,
   updateDay,
+  updateDistraction,
   updateGtdItem,
   updatePomodoros,
   updateSettings,
-  updateYoutube,
 } from '@/lib/api';
 import { formatDisplayDate, todayLocal } from '@/lib/date';
 import { isEveningWindow, isMorningWindow, isWeeklyReviewWindow } from '@/lib/notifications';
@@ -23,7 +23,7 @@ import { useWeeklySummary } from '@/lib/useWeeklySummary';
 import Header from './Header';
 import SpheresPanel from './SpheresPanel';
 import TodayPanel from './TodayPanel';
-import YoutubePanel from './YoutubePanel';
+import DistractionPanel from './DistractionPanel';
 import PomodoroPanel from './PomodoroPanel';
 import StatsPanel from './StatsPanel';
 import SettingsModal from './SettingsModal';
@@ -191,13 +191,13 @@ export default function Dashboard() {
     await refreshDay();
   }
 
-  async function addYoutubeMinutes(delta: number) {
-    setDay(await updateYoutube(date, { delta }));
+  async function addDistractionMinutes(delta: number) {
+    setDay(await updateDistraction(date, { delta }));
     refreshHistory();
   }
 
-  async function resetYoutube() {
-    setDay(await updateYoutube(date, { reset: true }));
+  async function resetDistraction() {
+    setDay(await updateDistraction(date, { reset: true }));
     refreshHistory();
   }
 
@@ -224,8 +224,8 @@ export default function Dashboard() {
     }
   }
 
-  async function changeYoutubeBudget(value: number) {
-    setSettings(await updateSettings({ youtubeBudget: value }));
+  async function changeDistractionBudget(value: number) {
+    setSettings(await updateSettings({ distractionBudget: value }));
   }
 
   if (loading) {
@@ -290,12 +290,13 @@ export default function Dashboard() {
               onToggleDone={toggleTodayDone}
               onRemove={removeFromToday}
             />
-            <YoutubePanel
-              minutes={day.youtubeMinutes}
-              budget={settings.youtubeBudget}
-              onAdd={addYoutubeMinutes}
-              onReset={resetYoutube}
-              onBudgetChange={changeYoutubeBudget}
+            <DistractionPanel
+              minutes={day.distractionMinutes}
+              budget={settings.distractionBudget}
+              label={settings.distractionLabel}
+              onAdd={addDistractionMinutes}
+              onReset={resetDistraction}
+              onBudgetChange={changeDistractionBudget}
             />
             <PomodoroPanel
               count={day.pomodoros}
@@ -306,15 +307,26 @@ export default function Dashboard() {
               syncError={sessionError}
             />
           </div>
-          <StatsPanel history={history} onSelectDate={setSelectedDate} />
+          <StatsPanel history={history} onSelectDate={setSelectedDate} distractionLabel={settings.distractionLabel} />
         </>
       )}
 
       {activeTab === 'gtd' && <GtdScreen />}
       {activeTab === 'routines' && <RoutinesScreen />}
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} onCategoriesChanged={refreshDay} />}
+      {settingsOpen && (
+        <SettingsModal
+          onClose={() => setSettingsOpen(false)}
+          onCategoriesChanged={refreshDay}
+          onSettingsChanged={setSettings}
+        />
+      )}
       {selectedDate && (
-        <DayDetailModal date={selectedDate} onClose={() => setSelectedDate(null)} onDataChanged={refreshHistory} />
+        <DayDetailModal
+          date={selectedDate}
+          distractionLabel={settings.distractionLabel}
+          onClose={() => setSelectedDate(null)}
+          onDataChanged={refreshHistory}
+        />
       )}
       {chartNode}
     </div>

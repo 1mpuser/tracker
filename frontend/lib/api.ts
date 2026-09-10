@@ -11,8 +11,8 @@ import type {
   Settings,
   TaskTemplate,
   WeekStats,
-  YoutubeDayStat,
-  YoutubeWeekStat,
+  DistractionDayStat,
+  DistractionWeekStat,
 } from '@/types/api';
 
 // A page loaded over https://tracker.performance can't fetch() a plain
@@ -75,8 +75,8 @@ export function planForToday(title: string, date: string): Promise<GtdItem> {
   return request(`/gtd/items/today`, { method: 'POST', body: JSON.stringify({ title, date }) });
 }
 
-export function updateYoutube(date: string, data: { delta?: number; reset?: boolean }): Promise<DayView> {
-  return request(`/days/${date}/youtube`, { method: 'PATCH', body: JSON.stringify(data) });
+export function updateDistraction(date: string, data: { delta?: number; reset?: boolean }): Promise<DayView> {
+  return request(`/days/${date}/distraction`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
 export function updatePomodoros(date: string, data: { delta?: number; reset?: boolean }): Promise<DayView> {
@@ -133,7 +133,11 @@ export function getSettings(): Promise<Settings> {
   return request('/settings');
 }
 
-export function updateSettings(data: { youtubeBudget?: number; notificationsEnabled?: boolean }): Promise<Settings> {
+export function updateSettings(data: {
+  distractionBudget?: number;
+  distractionLabel?: string;
+  notificationsEnabled?: boolean;
+}): Promise<Settings> {
   return request('/settings', { method: 'PATCH', body: JSON.stringify(data) });
 }
 
@@ -141,12 +145,12 @@ export function getCategoryStats(days: number): Promise<CategoryStat[]> {
   return request(`/stats/categories?days=${days}`);
 }
 
-export function getYoutubeWeeklyStats(weeks: number): Promise<YoutubeWeekStat[]> {
-  return request(`/stats/youtube?weeks=${weeks}`);
+export function getDistractionWeeklyStats(weeks: number): Promise<DistractionWeekStat[]> {
+  return request(`/stats/distraction?weeks=${weeks}`);
 }
 
-export function getYoutubeDailyStats(days: number): Promise<YoutubeDayStat[]> {
-  return request(`/stats/youtube-daily?days=${days}`);
+export function getDistractionDailyStats(days: number): Promise<DistractionDayStat[]> {
+  return request(`/stats/distraction-daily?days=${days}`);
 }
 
 export function getWeekStats(end: string): Promise<WeekStats> {

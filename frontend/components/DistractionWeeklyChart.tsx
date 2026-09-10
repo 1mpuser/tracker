@@ -2,17 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from 'recharts';
-import styles from './YoutubeWeeklyChart.module.css';
-import type { YoutubeWeekStat } from '@/types/api';
-import { getYoutubeWeeklyStats } from '@/lib/api';
+import styles from './DistractionWeeklyChart.module.css';
+import type { DistractionWeekStat } from '@/types/api';
+import { getDistractionWeeklyStats } from '@/lib/api';
 
 const WEEKS = 8;
 
-export default function YoutubeWeeklyChart() {
-  const [stats, setStats] = useState<YoutubeWeekStat[] | null>(null);
+interface DistractionWeeklyChartProps {
+  label: string;
+}
+
+export default function DistractionWeeklyChart({ label }: DistractionWeeklyChartProps) {
+  const [stats, setStats] = useState<DistractionWeekStat[] | null>(null);
 
   useEffect(() => {
-    getYoutubeWeeklyStats(WEEKS).then(setStats);
+    getDistractionWeeklyStats(WEEKS).then(setStats);
   }, []);
 
   if (!stats || stats.length === 0) return null;
@@ -20,7 +24,7 @@ export default function YoutubeWeeklyChart() {
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.title}>YouTube по неделям</div>
+      <div className={styles.title}>{label} по неделям</div>
       <ResponsiveContainer width="100%" height={140}>
         <BarChart data={stats} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
           <CartesianGrid stroke="var(--border)" vertical={false} />

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import styles from './DayDetailModal.module.css';
 import type { DayView } from '@/types/api';
-import { getDay, setCategoryDone, updateDay, updatePomodoros, updateYoutube } from '@/lib/api';
+import { getDay, setCategoryDone, updateDay, updateDistraction, updatePomodoros } from '@/lib/api';
 import { formatDisplayDate } from '@/lib/date';
 import { useWeeklySummary } from '@/lib/useWeeklySummary';
 import SpheresPanel from './SpheresPanel';
@@ -12,11 +12,12 @@ type Stage = 'loading' | 'view' | 'confirm' | 'edit';
 
 interface DayDetailModalProps {
   date: string;
+  distractionLabel: string;
   onClose: () => void;
   onDataChanged: () => void;
 }
 
-export default function DayDetailModal({ date, onClose, onDataChanged }: DayDetailModalProps) {
+export default function DayDetailModal({ date, distractionLabel, onClose, onDataChanged }: DayDetailModalProps) {
   const [day, setDay] = useState<DayView | null>(null);
   const [stage, setStage] = useState<Stage>('loading');
   const [closingDay, setClosingDay] = useState(false);
@@ -73,13 +74,13 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
     await refresh();
   }
 
-  async function addYoutubeMinutes(delta: number) {
-    await updateYoutube(date, { delta });
+  async function addDistractionMinutes(delta: number) {
+    await updateDistraction(date, { delta });
     await refresh();
   }
 
-  async function resetYoutube() {
-    await updateYoutube(date, { reset: true });
+  async function resetDistraction() {
+    await updateDistraction(date, { reset: true });
     await refresh();
   }
 
@@ -130,7 +131,7 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
               ))}
             </div>
             <div className={styles.section}>
-              <div className={styles.viewLine}>YouTube: {day.youtubeMinutes} мин</div>
+              <div className={styles.viewLine}>{distractionLabel}: {day.distractionMinutes} мин</div>
               <div className={styles.viewLine}>Помидорок: {day.pomodoros}</div>
               <div className={styles.viewLine}>День закрыт: {day.eveningClosed ? 'да' : 'нет'}</div>
               <div className={styles.viewLine}>Оценка: {day.rating === null ? '—' : `${day.rating}/10`}</div>
@@ -175,35 +176,35 @@ export default function DayDetailModal({ date, onClose, onDataChanged }: DayDeta
               onRatingChange={changeRating}
               onCommentChange={changeComment}
             />
-            <div className={styles.ytEditor}>
-              <div className={styles.ytEditorHeading}>YouTube</div>
-              <div className={styles.ytEditorTop}>
-                <span className={styles.ytEditorMinutes}>{day.youtubeMinutes} мин</span>
-                <span className={styles.ytEditorReset} onClick={resetYoutube}>
+            <div className={styles.distractionEditor}>
+              <div className={styles.distractionEditorHeading}>{distractionLabel}</div>
+              <div className={styles.distractionEditorTop}>
+                <span className={styles.distractionEditorMinutes}>{day.distractionMinutes} мин</span>
+                <span className={styles.distractionEditorReset} onClick={resetDistraction}>
                   сбросить
                 </span>
               </div>
-              <div className={styles.ytEditorButtons}>
-                <button type="button" onClick={() => addYoutubeMinutes(10)}>
+              <div className={styles.distractionEditorButtons}>
+                <button type="button" onClick={() => addDistractionMinutes(10)}>
                   +10
                 </button>
-                <button type="button" onClick={() => addYoutubeMinutes(25)}>
+                <button type="button" onClick={() => addDistractionMinutes(25)}>
                   +25
                 </button>
-                <button type="button" onClick={() => addYoutubeMinutes(50)}>
+                <button type="button" onClick={() => addDistractionMinutes(50)}>
                   +50
                 </button>
               </div>
             </div>
-            <div className={styles.ytEditor}>
-              <div className={styles.ytEditorHeading}>Помидорки</div>
-              <div className={styles.ytEditorTop}>
-                <span className={styles.ytEditorMinutes}>{day.pomodoros}</span>
-                <span className={styles.ytEditorReset} onClick={resetPomodoro}>
+            <div className={styles.distractionEditor}>
+              <div className={styles.distractionEditorHeading}>Помидорки</div>
+              <div className={styles.distractionEditorTop}>
+                <span className={styles.distractionEditorMinutes}>{day.pomodoros}</span>
+                <span className={styles.distractionEditorReset} onClick={resetPomodoro}>
                   сбросить
                 </span>
               </div>
-              <div className={styles.ytEditorButtons}>
+              <div className={styles.distractionEditorButtons}>
                 <button type="button" onClick={() => addPomodoro(1)}>
                   +1
                 </button>

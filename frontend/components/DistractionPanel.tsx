@@ -1,21 +1,29 @@
-import styles from './YoutubePanel.module.css';
+import styles from './DistractionPanel.module.css';
 
-interface YoutubePanelProps {
+interface DistractionPanelProps {
   minutes: number;
   budget: number;
+  label: string;
   onAdd: (delta: number) => void;
   onReset: () => void;
   onBudgetChange: (value: number) => void;
 }
 
-export default function YoutubePanel({ minutes, budget, onAdd, onReset, onBudgetChange }: YoutubePanelProps) {
+export default function DistractionPanel({
+  minutes,
+  budget,
+  label,
+  onAdd,
+  onReset,
+  onBudgetChange,
+}: DistractionPanelProps) {
   const pct = budget > 0 ? Math.min(100, (minutes / budget) * 100) : 0;
-  let barColor = 'var(--yt)';
+  let barColor = 'var(--distraction)';
   if (minutes > budget) barColor = 'var(--pom)';
 
   return (
     <div className={styles.panel}>
-      <h2 className={styles.heading}>YouTube</h2>
+      <h2 className={styles.heading}>{label}</h2>
       <div className={styles.top}>
         <div className={styles.count}>
           {minutes}
@@ -51,8 +59,7 @@ export default function YoutubePanel({ minutes, budget, onAdd, onReset, onBudget
         </button>
       </div>
       <div className={styles.note}>
-        Здесь только то, что ты сам занёс вручную. Точные логи — в Qbserve (автотрекер активности на Mac) и в Screen
-        Time (Настройки → Экранное время).
+        Здесь только то, что занесено вручную. Точные цифры — в «Экранном времени» телефона и компьютера.
       </div>
     </div>
   );

@@ -185,14 +185,14 @@
   background: rgba(217, 100, 90, 0.28);
 }
 
-.ytEditor {
+.distractionEditor {
   background: var(--panel-alt);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px 16px;
 }
 
-.ytEditorHeading {
+.distractionEditorHeading {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -201,20 +201,20 @@
   font-weight: 600;
 }
 
-.ytEditorTop {
+.distractionEditorTop {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   margin-bottom: 10px;
 }
 
-.ytEditorMinutes {
+.distractionEditorMinutes {
   font-family: var(--font-mono);
   font-size: 18px;
   font-weight: 700;
 }
 
-.ytEditorReset {
+.distractionEditorReset {
   font-size: 11.5px;
   color: var(--text-dim);
   cursor: pointer;
@@ -222,12 +222,12 @@
   text-underline-offset: 2px;
 }
 
-.ytEditorButtons {
+.distractionEditorButtons {
   display: flex;
   gap: 8px;
 }
 
-.ytEditorButtons button {
+.distractionEditorButtons button {
   background: var(--panel);
   border: 1px solid var(--border);
   color: var(--text);
@@ -238,7 +238,7 @@
   cursor: pointer;
 }
 
-.ytEditorButtons button:hover {
+.distractionEditorButtons button:hover {
   border-color: var(--accent2);
   color: var(--accent2);
 }

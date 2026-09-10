@@ -2,7 +2,7 @@ import { computeStreak, STREAK_THRESHOLD } from './streak';
 import type { HistoryEntry } from '@/types/api';
 
 function entry(date: string, completed: number): HistoryEntry {
-  return { date, completed, total: 6, ytOver: false };
+  return { date, completed, total: 6, distractionOver: false };
 }
 
 describe('computeStreak', () => {
@@ -31,7 +31,7 @@ describe('computeStreak', () => {
   });
 
   it('does not count a day as meeting the threshold just because it was 100% complete with fewer than 2 categories', () => {
-    const history = [{ date: '2026-07-14', completed: 1, total: 1, ytOver: false }];
+    const history = [{ date: '2026-07-14', completed: 1, total: 1, distractionOver: false }];
     expect(computeStreak(history, { date: '2026-07-15', completed: 0 })).toBe(0);
   });
 

@@ -1,4 +1,4 @@
-import { createGtdItem, getDay, getGtdItems, getWeekStats, planForToday, postWeeklySummary, syncSessionPomodoros, updateGtdItem, updatePomodoros } from './api';
+import { createGtdItem, getDay, getGtdItems, getWeekStats, planForToday, postWeeklySummary, syncSessionPomodoros, updateDistraction, updateGtdItem, updatePomodoros } from './api';
 
 describe('api request helper', () => {
   const originalFetch = global.fetch;
@@ -151,6 +151,21 @@ describe('api request helper', () => {
     expect(global.fetch).toHaveBeenCalledWith(
       'http://localhost:3001/days/2026-08-02/weekly-summary',
       expect.objectContaining({ body: JSON.stringify({}) }),
+    );
+  });
+
+  it('updateDistraction patches the distraction endpoint', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ date: '2026-09-11' }),
+    }) as unknown as typeof fetch;
+
+    await updateDistraction('2026-09-11', { delta: 10 });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/days/2026-09-11/distraction',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ delta: 10 }) }),
     );
   });
 });
