@@ -14,7 +14,9 @@ if [ ! -f .env.before-transit ]; then
 fi
 
 # Комментируем бот/учётки в .env (с бэкапом).
-sed -i.bak 's/^TELEGRAM_BOT_TOKEN=/;\0/; s/^TELEGRAM_CHAT_ID=/;\0/; s/^ICLOUD_APPLE_ID=/;\0/; s/^ICLOUD_APP_PASSWORD=/;\0/; s/^SESSION_/;\0/' .env || true
+# BSD sed не понимает GNU-овский \0 — берём & (всё совпадение), а комментарий
+# в .env — #, а не ";".
+sed -i.bak 's/^TELEGRAM_BOT_TOKEN=/#&/; s/^TELEGRAM_CHAT_ID=/#&/; s/^ICLOUD_APPLE_ID=/#&/; s/^ICLOUD_APP_PASSWORD=/#&/; s/^SESSION_/#&/' .env || true
 rm -f .env.bak
 
 # Токен бота локально — вон из БД (сервер теперь единственный писатель).
