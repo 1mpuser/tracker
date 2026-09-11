@@ -12,7 +12,7 @@ import {
 import { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { AUTH_CONFIG, AuthConfig } from './auth.config';
+import { AUTH_CONFIG, AuthConfig, sessionCookieOptions } from './auth.config';
 import { CurrentUser } from './current-user.decorator';
 import { Public } from './public.decorator';
 import { AuthUser } from './auth-user';
@@ -36,13 +36,7 @@ export class AuthController {
   ) {}
 
   private setSessionCookie(res: Response, token: string) {
-    res.cookie('sid', token, {
-      httpOnly: true,
-      secure: this.cfg.cookieSecure,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: this.cfg.sessionDays * 86_400_000,
-    });
+    res.cookie('sid', token, sessionCookieOptions(this.cfg));
   }
 
   private clearSessionCookie(res: Response) {

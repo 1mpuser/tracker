@@ -1,6 +1,20 @@
+import type { CookieOptions } from 'express';
+
 export interface AuthConfig {
   cookieSecure: boolean;
   sessionDays: number;
+}
+
+// Опции cookie сессии общие для AuthController (выдача при входе) и
+// SessionGuard (перевыдача при продлении срока) — иначе разойдутся.
+export function sessionCookieOptions(cfg: AuthConfig): CookieOptions {
+  return {
+    httpOnly: true,
+    secure: cfg.cookieSecure,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: cfg.sessionDays * 86_400_000,
+  };
 }
 
 // DI-токен конфига аутентификации: провайдер создаётся фабрикой в AuthModule,

@@ -17,6 +17,12 @@ export interface SessionResult {
   user: AuthUser;
 }
 
+export interface ResolvedSession {
+  user: AuthUser;
+  /** true, если в этом вызове срок сессии продлён — гард перевыставит cookie. */
+  renewExpiresAt: boolean;
+}
+
 interface Meta {
   userAgent?: string;
 }
@@ -119,20 +125,28 @@ export class AuthService implements OnModuleInit {
     return { sessionToken: token, user: current };
   }
 
-  async resolveSession(sessionToken: string): Promise<AuthUser | null> {
+  async resolveSession(sessionToken: string): Promise<ResolvedSession | null> {
     const session = await this.prisma.session.findUnique({ where: { tokenHash: sha256(sessionToken) } });
     if (!session || isExpired(session.expiresAt)) {
       return null;
     }
-    // Продление срока жизни не чаще раза в сутки — иначе каждая активность
-    // писала бы в БД.
-    if (Date.now() - session.lastSeenAt.getTime() > SESSION_REFRESH_MS) {
-      await this.prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } });
+    // Продление не чаще раза в сутки — иначе каждая активность писала бы в БД.
+    // Активному пользователю сессия живёт ещё sessionDays от момента активности,
+    // а не от создания: иначе регулярный юзер вылетал бы через sessionDays дней.
+    const renewExpiresAt = Date.now() - session.lastSeenAt.getTime() > SESSION_REFRESH_MS;
+    if (renewExpiresAt) {
+      await this.prisma.session.update({
+        where: { id: session.id },
+        data: {
+          lastSeenAt: new Date(),
+          expiresAt: new Date(Date.now() + this.sessionLifetimeMs),
+        },
+      });
     }
     const user = await this.prisma.user.findUnique({ where: { id: session.userId } });
     // Заблокированная учётка: даже живая сессия перестаёт работать сразу.
     if (!user || user.blockedAt) return null;
-    return { id: user.id, email: user.email, timezone: user.timezone };
+    return { user: { id: user.id, email: user.email, timezone: user.timezone }, renewExpiresAt };
   }
 
   // Полная идентичность пользователя: помимо данных сессии фронтенду нужен

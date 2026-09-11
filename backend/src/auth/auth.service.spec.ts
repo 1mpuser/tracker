@@ -115,15 +115,32 @@ describe('AuthService', () => {
       await expect(service.resolveSession('tok')).resolves.toBeNull();
     });
 
-    it('продлевает lastSeenAt, если прошло больше суток', async () => {
+    it('не продлевает при активности меньше суток', async () => {
+      prisma.session.findUnique.mockResolvedValue({ id: 1, userId: 3, expiresAt: new Date(Date.now() + 3600e3), lastSeenAt: new Date(Date.now() - 3600e3) });
+      prisma.user.findUnique.mockResolvedValue({ id: 3, email: 'a@b.c', timezone: 'UTC' });
+
+      const resolved = await service.resolveSession('tok');
+
+      expect(prisma.session.update).not.toHaveBeenCalled();
+      expect(resolved?.renewExpiresAt).toBe(false);
+      expect(resolved?.user.email).toBe('a@b.c');
+    });
+
+    it('продлевает и lastSeenAt, и expiresAt, если активности больше суток', async () => {
       prisma.session.findUnique.mockResolvedValue({ id: 1, userId: 3, expiresAt: new Date(Date.now() + 3600e3), lastSeenAt: new Date(Date.now() - 2 * 86400e3) });
       prisma.session.update.mockResolvedValue({});
       prisma.user.findUnique.mockResolvedValue({ id: 3, email: 'a@b.c', timezone: 'UTC' });
+      const before = Date.now();
 
-      const user = await service.resolveSession('tok');
+      const resolved = await service.resolveSession('tok');
 
-      expect(prisma.session.update).toHaveBeenCalled();
-      expect(user?.email).toBe('a@b.c');
+      const call = prisma.session.update.mock.calls[0][0];
+      // Активному пользователю сессия живёт ещё sessionDays с момента активности.
+      const expectedExpiry = new Date(before + 30 * 86400e3);
+      expect(call.data.expiresAt.getTime()).toBeGreaterThanOrEqual(expectedExpiry.getTime() - 1000);
+      expect(call.data.lastSeenAt).toBeInstanceOf(Date);
+      expect(resolved?.renewExpiresAt).toBe(true);
+      expect(resolved?.user.email).toBe('a@b.c');
     });
 
     it('возвращает null для заблокированного пользователя даже с живой сессией', async () => {
