@@ -266,7 +266,9 @@ export default function AdminPage() {
                       <button
                         type="button"
                         className={styles.rowBtn}
-                        disabled={busy}
+                        // Свой пароль — во вкладке «Аккаунт»: смена здесь закрыла бы
+                        // все сессии админа, включая текущую.
+                        disabled={busy || isSelf}
                         onClick={() => {
                           setChangeId(u.id);
                           setChangePassword(generatePassword());
