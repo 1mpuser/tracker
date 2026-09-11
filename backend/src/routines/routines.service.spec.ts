@@ -149,6 +149,26 @@ describe('RoutinesService.update', () => {
 
     expect(prisma.routine.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { timesPerDay: 2 } });
   });
+
+  it('чужую категорию привязать нельзя — 404 как в create', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false });
+    prisma.category.findFirst.mockResolvedValue(null);
+
+    await expect(service.update(userId, 1, { categoryId: 99 })).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.routine.update).not.toHaveBeenCalled();
+  });
+
+  it('отвязка категории (categoryId: null) остаётся разрешённой', async () => {
+    const { service, prisma } = makeService();
+    prisma.routine.findFirst.mockResolvedValue({ id: 1, archived: false, categoryId: 5 });
+    prisma.routine.update.mockResolvedValue({ id: 1 });
+
+    await service.update(userId, 1, { categoryId: null });
+
+    expect(prisma.category.findFirst).not.toHaveBeenCalled();
+    expect(prisma.routine.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { categoryId: null } });
+  });
 });
 
 describe('RoutinesService.archive', () => {

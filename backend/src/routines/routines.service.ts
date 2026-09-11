@@ -110,6 +110,16 @@ export class RoutinesService {
     if (!existing) {
       throw new NotFoundException(`Routine ${id} not found`);
     }
+    // Чужую категорию привязать нельзя — та же проверка, что в create.
+    // categoryId: null (отвязка) остаётся разрешённым.
+    if (dto.categoryId != null) {
+      const category = await this.prisma.category.findFirst({
+        where: { id: dto.categoryId, userId },
+      });
+      if (!category) {
+        throw new NotFoundException(`Category ${dto.categoryId} not found`);
+      }
+    }
     const data: any = {};
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.timesPerDay !== undefined) data.timesPerDay = dto.timesPerDay;
