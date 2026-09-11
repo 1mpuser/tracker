@@ -50,6 +50,20 @@ describe('TelegramConfigService', () => {
     await expect(service.resolveToken(1)).resolves.toBe(VALID);
   });
 
+  it('resolveToken: нерасшифровываемый токен (сменённый APP_ENCRYPTION_KEY) → null, warn без токена, бот не настроен', async () => {
+    const warn = jest.spyOn((service as any).logger, 'warn').mockImplementation(() => undefined);
+    // Чужой ключ: расшифровка упадёт на проверке GCM-тега.
+    const foreign = encryptSecret(VALID, Buffer.alloc(32, 1).toString('base64'));
+    prisma.settings.findUnique.mockResolvedValue({ id: 1, userId: 1, telegramBotToken: foreign });
+
+    await expect(service.resolveToken(1)).resolves.toBeNull();
+    expect(warn).toHaveBeenCalled();
+    expect(String(warn.mock.calls[0][0])).not.toContain(VALID);
+
+    await expect(service.getBot(1)).resolves.toMatchObject({ configured: false });
+    expect(telegram.getMe).not.toHaveBeenCalled();
+  });
+
   it('getBot never returns the full token', async () => {
     const stored = encryptSecret(VALID, (service as any).encKey);
     prisma.settings.findUnique.mockResolvedValue({ id: 1, userId: 1, telegramBotToken: stored });

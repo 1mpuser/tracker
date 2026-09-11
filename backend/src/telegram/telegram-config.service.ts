@@ -59,10 +59,19 @@ export class TelegramConfigService implements OnModuleInit {
 
   // Токен только из настроек пользователя. Env-фоллбэков нет: в
   // многопользовательском режиме чужие действия шли бы в Telegram владельца.
+  // Сменённый APP_ENCRYPTION_KEY не роняет запросы: не расшифровалось →
+  // бот считается не настроенным (нужно ввести заново).
   async resolveToken(userId: number): Promise<string | null> {
     const stored = (await this.settingsRow(userId)).telegramBotToken;
     if (!stored) return null;
-    return isEncrypted(stored) ? decryptSecret(stored, this.encKey) : stored;
+    if (!isEncrypted(stored)) return stored;
+    try {
+      return decryptSecret(stored, this.encKey);
+    } catch (e) {
+      // Токен в лог не пишем: только пользователь и факт расшифровки.
+      this.logger.warn(`Токен Telegram пользователя #${userId} не расшифровывается, бот считается ненастроенным: ${e}`);
+      return null;
+    }
   }
 
   async recipients(userId: number, kind: 'day' | 'week'): Promise<string[]> {

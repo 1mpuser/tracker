@@ -97,6 +97,29 @@ describe('IntegrationsService', () => {
     await expect(service.icloudCredentials(userId)).resolves.toEqual(creds);
   });
 
+  it('нерасшифровываемый секрет (сменённый APP_ENCRYPTION_KEY): null, не бросает, интеграции считаются ненастроенными', async () => {
+    const warn = jest.spyOn((service as any).logger, 'warn').mockImplementation(() => undefined);
+    // Чужой ключ: расшифровка упадёт на проверке GCM-тега.
+    const { encryptSecret } = require('../common/crypto.util');
+    prisma.settings.findUnique.mockResolvedValue({
+      id: 1,
+      userId,
+      icloudAppleId: 'me@example.com',
+      icloudAppPasswordEnc: encryptSecret('aaaa-bbbb-cccc', Buffer.alloc(32, 1).toString('base64')),
+      icloudRemindersList: 'GTD',
+      sessionCalendarName: 'Focus',
+      sessionMinMinutes: 20,
+    });
+
+    await expect(service.icloudCredentials(userId)).resolves.toBeNull();
+    expect(warn).toHaveBeenCalled();
+    expect(String(warn.mock.calls[0][0])).not.toContain('aaaa-bbbb-cccc');
+
+    // GET /settings видит iCloud и Session ненастроенными.
+    await expect(service.getICloud(userId)).resolves.toMatchObject({ configured: false });
+    await expect(service.getSession(userId)).resolves.toMatchObject({ configured: false, icloudConfigured: false });
+  });
+
   it('clearICloud также выключает Session', async () => {
     prisma.settings.update.mockResolvedValue({});
     await service.clearICloud(userId);

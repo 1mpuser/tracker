@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CalDavClient, ICloudCredentials } from '../icloud/caldav.client';
 import { decryptSecret, encryptSecret, loadEncryptionKey } from '../common/crypto.util';
@@ -20,6 +20,7 @@ export interface ReminderItemLike {
 @Injectable()
 export class IntegrationsService {
   private readonly encKey = loadEncryptionKey();
+  private readonly logger = new Logger(IntegrationsService.name);
 
   constructor(
     private prisma: PrismaService,
@@ -33,13 +34,21 @@ export class IntegrationsService {
   }
 
   // Расшифрованные учётные данные — только для внутреннего использования.
+  // Сменённый APP_ENCRYPTION_KEY не должен ронять запросы: расшифровка не
+  // удалась → интеграция считается ненастроенной (нужно ввести заново).
   async icloudCredentials(userId: number): Promise<ICloudCredentials | null> {
     const settings = await this.settingsRow(userId);
     if (!settings.icloudAppleId || !settings.icloudAppPasswordEnc) return null;
-    return {
-      appleId: settings.icloudAppleId,
-      appPassword: decryptSecret(settings.icloudAppPasswordEnc, this.encKey),
-    };
+    try {
+      return {
+        appleId: settings.icloudAppleId,
+        appPassword: decryptSecret(settings.icloudAppPasswordEnc, this.encKey),
+      };
+    } catch (e) {
+      // Без пароля/секрета в логе: сам факт — пользователю, подробности — разработчику.
+      this.logger.warn(`iCloud-пароль пользователя #${userId} не расшифровывается, интеграция считается ненастроенной: ${e}`);
+      return null;
+    }
   }
 
   async getICloud(userId: number): Promise<{ configured: boolean; appleId: string | null; remindersList: string }> {
