@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import Link from 'next/link';
 import styles from './Header.module.css';
 import { flameTier } from '@/lib/flame';
 import { FlameIcon, GearIcon, TomatoIcon } from './icons';
@@ -10,6 +11,7 @@ interface HeaderProps {
   pomodoroStreakOpt: number;
   notificationsEnabled: boolean;
   email: string;
+  isAdmin: boolean;
   onEnableNotifications: () => void;
   onOpenSettings: () => void;
 }
@@ -43,6 +45,7 @@ export default function Header({
   pomodoroStreakOpt,
   notificationsEnabled,
   email,
+  isAdmin,
   onEnableNotifications,
   onOpenSettings,
 }: HeaderProps) {
@@ -60,6 +63,11 @@ export default function Header({
             </button>
           )}
           <span className={styles.email}>{email}</span>
+          {isAdmin && (
+            <Link href="/admin" className={styles.iconBtn}>
+              Админка
+            </Link>
+          )}
           <button type="button" className={styles.gearBtn} onClick={onOpenSettings} aria-label="Настройки">
             <GearIcon className={styles.gearIcon} />
           </button>

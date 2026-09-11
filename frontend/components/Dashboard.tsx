@@ -49,6 +49,7 @@ export default function Dashboard() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [email, setEmail] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -65,6 +66,7 @@ export default function Dashboard() {
     setHistory(h);
     setSettings(s);
     setEmail(me.user.email);
+    setIsAdmin(me.user.isAdmin);
   }, [date]);
 
   useEffect(() => {
@@ -273,6 +275,7 @@ export default function Dashboard() {
             pomodoroStreakOpt={pomodoroStreakOpt}
             notificationsEnabled={notificationsActive}
             email={email}
+            isAdmin={isAdmin}
             onEnableNotifications={enableNotifications}
             onOpenSettings={() => setSettingsOpen(true)}
           />

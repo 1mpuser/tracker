@@ -237,6 +237,7 @@ export interface AuthUser {
   id: number;
   email: string;
   timezone: string;
+  isAdmin: boolean;
 }
 
 export function login(email: string, password: string): Promise<{ user: AuthUser }> {
@@ -261,6 +262,41 @@ export function logout(): Promise<void> {
 
 export function logoutAll(): Promise<void> {
   return request('/auth/logout-all', { method: 'POST' });
+}
+
+// ---- Админка: выдача учёток. Все /admin/* для не-админа отвечают 404. ----
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  timezone: string;
+  isAdmin: boolean;
+  blockedAt: string | null;
+  createdAt: string;
+}
+
+export function getAdminUsers(): Promise<AdminUser[]> {
+  return request('/admin/users');
+}
+
+export function createAdminUser(data: { email: string; password: string; timezone?: string }): Promise<AdminUser> {
+  return request('/admin/users', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function setAdminPassword(id: number, password: string): Promise<void> {
+  return request(`/admin/users/${id}/password`, { method: 'POST', body: JSON.stringify({ password }) });
+}
+
+export function blockAdminUser(id: number): Promise<void> {
+  return request(`/admin/users/${id}/block`, { method: 'POST' });
+}
+
+export function unblockAdminUser(id: number): Promise<void> {
+  return request(`/admin/users/${id}/unblock`, { method: 'POST' });
+}
+
+export function deleteAdminUser(id: number): Promise<void> {
+  return request(`/admin/users/${id}`, { method: 'DELETE' });
 }
 
 // NestJS отдаёт ошибки как {"message": "...", ...}; request() кладёт тело в текст Error.
