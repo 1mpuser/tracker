@@ -61,6 +61,18 @@ describe('AuthService', () => {
       expect(result.user.email).toBe('a@b.c');
       expect(result.sessionToken).toBeTruthy();
     });
+
+    it('заблокированная учётка не входит: тот же 401 и без сессии', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 7,
+        email: 'a@b.c',
+        passwordHash: await hashPassword('rightpass123'),
+        blockedAt: new Date(),
+      });
+
+      await expect(service.login('a@b.c', 'rightpass123', {})).rejects.toThrow(UnauthorizedException);
+      expect(prisma.session.create).not.toHaveBeenCalled();
+    });
   });
 
   // Проверяем 401-пути login отдельно с настоящими хэшами: важно, что
@@ -112,6 +124,26 @@ describe('AuthService', () => {
 
       expect(prisma.session.update).toHaveBeenCalled();
       expect(user?.email).toBe('a@b.c');
+    });
+
+    it('возвращает null для заблокированного пользователя даже с живой сессией', async () => {
+      prisma.session.findUnique.mockResolvedValue({ id: 1, userId: 3, expiresAt: new Date(Date.now() + 3600e3), lastSeenAt: new Date() });
+      prisma.user.findUnique.mockResolvedValue({ id: 3, email: 'a@b.c', timezone: 'UTC', blockedAt: new Date() });
+
+      await expect(service.resolveSession('tok')).resolves.toBeNull();
+    });
+  });
+
+  describe('me', () => {
+    it('возвращает идентичность пользователя с признаком админа из базы', async () => {
+      prisma.user.findUniqueOrThrow.mockResolvedValue({ id: 3, email: 'a@b.c', timezone: 'UTC', isAdmin: true });
+
+      await expect(service.me(3)).resolves.toMatchObject({
+        id: 3,
+        email: 'a@b.c',
+        timezone: 'UTC',
+        isAdmin: true,
+      });
     });
   });
 

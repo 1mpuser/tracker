@@ -10,6 +10,7 @@ import { GtdModule } from './gtd/gtd.module';
 import { RoutinesModule } from './routines/routines.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { AuthModule } from './auth/auth.module';
+import { AdminModule } from './admin/admin.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -17,6 +18,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
   imports: [
     PrismaModule,
     AuthModule,
+    AdminModule,
     // Глобальный мягкий лимит; жёсткие @Throttle — на /auth-эндпоинтах.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     CategoriesModule,

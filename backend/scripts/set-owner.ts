@@ -67,7 +67,7 @@ async function main() {
 
   await prisma.user.update({
     where: { id: owner.id },
-    data: { email, timezone, passwordHash: await hashPassword(password) },
+    data: { email, timezone, passwordHash: await hashPassword(password), isAdmin: true },
   });
   console.log(`Владелец назначен: ${email} (${timezone}). Удалите заглушку owner@localhost.invalid.`);
 }

@@ -12,6 +12,10 @@ model User {
   // null — у владельца сразу после переезда, пока set-owner не задал пароль.
   passwordHash String?
   timezone     String   @default("UTC")
+  // Админов назначает только скрипт (set-owner / make-admin), не интерфейс.
+  isAdmin      Boolean  @default(false)
+  // null = учётка активна; непустое значение — заблокирована до разблокировки.
+  blockedAt    DateTime?
   createdAt    DateTime @default(now())
 
   categories    Category[]

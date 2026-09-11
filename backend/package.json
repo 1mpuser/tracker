@@ -9,6 +9,7 @@
     "test": "jest",
     "test:e2e": "DATABASE_URL=${DATABASE_URL_TEST:-postgresql://tracker:tracker@localhost:5434/tracker_test} jest -c test/jest-e2e.config.ts",
     "set-owner": "bun run scripts/set-owner.ts",
+    "make-admin": "bun run scripts/make-admin.ts",
     "reset-password": "bun run scripts/reset-password.ts"
   },
   "dependencies": {

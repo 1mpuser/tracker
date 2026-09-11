@@ -60,8 +60,8 @@ export class AuthController {
   }
 
   @Get('me')
-  me(@CurrentUser() user: AuthUser) {
-    return { user };
+  async me(@CurrentUser() user: AuthUser) {
+    return { user: await this.auth.me(user.id) };
   }
 
   @Patch('me')

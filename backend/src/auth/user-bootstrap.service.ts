@@ -12,22 +12,27 @@ export class UserBootstrapService {
 
   async createUser(data: { email: string; passwordHash?: string | null; timezone?: string }) {
     const budgetDefault = parseInt(process.env.DISTRACTION_BUDGET_DEFAULT ?? '60', 10);
-    const user = await this.prisma.user.create({
-      data: {
-        email: data.email,
-        passwordHash: data.passwordHash ?? null,
-        timezone: data.timezone ?? 'UTC',
-      },
-    });
 
-    await this.prisma.settings.create({
-      data: { userId: user.id, distractionBudget: Number.isFinite(budgetDefault) ? budgetDefault : 60 },
-    });
+    // Всё в одной транзакции: не может остаться пользователь без дефолтных
+    // сфер или настроек, а занятая почта P2002 откатывает создание целиком.
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: data.email,
+          passwordHash: data.passwordHash ?? null,
+          timezone: data.timezone ?? 'UTC',
+        },
+      });
 
-    await this.prisma.category.createMany({
-      data: DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: user.id })),
-    });
+      await tx.settings.create({
+        data: { userId: user.id, distractionBudget: Number.isFinite(budgetDefault) ? budgetDefault : 60 },
+      });
 
-    return user;
+      await tx.category.createMany({
+        data: DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: user.id })),
+      });
+
+      return user;
+    });
   }
 }

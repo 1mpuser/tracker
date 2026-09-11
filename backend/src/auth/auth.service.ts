@@ -71,6 +71,12 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException('Неверная почта или пароль');
     }
 
+    // Блокировку проверяем только после verifyPassword — по времени ответа
+    // нельзя понять, заблокирована ли учётка, и 401 тот же, что на пароль.
+    if (user.blockedAt) {
+      throw new UnauthorizedException('Неверная почта или пароль');
+    }
+
     if (needsRehash(user.passwordHash)) {
       await this.prisma.user.update({
         where: { id: user.id },
@@ -124,8 +130,17 @@ export class AuthService implements OnModuleInit {
       await this.prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } });
     }
     const user = await this.prisma.user.findUnique({ where: { id: session.userId } });
-    if (!user) return null;
+    // Заблокированная учётка: даже живая сессия перестаёт работать сразу.
+    if (!user || user.blockedAt) return null;
     return { id: user.id, email: user.email, timezone: user.timezone };
+  }
+
+  // Полная идентичность пользователя: помимо данных сессии фронтенду нужен
+  // признак админа (GET /auth/me). AuthUser не расширяем — его собирают в
+  // десятках мест, isAdmin берётся из базы отдельно.
+  async me(userId: number): Promise<{ id: number; email: string; timezone: string; isAdmin: boolean }> {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    return { id: user.id, email: user.email, timezone: user.timezone, isAdmin: user.isAdmin };
   }
 
   async logout(sessionToken: string): Promise<void> {
