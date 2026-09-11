@@ -122,13 +122,6 @@ export default function SettingsModal({ onClose, onCategoriesChanged, onSettings
             >
               Чаты
             </button>
-                        <button
-              type="button"
-              className={`${styles.tab} ${tab === 'telegramChats' ? styles.tabActive : ''}`}
-              onClick={() => setTab('telegramChats')}
-            >
-              Чаты
-            </button>
             <button
               type="button"
               className={`${styles.tab} ${tab === 'icloud' ? styles.tabActive : ''}`}
