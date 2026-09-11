@@ -79,4 +79,29 @@ describe('CalDavClient', () => {
     const cal = await c1.findCalendar(1, creds, 'Session');
     expect(cal?.displayName).toBe('Session');
   });
+
+  it('смена Apple ID не подхватывает кэш календарей старой учётки', async () => {
+    fetchCalendarsSpy.mockResolvedValue([{ displayName: 'GTD', url: 'https://example/old' }] as never);
+    const c1 = new CalDavClient();
+    await c1.findCalendar(1, creds, 'GTD');
+
+    fetchCalendarsSpy.mockResolvedValue([{ displayName: 'GTD', url: 'https://example/new' }] as never);
+    const cal = await c1.findCalendar(1, { appleId: 'other@example.com', appPassword: 'app-specific-password' }, 'GTD');
+
+    expect(cal?.url).toBe('https://example/new');
+    expect(fetchCalendarsSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('forget сбрасывает кэш календарей по префиксу userId, невзирая на отпечаток в ключе', async () => {
+    fetchCalendarsSpy.mockResolvedValue([{ displayName: 'GTD', url: 'https://example/x' }] as never);
+    const c1 = new CalDavClient();
+    await c1.findCalendar(1, creds, 'GTD');
+
+    c1.forget(1);
+    fetchCalendarsSpy.mockClear();
+
+    const cal = await c1.findCalendar(1, creds, 'GTD');
+    expect(cal?.url).toBe('https://example/x');
+    expect(fetchCalendarsSpy).toHaveBeenCalledTimes(1);
+  });
 });

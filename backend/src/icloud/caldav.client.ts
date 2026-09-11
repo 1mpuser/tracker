@@ -49,9 +49,11 @@ export class CalDavClient {
   }
 
   async findCalendar(userId: number, creds: ICloudCredentials, name: string): Promise<DAVCalendar | null> {
-    // Списки ищем по ключу (userId, name): у разных пользователей могут быть
-    // списки с одинаковыми именами и разным содержимым.
-    const key = `${userId}:${name}`;
+    // Ключ — пользователь + отпечаток учётки + имя: у разных пользователей могут
+    // быть списки с одинаковыми именами, а после смены Apple ID не должен
+    // подхватываться кэш старой учётки. forget() всё ещё работает по префиксу
+    // `${userId}:` — отпечаток не ломает сброс кэша пользователя.
+    const key = `${userId}:${this.fingerprint(creds)}:${name}`;
     const cached = this.calendars.get(key);
     if (cached) return cached;
     const client = await this.getClient(userId, creds);
