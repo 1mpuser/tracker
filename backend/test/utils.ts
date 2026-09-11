@@ -1,3 +1,6 @@
+// Утилиты e2e. Общие для всех спеков: createApp приносит реальное приложение
+// (тот же AppModule, что в проде), truncateAll чистит тестовую БД между тестами.
+
 import request from 'supertest';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -17,11 +20,21 @@ export async function createApp(): Promise<NestExpressApplication> {
 }
 
 // Полная очистка между тестами: всё, кроме служебной таблицы миграций.
+// Имя базы проверяем тем же соединением, которым собираемся чистить:
+// DATABASE_URL может не совпадать с тем, куда реально подключился Prisma,
+// поэтому парсим не URL, а SELECT current_database().
 export async function truncateAll(prisma: PrismaService): Promise<void> {
-  const rows: { tablename: string }[] = await prisma.$queryRaw`
+  const rows: { current_database: string }[] = await prisma.$queryRaw`SELECT current_database()`;
+  const dbName = rows[0]?.current_database ?? '';
+  if (!dbName.includes('test')) {
+    throw new Error(
+      `Отказываюсь чистить БД «${dbName || '?'}»: e2e-тесты чистят только тестовую базу (имя должно содержать "test")`,
+    );
+  }
+  const tables: { tablename: string }[] = await prisma.$queryRaw`
     SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'
   `;
-  const names = rows.map((r) => `"${r.tablename}"`).join(', ');
+  const names = tables.map((r) => `"${r.tablename}"`).join(', ');
   if (names) {
     await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${names} RESTART IDENTITY CASCADE`);
   }
