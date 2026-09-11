@@ -5,20 +5,14 @@ function env(overrides: Record<string, string> = {}) {
 }
 
 describe('loadAuthConfig', () => {
-  it('defaults to open signup, no resend, localhost cookies outside production', () => {
+  it('defaults to non-secure cookies and 30 session days outside production', () => {
     const cfg = loadAuthConfig(env({ NODE_ENV: 'development' }));
-    expect(cfg.signupMode).toBe('open');
-    expect(cfg.resendApiKey).toBeNull();
     expect(cfg.cookieSecure).toBe(false);
-    expect(cfg.appUrl).toBe('');
     expect(cfg.sessionDays).toBe(30);
   });
 
   const PROD_ENV = {
     NODE_ENV: 'production',
-    APP_URL: 'https://tracker.example.com',
-    RESEND_API_KEY: 're_xxx',
-    MAIL_FROM: 'Трекер <noreply@example.com>',
     APP_ENCRYPTION_KEY: 'base64key000000000000000000000000',
   };
 
@@ -30,33 +24,11 @@ describe('loadAuthConfig', () => {
     expect(loadAuthConfig(env({ ...PROD_ENV, COOKIE_SECURE: 'false' })).cookieSecure).toBe(false);
   });
 
-  it('rejects unknown signup modes', () => {
-    expect(() => loadAuthConfig(env({ SIGNUP_MODE: 'nope' }))).toThrow(/SIGNUP_MODE/);
+  it('throws in production without APP_ENCRYPTION_KEY', () => {
+    expect(() => loadAuthConfig(env({ NODE_ENV: 'production' }))).toThrow(/APP_ENCRYPTION_KEY/);
   });
 
-  it('parses allowlist emails lowercased and trimmed', () => {
-    const cfg = loadAuthConfig(env({ SIGNUP_MODE: 'allowlist', ALLOWED_EMAILS: ' A@B.c , D@e.f ' }));
-    expect(cfg.allowedEmails.has('a@b.c')).toBe(true);
-    expect(cfg.allowedEmails.has('d@e.f')).toBe(true);
-  });
-
-  it('throws in production without required env vars', () => {
-    expect(() => loadAuthConfig(env({ NODE_ENV: 'production', APP_URL: '', RESEND_API_KEY: '', MAIL_FROM: '', APP_ENCRYPTION_KEY: '' }))).toThrow(
-      /APP_URL.*RESEND_API_KEY.*MAIL_FROM.*APP_ENCRYPTION_KEY/s,
-    );
-  });
-
-  it('passes production when all required vars are present', () => {
-    const cfg = loadAuthConfig(
-      env({
-        NODE_ENV: 'production',
-        APP_URL: 'https://tracker.example.com',
-        RESEND_API_KEY: 're_xxx',
-        MAIL_FROM: 'Трекер <noreply@example.com>',
-        APP_ENCRYPTION_KEY: 'base64key000000000000000000000000',
-      }),
-    );
-    expect(cfg.appUrl).toBe('https://tracker.example.com');
-    expect(cfg.resendApiKey).toBe('re_xxx');
+  it('passes production when APP_ENCRYPTION_KEY is present', () => {
+    expect(() => loadAuthConfig(env({ ...PROD_ENV }))).not.toThrow();
   });
 });

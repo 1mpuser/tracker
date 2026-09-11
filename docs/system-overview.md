@@ -106,7 +106,7 @@ Design-доки по каждому шагу лежат в `docs/superpowers/spe
 ## Многопользовательность (с 2026-09-11)
 
 - **User** — корневая таблица; все остальные (Category, Day, Settings, GtdItem, Routine, TaskTemplate, TelegramChat) принадлежат ему (`userId`). Изоляция — явным `userId` в каждом методе сервиса + e2e-тест `test/isolation.e2e-spec.ts`.
-- **Аутентификация**: `PendingSignup` → письмо (Resend) → `User` + default-сферы; вход почта+пароль (scrypt), серверные сессии (`Session`, cookie `sid`). См. модули `auth` и `integrations`.
+- **Аутентификация**: вход почта+пароль (scrypt), серверные сессии (`Session`, cookie `sid`), смена пароля. Самостоятельной регистрации и писем нет — учётки создаёт администратор (`UserBootstrapService`). См. модули `auth` и `integrations`.
 - **Интеграции — на пользователя**: Telegram (токен бота), iCloud (Apple ID + пароль приложения, зашифрован), Session (календарь + минимальная длина) настраиваются в Настройках каждого.
 - **Время**: «сегодня» считается через `todayFor(user.timezone)`; контейнер в UTC.
 - Переезд данных владельца с локальной версии — `docs/deploy.md` («Переезд»), скрипты `deploy/transit/`.

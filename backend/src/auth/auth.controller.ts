@@ -16,12 +16,7 @@ import { AUTH_CONFIG, AuthConfig } from './auth.config';
 import { CurrentUser } from './current-user.decorator';
 import { Public } from './public.decorator';
 import { AuthUser } from './auth-user';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { ConfirmDto } from './dto/confirm.dto';
-import { ResendDto } from './dto/resend.dto';
-import { ForgotDto } from './dto/forgot.dto';
-import { ResetDto } from './dto/reset.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 
@@ -55,61 +50,11 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { ttl: 60 * 60 * 1000, limit: 3 } })
-  @Post('register')
-  @HttpCode(204)
-  async register(@Body() dto: RegisterDto) {
-    await this.auth.register(dto.email, dto.password, dto.timezone);
-  }
-
-  @Public()
-  @Throttle({ default: { ttl: 60 * 1000, limit: 10 } })
-  @Post('register/confirm')
-  @HttpCode(200)
-  async confirm(
-    @Body() dto: ConfirmDto,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const result =
-      dto.token !== undefined
-        ? await this.auth.confirmByToken(dto.token, metaFrom(req))
-        : await this.auth.confirmByCode(dto.email ?? '', dto.code ?? '', metaFrom(req));
-    this.setSessionCookie(res, result.sessionToken);
-    return { user: result.user };
-  }
-
-  @Public()
-  @Throttle({ default: { ttl: 60 * 60 * 1000, limit: 3 } })
-  @Post('register/resend')
-  @HttpCode(204)
-  async resend(@Body() dto: ResendDto) {
-    await this.auth.resendConfirmation(dto.email);
-  }
-
-  @Public()
   @Throttle({ default: { ttl: 60 * 1000, limit: 5 } })
   @Post('login')
   @HttpCode(200)
   async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const result = await this.auth.login(dto.email, dto.password, metaFrom(req));
-    this.setSessionCookie(res, result.sessionToken);
-    return { user: result.user };
-  }
-
-  @Public()
-  @Throttle({ default: { ttl: 60 * 60 * 1000, limit: 3 } })
-  @Post('forgot')
-  @HttpCode(204)
-  async forgot(@Body() dto: ForgotDto) {
-    await this.auth.forgot(dto.email);
-  }
-
-  @Public()
-  @Post('reset')
-  @HttpCode(200)
-  async reset(@Body() dto: ResetDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const result = await this.auth.reset(dto.token, dto.password, metaFrom(req));
     this.setSessionCookie(res, result.sessionToken);
     return { user: result.user };
   }

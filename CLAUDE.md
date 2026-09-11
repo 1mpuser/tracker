@@ -35,8 +35,8 @@ CORS-список задаёт `CORS_ORIGINS` (через запятую); по 
 
 ### Продакшен (VPS)
 
-- Прод-стек — `docker-compose.prod.yml` + `caddy/Caddyfile.prod` (Let's Encrypt, наружу только 80/443, фронт и API за одним доменом — `/api` проксируется на backend). Публичный домен и почта настраиваются в `.env.prod` (см. `.env.prod.example` и `docs/deploy.md`).
-- Бэкенд в проде не стартует без `RESEND_API_KEY`, `MAIL_FROM`, `APP_URL`, `APP_ENCRYPTION_KEY`, `POSTGRES_PASSWORD`.
+- Прод-стек — `docker-compose.prod.yml` + `caddy/Caddyfile.prod` (Let's Encrypt, наружу только 80/443, фронт и API за одним доменом — `/api` проксируется на backend). Публичный домен настраивается в `.env.prod` (см. `.env.prod.example` и `docs/deploy.md`).
+- Бэкенд в проде не стартует без `APP_ENCRYPTION_KEY`, `POSTGRES_PASSWORD`.
 - Деплой: `./deploy/deploy.sh` (pull → бэкап → build → health).
 
 ### HTTPS / tracker.performance

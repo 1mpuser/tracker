@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from '../Auth.module.css';
 import { login } from '@/lib/api';
@@ -33,7 +32,7 @@ export default function LoginPage() {
     <div className={styles.wrap}>
       <div className={styles.card}>
         <h1 className={styles.title}>Вход</h1>
-        <p className={styles.subtitle}>Почта и пароль — как при регистрации</p>
+        <p className={styles.subtitle}>Почта и пароль, которые выдал администратор</p>
         <form onSubmit={submit}>
           <div className={styles.field}>
             <label>Почта</label>
@@ -61,10 +60,6 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
-        <div className={styles.links}>
-          <Link href="/register">Регистрация</Link>
-          <Link href="/forgot">Забыли пароль?</Link>
-        </div>
         {error && <div className={styles.error}>{error}</div>}
       </div>
     </div>

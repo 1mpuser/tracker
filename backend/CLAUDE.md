@@ -39,7 +39,7 @@ e2e on a real Postgres: `bun run test:e2e` (uses `tracker_test`; `DATABASE_URL_T
 
 ### Auth + Integrations module
 
-- `auth/` — своя аутентификация: `PendingSignup` → письмо Resend → `User` (scrypt-хэш пароля, `auth/password.util.ts`), серверные сессии в Postgres (`Session`, cookie `sid` через `SessionGuard`), сброс пароля. `@Public()` на `/auth/*` и `/health`.
+- `auth/` — своя аутентификация: вход почта+пароль (scrypt-хэш через `auth/password.util.ts`), серверные сессии в Postgres (`Session`, cookie `sid` через `SessionGuard`), смена пароля. Регистрации и писем нет — учётки создаёт администратор (`UserBootstrapService`). `@Public()` на `/auth/*` и `/health`.
 - `integrations/` — пер-пользовательские учётные данные iCloud/Session (`IntegrationsService`, шифрование пароля приложения), `ICloudService` и `SessionService` читают их отсюда. Эндпоинты `/integrations/*`.
 
 ### Время

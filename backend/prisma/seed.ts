@@ -6,7 +6,7 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(process.env.DATABASE_URL
 
 // Seed для локального dev: создаёт dev-пользователя с дефолтными сферами и
 // настройками, если пользователей ещё нет. Никаких глобальных сфер больше нет —
-// дефолтные сферы создаются при регистрации (UserBootstrapService).
+// дефолтные сферы создаются вместе с учёткой (UserBootstrapService).
 const DEFAULT_DISTRACTION_BUDGET = parseInt(process.env.DISTRACTION_BUDGET_DEFAULT ?? '60', 10);
 
 async function main() {

@@ -21,5 +21,5 @@ COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/src ./src
 EXPOSE 3001
 # seed убран из стартовой команды: глобальных сфер больше нет, дефолтные
-# создаются при регистрации пользователя (UserBootstrapService).
+# создаются вместе с учёткой (UserBootstrapService).
 CMD sh -c "bunx prisma migrate deploy && bun dist/main.js"

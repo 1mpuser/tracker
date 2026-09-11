@@ -3,9 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DEFAULT_CATEGORIES } from './default-categories';
 
 // Единственный путь создания пользователя и всего, что с ним рождается:
-// он же используется и временным SingleUserGuard, и подтверждением регистрации
-// (Task 2.2), и seed.ts. Всё в одной транзакции — не может остаться
-// пользователь без дефолтных сфер или настроек.
+// его используют и тесты (loginAs), и seed.ts, и администратор в следующей
+// задаче. Всё в одной транзакции — не может остаться пользователь без
+// дефолтных сфер или настроек.
 @Injectable()
 export class UserBootstrapService {
   constructor(private prisma: PrismaService) {}

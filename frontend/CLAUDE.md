@@ -32,7 +32,7 @@ Design tokens are fixed CSS custom properties in `app/globals.css` (`--bg`, `--p
 
 ## Auth
 
-- Страницы входа/регистрации/сброса — `app/{login,register,register/confirm,forgot,reset}/page.tsx` (client компоненты, общий `app/Auth.module.css`).
+- Страница входа — `app/login/page.tsx` (client компонент, стили в общем `app/Auth.module.css`). Регистрации и сброса пароля по почте нет: учётки выдаёт администратор.
 - `lib/api.ts` ходит с `credentials: 'include'`; при 401 на не-auth-странице делает `window.location.href = '/login'` и не резолвится.
 - `NEXT_PUBLIC_API_URL`, начинающийся с `/`, трактуется как путь на своём origin (прод: фронт и API за одним доменом, `/api` проксируется Caddy).
 - Настройки → «Аккаунт» (`AccountTab.tsx`): почта, часовой пояс, смена пароля, выход/выход везде.

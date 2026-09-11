@@ -8,8 +8,6 @@ cd "$PROJECT_DIR"
 export DOMAIN="${DOMAIN:?задайте DOMAIN}"
 export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-}"
 export ACME_EMAIL="${ACME_EMAIL:-}"
-export RESEND_API_KEY="${RESEND_API_KEY:-}"
-export MAIL_FROM="${MAIL_FROM:-}"
 export APP_ENCRYPTION_KEY="${APP_ENCRYPTION_KEY:-}"
 
 git pull --ff-only

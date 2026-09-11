@@ -26,13 +26,8 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://tracker:${POSTGRES_PASSWORD}@postgres:5432/tracker
       PORT: "3001"
-      APP_URL: https://${DOMAIN:?задайте DOMAIN}
-      CORS_ORIGINS: https://${DOMAIN}
+      CORS_ORIGINS: https://${DOMAIN:?задайте DOMAIN}
       COOKIE_SECURE: "true"
-      SIGNUP_MODE: ${SIGNUP_MODE:-open}
-      ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
-      RESEND_API_KEY: ${RESEND_API_KEY:?задайте RESEND_API_KEY}
-      MAIL_FROM: ${MAIL_FROM:?задайте MAIL_FROM}
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?задайте APP_ENCRYPTION_KEY}
       DISTRACTION_BUDGET_DEFAULT: "60"
       TZ: UTC

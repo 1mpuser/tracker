@@ -40,7 +40,7 @@ const API_URL = resolveApiUrl();
 
 // Эндпоинты аутентификации, на которых 401 не должен уводить на /login
 // (иначе «Неверная почта или пароль» кидало бы на страницу входа).
-const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/register/confirm', '/auth/register/resend', '/auth/forgot', '/auth/reset'];
+const AUTH_PATHS = ['/auth/login'];
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -239,32 +239,8 @@ export interface AuthUser {
   timezone: string;
 }
 
-export function register(data: { email: string; password: string; timezone?: string }): Promise<void> {
-  return request('/auth/register', { method: 'POST', body: JSON.stringify(data) });
-}
-
-export function confirmSignupByToken(token: string): Promise<{ user: AuthUser }> {
-  return request('/auth/register/confirm', { method: 'POST', body: JSON.stringify({ token }) });
-}
-
-export function confirmSignupByCode(email: string, code: string): Promise<{ user: AuthUser }> {
-  return request('/auth/register/confirm', { method: 'POST', body: JSON.stringify({ email, code }) });
-}
-
-export function resendSignup(email: string): Promise<void> {
-  return request('/auth/register/resend', { method: 'POST', body: JSON.stringify({ email }) });
-}
-
 export function login(email: string, password: string): Promise<{ user: AuthUser }> {
   return request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
-}
-
-export function forgotPassword(email: string): Promise<void> {
-  return request('/auth/forgot', { method: 'POST', body: JSON.stringify({ email }) });
-}
-
-export function resetPassword(token: string, password: string): Promise<{ user: AuthUser }> {
-  return request('/auth/reset', { method: 'POST', body: JSON.stringify({ token, password }) });
 }
 
 export function getMe(): Promise<{ user: AuthUser }> {

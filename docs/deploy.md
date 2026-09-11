@@ -1,7 +1,7 @@
 # Как поднять трекер на своём VPS
 
 Пошаговая инструкция для человека. Команды — для копирования. Всё, кроме
-шагов «Домен/Resend/VPS», выполняется из репозитория с ветки `feat/multi-user`
+шагов «Домен/VPS», выполняется из репозитория с ветки `feat/multi-user`
 (см. `docs/superpowers/plans/2026-09-11-multi-user-hosting.md`).
 
 ## 1. Что купить
@@ -12,7 +12,7 @@
 Перед покупкой на длительный срок проверьте с будущего сервера доступность внешних сервисов:
 
 ```bash
-curl -sI https://api.telegram.org https://caldav.icloud.com https://api.resend.com | head -20
+curl -sI https://api.telegram.org https://caldav.icloud.com | head -20
 ```
 
 ## 2. DNS
@@ -23,21 +23,7 @@ A/AAAA на IP VPS. Проверить:
 dig +short ваш-домен
 ```
 
-## 3. Resend (обязательно)
-
-Регистрация и сброс пароля идут только через письма.
-
-1. В Resend добавьте домен (лучше поддомен `mail.ваш-домен`).
-2. Пропишите в DNS: DKIM, SPF, MX и `_dmarc` (`v=DMARC1; p=none;`).
-3. Дождитесь статуса **Verified** (обычно минуты).
-4. Создайте API-ключ **«Sending access»** (`re_...`).
-5. `MAIL_FROM` — на подтверждённом домене: `Трекер <noreply@mail.ваш-домен>`.
-
-**Тест до зова людей:** зарегистрируйтесь самим и проверьте, что письмо
-подтверждения не в спаме (и на Gmail, и на почте друга). Без DKIM/SPF письма
-уходят в спам.
-
-## 4. Сервер
+## 3. Сервер
 
 ```bash
 sudo useradd -m -s /bin/bash deploy
@@ -64,7 +50,7 @@ sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapf
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
 
-## 5. Код
+## 4. Код
 
 GitHub → Settings → Deploy keys, **read-only**, на `/home/deploy/.ssh`:
 
@@ -85,7 +71,7 @@ echo "POSTGRES_PASSWORD: $(openssl rand -base64 24 | tr -d '/+=' | tr -d '\n')"
 echo "APP_ENCRYPTION_KEY: $(openssl rand -base64 32)"   # СОХРАНИТЬ В МЕНЕДЖЕР ПАРОЛЕЙ
 ```
 
-## 6. Первый запуск
+## 5. Первый запуск
 
 Если это **переезд** существующих данных владельца — сначала Фаза 5 (раздел
 «Переезд») ниже. Иначе:
@@ -96,7 +82,7 @@ echo "APP_ENCRYPTION_KEY: $(openssl rand -base64 32)"   # СОХРАНИТЬ В 
 
 Проверить: `https://домен` (страница входа), `https://домен/api/health` → `{"status":"ok"}`.
 
-## 7. Бэкапы
+## 6. Бэкапы
 
 Крон от имени `deploy` (crontab -e):
 
@@ -108,11 +94,11 @@ echo "APP_ENCRYPTION_KEY: $(openssl rand -base64 32)"   # СОХРАНИТЬ В 
 - Внешняя копия: `RCLONE_REMOTE=remote:folder` в `.env` → бэкап уйдёт ещё и туда.
 - Раз в месяц — пробное восстановление в `tracker_restore_test`.
 
-## 8. Мониторинг
+## 7. Мониторинг
 
 UptimeRobot (или аналог) на `https://домен/api/health`.
 
-## 9. Обновление
+## 8. Обновление
 
 ```bash
 ./deploy/deploy.sh
@@ -123,22 +109,16 @@ UptimeRobot (или аналог) на `https://домен/api/health`.
 **Откат:** `git checkout <коммит>` → `up -d --build`; если нужен и откат данных —
 `deploy/restore.sh <последний дамп>`. Миграции БД назад не катятся.
 
-## 10. Если пошли боты
+## 9. Учётки выдаёт администратор
 
-`SIGNUP_MODE=closed` (или `allowlist` + `ALLOWED_EMAILS`) в `.env.prod`:
+Самостоятельно завести аккаунт нельзя — учётки создаёт и раздаёт администратор
+в разделе `/admin`.
 
-```bash
-docker compose -f docker-compose.prod.yml up -d backend
-```
-
-Уже зарегистрированных пользователей это не касается.
-
-## 11. Частые проблемы
+## 10. Частые проблемы
 
 - **Сертификат не выпускается**: DNS не на IP / порт 80 закрыт. `docker compose -f docker-compose.prod.yml logs caddy`.
-- **Письма не приходят**: Resend не Verified или `MAIL_FROM` не на подтверждённом домене. `docker compose -f docker-compose.prod.yml logs backend`.
 - **401 сразу после входа**: фронт собран с абсолютным API-URL вместо `NEXT_PUBLIC_API_URL=/api`, либо `COOKIE_SECURE=true` при http (`cookieSecure` в составе URL не проверяется) — пересобрать фронт.
-- **502**: бэкенд упал на проверке env (не задан `RESEND_API_KEY`/`APP_ENCRYPTION_KEY` и т.п.) — `docker compose -f docker-compose.prod.yml logs backend`.
+- **502**: бэкенд упал на проверке env (не задан `APP_ENCRYPTION_KEY`) — `docker compose -f docker-compose.prod.yml logs backend`.
 - **iCloud не подключается**: нужен **пароль приложения** (appleid.apple.com → Вход и безопасность → Пароли приложений), а не пароль Apple ID.
 
 ---
@@ -153,9 +133,8 @@ docker compose -f docker-compose.prod.yml up -d backend
 ### За день
 
 1. Сервер поднят по пп. 1–5, но `deploy.sh` **не запускался**.
-2. Resend проверен тестовым письмом (не через прод-БД).
-3. Репетиция зелёная: `cd deploy && ./transit/1-rehearsal.sh` **минимум дважды**, before == after.
-4. В локальном `.env` `TZ` = тому поясу, который укажете в `set-owner --timezone`.
+2. Репетиция зелёная: `cd deploy && ./transit/1-rehearsal.sh` **минимум дважды**, before == after.
+3. В локальном `.env` `TZ` = тому поясу, который укажете в `set-owner --timezone`.
 
 ### Окно заморозки (~15–30 минут)
 
