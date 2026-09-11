@@ -82,8 +82,8 @@ export default function AdminPage() {
     try {
       const created = await createAdminUser({ email, password, timezone });
       await loadUsers();
-      await copyPassword(password);
       setRevealed({ email: created.email, password, label: 'Новая учётка' });
+      setCopied(false);
       // Форма для следующей учётки: поле почты очищаем, пароль генерируем заново.
       setEmail('');
       setPassword(generatePassword());
@@ -112,7 +112,7 @@ export default function AdminPage() {
     try {
       await setAdminPassword(changeId, changePassword);
       await loadUsers();
-      await copyPassword(changePassword);
+      setCopied(false);
       setRevealed({ email: target?.email ?? '', password: changePassword, label: 'Пароль изменён' });
       setNotice('Пароль изменён, все сессии учётки закрыты');
       setChangeId(null);
