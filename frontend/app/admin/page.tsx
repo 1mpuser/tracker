@@ -248,21 +248,21 @@ export default function AdminPage() {
                 const isSelf = u.id === meId;
                 return (
                   <tr key={u.id}>
-                    <td>
+                    <td data-label="Почта">
                       {u.email}
                       {u.isAdmin && <span className={styles.badge}>админ</span>}
                       {isSelf && <span className={styles.selfBadge}>вы</span>}
                     </td>
-                    <td>{u.timezone}</td>
-                    <td>{formatDate(u.createdAt)}</td>
-                    <td>
+                    <td data-label="Пояс">{u.timezone}</td>
+                    <td data-label="Создана">{formatDate(u.createdAt)}</td>
+                    <td data-label="Статус">
                       {u.blockedAt ? (
                         <span className={styles.statusBlocked}>заблокирована</span>
                       ) : (
                         <span className={styles.statusActive}>активна</span>
                       )}
                     </td>
-                    <td className={styles.actionsCell}>
+                    <td data-label="Действия" className={styles.actionsCell}>
                       <button
                         type="button"
                         className={styles.rowBtn}

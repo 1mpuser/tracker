@@ -317,8 +317,140 @@
   padding: 10px 12px;
 }
 
+/* ---- телефон ---- */
 @media (max-width: 640px) {
+  .page {
+    padding: 16px 14px calc(32px + env(safe-area-inset-bottom));
+    gap: 14px;
+  }
+  .head {
+    gap: 6px;
+  }
+  .title {
+    font-size: 23px;
+  }
+  .createCard,
+  .listCard {
+    padding: 14px;
+  }
+  .formRow input,
+  .formRow select {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+  .passwordRow {
+    flex-wrap: wrap;
+  }
+  .passwordRow input {
+    flex: 1 1 100%;
+  }
+  .smallBtn {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+  }
+  .primaryBtn,
+  .secondaryBtn {
+    min-height: 48px;
+    font-size: 15px;
+  }
+  .rowBtn {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+  }
+  .reveal {
+    padding: 12px;
+  }
+
+  /* Таблица учёток превращается в карточки, по одной на учётку:
+     строки блокируются, «шапки» скрываются, у каждой ячейки слева —
+     подпись из data-label. */
+  .table,
+  .table thead,
+  .table tbody,
+  .table tr,
+  .table th,
+  .table td {
+    display: block;
+    width: auto;
+  }
+  .table thead {
+    display: none;
+  }
+  .table {
+    font-size: 13.5px;
+  }
+  .table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .table tbody tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 12px 10px;
+    background: var(--panel-alt);
+    box-shadow: var(--elev);
+  }
+  .table tbody tr:last-child td,
+  .table td {
+    border-bottom: 1px solid var(--hair);
+  }
+  .table td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 12px;
+    padding: 10px 0;
+  }
+  .table tr td:last-child {
+    border-bottom: none;
+  }
+  .table td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    min-width: 84px;
+    flex-shrink: 0;
+  }
   .actionsCell {
-    justify-content: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .actionsCell::before {
+    margin-bottom: 2px;
+  }
+  .actionsCell .rowBtn {
+    justify-content: center;
+  }
+  .badge {
+    margin-left: 0;
+  }
+
+  /* Модалки админки на весь экран */
+  .overlay {
+    padding: 0;
+  }
+  .modal {
+    width: 100%;
+    max-width: none;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    border-radius: 0;
+    overflow-y: auto;
+    padding: calc(20px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  .modalActions {
+    gap: 10px;
+  }
+  .modalActions button {
+    flex: 1;
   }
 }
