@@ -82,6 +82,14 @@ echo "APP_ENCRYPTION_KEY: $(openssl rand -base64 32)"   # СОХРАНИТЬ В 
 
 Проверить: `https://домен` (страница входа), `https://домен/api/health` → `{"status":"ok"}`.
 
+На чистой базе создать первого админа (пароль спросит интерактивно):
+
+```bash
+docker compose -f docker-compose.prod.yml exec backend bun run create-admin --email you@example.com --timezone Europe/Moscow
+```
+
+Дальше учётки выдаются в `/admin`.
+
 ## 6. Бэкапы
 
 Крон от имени `deploy` (crontab -e):
