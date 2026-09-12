@@ -5,6 +5,10 @@ set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_DIR"
 
+# Переменные — из .env проекта (на сервере симлинк на .env.prod), чтобы не
+# экспортировать их руками перед каждым деплоем.
+if [ -f .env ]; then set -a; . ./.env; set +a; fi
+
 export DOMAIN="${DOMAIN:?задайте DOMAIN}"
 export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-}"
 export ACME_EMAIL="${ACME_EMAIL:-}"

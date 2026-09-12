@@ -4,6 +4,9 @@
 set -euo pipefail
 
 PROJECT_DIR="${PROJECT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+# cron запускает скрипт без переменных окружения — берём их из .env проекта
+# (на сервере это симлинк на .env.prod).
+if [ -f "$PROJECT_DIR/.env" ]; then set -a; . "$PROJECT_DIR/.env"; set +a; fi
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/tracker}"
 KEEP_DAYS="${KEEP_DAYS:-14}"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD}"
