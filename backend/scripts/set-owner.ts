@@ -69,7 +69,8 @@ async function main() {
     where: { id: owner.id },
     data: { email, timezone, passwordHash: await hashPassword(password), isAdmin: true },
   });
-  console.log(`Владелец назначен: ${email} (${timezone}). Удалите заглушку owner@localhost.invalid.`);
+  // Заглушка не удаляется, а сама становится владельцем — данные остаются при ней.
+  console.log(`Владелец назначен: ${email} (${timezone}), админ. Заглушки owner@localhost.invalid больше нет.`);
 }
 
 main()
