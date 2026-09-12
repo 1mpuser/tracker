@@ -258,14 +258,60 @@
   .hot.red:not(.tier0) .num { filter: drop-shadow(0 0 13px var(--pom-glow)); }
 }
 
-@media (max-width: 560px) {
-  .heroRail {
+@media (max-width: 640px) {
+  .header {
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+  }
+  .titlebar {
+    gap: 12px;
+  }
+  .title {
+    font-size: 26px;
+  }
+  .actions {
+    gap: 8px;
     flex-wrap: wrap;
   }
+  .email {
+    display: none;
+  }
+  .iconBtn {
+    min-height: 44px;
+    padding: 9px 12px;
+  }
+  .heroRail {
+    gap: 8px;
+    margin-top: 14px;
+  }
   .cell {
-    min-width: 42%;
+    padding: 10px 8px 10px;
+  }
+  .glyph {
+    height: 28px;
+  }
+  .flame {
+    width: 20px;
+    height: 24px;
+  }
+  .tier2 .flame {
+    width: 22px;
+    height: 27px;
+  }
+  .tier3 .flame {
+    width: 25px;
+    height: 31px;
+  }
+  .tier4 .flame {
+    width: 28px;
+    height: 34px;
   }
   .num {
-    font-size: 38px;
+    font-size: 32px;
+  }
+  .lbl {
+    font-size: 9px;
+    letter-spacing: 0;
+    margin-top: 8px;
   }
 }

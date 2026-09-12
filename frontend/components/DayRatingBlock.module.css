@@ -81,3 +81,26 @@
   outline: none;
   border-color: var(--accent2);
 }
+
+/* ---- телефон ---- */
+@media (max-width: 640px) {
+  .sliderRow {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .slider {
+    height: 6px;
+  }
+  .slider::-webkit-slider-thumb {
+    width: 26px;
+    height: 26px;
+  }
+  .slider::-moz-range-thumb {
+    width: 26px;
+    height: 26px;
+  }
+  .comment {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+}

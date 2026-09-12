@@ -106,3 +106,34 @@
   color: var(--text-dim);
   line-height: 1.5;
 }
+
+/* ---- телефон ---- */
+@media (max-width: 640px) {
+  .panel {
+    padding: 14px 12px 16px;
+  }
+  .count {
+    font-size: 24px;
+  }
+  .budgetInput {
+    /* после глобального 16px шрифта узкое поле режем до реальной ширины */
+    width: 56px;
+  }
+  .buttons button,
+  .budgetInput {
+    min-height: 44px;
+  }
+  .buttons {
+    gap: 8px;
+  }
+  .buttons button {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  .reset {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}

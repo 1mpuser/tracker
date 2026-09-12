@@ -53,9 +53,28 @@
   gap: 16px;
 }
 
-@media (max-width: 720px) {
+/* Две колонки сетки главного экрана держим вплоть до планшета,
+   на телефоне все панели складываются в одну колонку. */
+@media (max-width: 640px) {
   .grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    padding: 16px 14px calc(24px + env(safe-area-inset-bottom));
+  }
+  .topbar {
+    margin-bottom: 14px;
+  }
+  .tab {
+    padding: 10px 16px;
+    font-size: 14px;
+    min-height: 44px;
+  }
+  .sysHint {
+    display: none;
   }
 }
 
