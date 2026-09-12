@@ -167,3 +167,73 @@
   font-size: 12px;
   color: var(--pom);
 }
+
+/* ---- телефон: модалка на весь экран ---- */
+@media (max-width: 640px) {
+  .overlay {
+    padding: 0;
+  }
+  .panel {
+    width: 100%;
+    max-width: none;
+    max-height: 100vh;
+    max-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    padding: 0 16px calc(20px + env(safe-area-inset-bottom));
+  }
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: var(--panel);
+    margin: 0 -16px 14px;
+    padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tabs {
+    flex: 1 1 auto;
+    /* место под прижатую сверху-справа кнопку закрытия */
+    padding-right: 48px;
+  }
+  .tab {
+    min-height: 44px;
+    font-size: 13.5px;
+    padding: 8px 12px;
+  }
+  .closeBtn {
+    position: absolute;
+    top: calc(10px + env(safe-area-inset-top));
+    right: 12px;
+    font-size: 30px;
+    width: 44px;
+    height: 44px;
+    align-self: flex-start;
+  }
+  .catRow {
+    gap: 6px;
+  }
+  .catInput,
+  .addRow input,
+  .addRow select {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+  .catActions button {
+    min-height: 44px;
+    min-width: 36px;
+  }
+  .addRow {
+    flex-wrap: wrap;
+  }
+  .addRow button {
+    flex: 1;
+    min-height: 44px;
+  }
+}

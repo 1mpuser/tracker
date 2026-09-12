@@ -87,9 +87,19 @@
   color: var(--pom);
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .row {
     grid-template-columns: 1fr;
-    gap: 4px;
+    gap: 6px;
+  }
+  .input,
+  .row select {
+    height: 44px;
+    padding: 0 10px;
+  }
+  .row button {
+    height: 44px;
+    padding: 0 16px;
+    font-size: 14px;
   }
 }

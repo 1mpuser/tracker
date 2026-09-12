@@ -122,3 +122,24 @@
   font-size: 12.5px;
   color: var(--pom);
 }
+
+/* ---- телефон ---- */
+@media (max-width: 640px) {
+  .row input,
+  .chatRow input {
+    min-height: 44px;
+    min-width: 0;
+    padding: 8px 10px;
+  }
+  .row button,
+  .chatRow button {
+    min-height: 44px;
+    padding: 8px 14px;
+    font-size: 13.5px;
+  }
+  .found {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+  }
+}

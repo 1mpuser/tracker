@@ -69,3 +69,28 @@
   font-size: 12.5px;
   cursor: pointer;
 }
+
+/* ---- телефон ---- */
+@media (max-width: 640px) {
+  .row {
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .del {
+    font-size: 13px;
+    padding: 8px 6px;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+  .addRow {
+    flex-wrap: wrap;
+  }
+  .addRow input {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+  .addRow button {
+    flex: 1;
+    min-height: 44px;
+  }
+}
