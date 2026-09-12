@@ -185,3 +185,57 @@
   border-radius: 3px;
   border: 1px solid var(--hair);
 }
+
+/* ---- телефон ---- */
+@media (max-width: 640px) {
+  .row {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .title {
+    flex: 1 1 100%;
+    min-width: 0;
+    font-size: 15px;
+  }
+  .dot {
+    width: 30px;
+    height: 30px;
+  }
+  .count {
+    font-size: 14px;
+  }
+  .markBtn {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 13px;
+    flex: 1;
+  }
+  .settingsRow {
+    gap: 10px;
+  }
+  .settingsInput,
+  .settingsSelect {
+    flex: 1 1 100%;
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+  .settingsNumber {
+    width: 64px;
+    height: 44px;
+  }
+  .settingsLabel {
+    flex: 1 1 40%;
+  }
+  .archiveBtn {
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+  .settingsToggle {
+    padding: 10px 0;
+    font-size: 13px;
+  }
+  .historyRow {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

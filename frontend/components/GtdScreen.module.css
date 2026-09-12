@@ -128,3 +128,25 @@
   font-style: italic;
   padding: 8px 0;
 }
+
+/* ---- телефон ---- */
+@media (max-width: 640px) {
+  .bucket,
+  .reviewButton,
+  .reviewBanner {
+    min-height: 44px;
+    font-size: 13.5px;
+    padding: 8px 12px;
+  }
+  .reviewBanner {
+    padding: 10px 12px;
+    line-height: 1.35;
+  }
+  .bucket {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .search {
+    min-height: 44px;
+  }
+}

@@ -191,3 +191,35 @@
   font-size: 14px;
   cursor: pointer;
 }
+
+/* ---- телефон ---- */
+@media (max-width: 640px) {
+  .card {
+    padding: 14px 14px;
+  }
+  .addRow {
+    flex-wrap: wrap;
+  }
+  .input {
+    flex: 1 1 100%;
+    min-height: 44px;
+  }
+  .addBtn {
+    flex: 1;
+    min-height: 44px;
+    font-size: 15px;
+  }
+  .stepCheck {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+  .stepTitle {
+    font-size: 14.5px;
+    line-height: 1.35;
+  }
+  .close {
+    min-height: 40px;
+    padding: 4px 8px;
+  }
+}

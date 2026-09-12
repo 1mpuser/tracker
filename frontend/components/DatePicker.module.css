@@ -151,3 +151,33 @@
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* ---- телефон ---- */
+@media (max-width: 640px) {
+  .popover,
+  .popoverUp {
+    /* на узком экране календарь центрируем по вьюпорту, чтобы он никогда
+       не вылезал за край (в том числе из вложенных меню GTD) */
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    width: min(280px, calc(100vw - 24px));
+    max-height: 80vh;
+    max-height: 80dvh;
+    z-index: 30;
+  }
+  .day {
+    padding: 8px 0;
+    font-size: 14px;
+  }
+  .navBtn {
+    width: 36px;
+    height: 36px;
+  }
+  .footerBtn {
+    padding: 10px 0;
+    font-size: 13px;
+  }
+}

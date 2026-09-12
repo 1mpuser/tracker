@@ -187,3 +187,50 @@
   color: inherit;
   cursor: pointer;
 }
+
+/* ---- телефон: модалка на весь экран ---- */
+@media (max-width: 640px) {
+  .overlay {
+    padding: 0;
+  }
+  .panel {
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    padding: calc(16px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+  }
+  .header {
+    position: sticky;
+    top: calc(-1 * env(safe-area-inset-top) - 16px);
+    background: var(--panel);
+    z-index: 2;
+    margin: calc(-1 * env(safe-area-inset-top)) -16px 14px;
+    padding: calc(16px + env(safe-area-inset-top)) 16px 12px;
+  }
+  .closeBtn {
+    font-size: 30px;
+    width: 44px;
+    height: 44px;
+  }
+  .openBtn {
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+  .finishBtn {
+    min-height: 48px;
+    font-size: 14px;
+  }
+  .queueBtn {
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+  .step {
+    padding: 12px;
+  }
+}

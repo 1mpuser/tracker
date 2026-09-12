@@ -145,3 +145,33 @@
   font-weight: 600;
   color: var(--accent);
 }
+
+/* ---- телефон ---- */
+@media (max-width: 640px) {
+  .capture {
+    flex-wrap: wrap;
+  }
+  .input {
+    flex: 1 1 100%;
+    min-height: 44px;
+  }
+  .addBtn {
+    flex: 1;
+    min-height: 44px;
+  }
+  .optBtn {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 13.5px;
+  }
+  .item {
+    padding: 12px;
+  }
+  .datePick {
+    flex-wrap: wrap;
+  }
+  .dateInput {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+}
