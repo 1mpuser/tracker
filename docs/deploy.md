@@ -116,7 +116,7 @@ UptimeRobot (или аналог) на `https://домен/api/health`.
 
 ## 10. Частые проблемы
 
-- **Сертификат не выпускается**: DNS не на IP / порт 80 закрыт. `docker compose -f docker-compose.prod.yml logs caddy`.
+- **Сертификат не выпускается**: DNS не на IP / TCP 443 занят чем-то другим. Caddy публикует только TCP 443 и получает сертификат через TLS-ALPN: порт 80 на нашем VPS нужен acme.sh для сертификата VPN, UDP 443 перенаправлен на hysteria. Поэтому редиректа `http://` → `https://` нет. `docker compose -f docker-compose.prod.yml logs caddy`.
 - **401 сразу после входа**: фронт собран с абсолютным API-URL вместо `NEXT_PUBLIC_API_URL=/api`, либо `COOKIE_SECURE=true` при http (`cookieSecure` в составе URL не проверяется) — пересобрать фронт.
 - **502**: бэкенд упал на проверке env (не задан `APP_ENCRYPTION_KEY`) — `docker compose -f docker-compose.prod.yml logs backend`.
 - **iCloud не подключается**: нужен **пароль приложения** (appleid.apple.com → Вход и безопасность → Пароли приложений), а не пароль Apple ID.

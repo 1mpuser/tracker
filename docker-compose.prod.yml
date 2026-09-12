@@ -50,7 +50,10 @@ services:
     environment:
       DOMAIN: ${DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL:?задайте ACME_EMAIL}
-    ports: ["80:80", "443:443", "443:443/udp"]
+    # Только TCP 443. Порт 80 на VPS нужен acme.sh (сертификат VPN, продление в
+    # standalone-режиме), UDP 443 перенаправлен на hysteria — их не публикуем.
+    # Сертификат домена Caddy получает через TLS-ALPN на 443 (см. Caddyfile.prod).
+    ports: ["443:443"]
     volumes:
       - ./caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

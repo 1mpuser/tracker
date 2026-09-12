@@ -1,8 +1,21 @@
 {
-	email {$ACME_EMAIL}
+	# Порт 80 наружу не публикуется (на VPS он у acme.sh для сертификата VPN),
+	# поэтому редиректа http→https нет.
+	auto_https disable_redirects
+}
+
+# Сертификат только через TLS-ALPN на 443: HTTP-челлендж шёл бы на порт 80.
+(tls_alpn_only) {
+	tls {
+		issuer acme {
+			email {$ACME_EMAIL}
+			disable_http_challenge
+		}
+	}
 }
 
 {$DOMAIN} {
+	import tls_alpn_only
 	encode zstd gzip
 
 	header {
@@ -23,5 +36,6 @@
 }
 
 www.{$DOMAIN} {
+	import tls_alpn_only
 	redir https://{$DOMAIN}{uri} permanent
 }
