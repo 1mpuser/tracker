@@ -30,6 +30,10 @@ bunx jest streak.spec.ts                   # single test file
 
 Design tokens are fixed CSS custom properties in `app/globals.css` (`--bg`, `--panel`, `--accent`, `--accent-glow`, etc.) — every component's CSS Module reads from these, no hardcoded colors, no UI-kit library. `recharts` is the sole exception to "no library," used only in `DistractionWeeklyChart`.
 
+## Breakpoints (отзывчивость)
+
+Единая система точек перелома, описанная также в `app/globals.css`: только две границы — **телефон ≤640px** (`@media (max-width: 640px)`) и **планшет ≤960px** (`@media (max-width: 960px)`, покрывает и телефон). Десктоп — это состояние без медиазапроса (≥961px), и он выглядит как раньше. Правило вешается на `max-width: 640px`, если нужно только на телефоне, и на `max-width: 960px` — если нужно на всех не-десктопных экранах; других ширин не вводим. Телефонные правила: многоколоночные сетки складываются в одну колонку, модалки занимают весь экран, зоны нажатий ≥44px и шрифт полей ввода ≥16px (иначе iOS зумит при фокусе — это глобально в `globals.css`). Широкое содержимое (хитмепы на 84 дня, графики, таблицы) прокручивается по горизонтали внутри своего блока через `overflow-x: auto`, сама страница по горизонтали никогда не прокручивается (`overflow-x: hidden` на `body`). Safe-area для вырезов экрана — через `env(safe-area-inset-*)` в неприкрепленных паддингах шапки/модалок.
+
 ## Auth
 
 - Страница входа — `app/login/page.tsx` (client компонент, стили в общем `app/Auth.module.css`). Регистрации и сброса пароля по почте нет: учётки выдаёт администратор.
