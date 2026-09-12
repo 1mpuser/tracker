@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import styles from './SettingsModal.module.css';
+import styles from './SettingsForm.module.css';
 import type { AuthUser } from '@/lib/api';
 import { apiErrorMessage, changePassword, getMe, logout, logoutAll, updateMe } from '@/lib/api';
 
@@ -74,14 +74,14 @@ export default function AccountTab() {
   }
 
   return (
-    <div className={styles.tabBody}>
-      <div className={styles.addRow}>
-        <span>Почта</span>
-        <input value={me?.email ?? ''} readOnly />
+    <div className={styles.body}>
+      <div className={styles.row}>
+        <span className={styles.label}>Почта</span>
+        <input className={styles.input} value={me?.email ?? ''} readOnly />
       </div>
 
-      <div className={styles.addRow}>
-        <span>Часовой пояс</span>
+      <div className={styles.row}>
+        <span className={styles.label}>Часовой пояс</span>
         <select
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
@@ -97,57 +97,54 @@ export default function AccountTab() {
       </div>
 
       <form onSubmit={savePassword}>
-        <div className={styles.addRow}>
-          <span>Текущий пароль</span>
-          <input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+        <div className={styles.row}>
+          <span className={styles.label}>Текущий пароль</span>
+          <input className={styles.input} type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
         </div>
-        <div className={styles.addRow}>
-          <span>Новый пароль</span>
-          <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
+        <div className={styles.row}>
+          <span className={styles.label}>Новый пароль</span>
+          <input className={styles.input} type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
         </div>
-        <div className={styles.addRow}>
-          <span>Повтор</span>
-          <input type="password" autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} />
+        <div className={styles.row}>
+          <span className={styles.label}>Повтор</span>
+          <input className={styles.input} type="password" autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} />
         </div>
-        <div className={styles.addRow}>
-          <button type="submit" className={styles.primaryBtn} disabled={busy || !current || !next}>
+        <div className={styles.row}>
+          <span className={styles.label} />
+          <button type="submit" className={styles.btnPrimary} disabled={busy || !current || !next}>
             Сменить пароль
           </button>
         </div>
       </form>
 
-      <div className={styles.addRow}>
-        <span>Сессии</span>
-        <span>
-          <button type="button" className={styles.secondaryBtn} onClick={signOutAll} disabled={busy}>
-            Выйти на всех устройствах
-          </button>
-        </span>
+      <div className={styles.row}>
+        <span className={styles.label}>Сессии</span>
+        <button type="button" className={styles.btnSecondary} onClick={signOutAll} disabled={busy}>
+          Выйти на всех устройствах
+        </button>
       </div>
 
-      <div className={styles.addRow}>
-        <span>Здесь и сейчас</span>
-        <span>
-          <button
-            type="button"
-            className={styles.secondaryBtn}
-            onClick={async () => {
-              setError(null);
-              try {
-                await logout();
-                window.location.href = '/login';
-              } catch (e) {
-                setError(apiErrorMessage(e));
-              }
-            }}
-            disabled={busy}
-          >
-            Выйти
-          </button>
-        </span>
+      <div className={styles.row}>
+        <span className={styles.label}>Здесь и сейчас</span>
+        <button
+          type="button"
+          className={styles.btnSecondary}
+          onClick={async () => {
+            setError(null);
+            try {
+              await logout();
+              window.location.href = '/login';
+            } catch (e) {
+              setError(apiErrorMessage(e));
+            }
+          }}
+          disabled={busy}
+        >
+          Выйти
+        </button>
       </div>
 
-      {notice && <div className={styles.notice}>{notice}</div>}
+      {notice && <div className={styles.status}>{notice}</div>}
       {error && <div className={styles.error}>{error}</div>}
     </div>
   );

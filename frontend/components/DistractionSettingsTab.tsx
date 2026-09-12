@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import styles from './SettingsModal.module.css';
+import styles from './SettingsForm.module.css';
 import type { Settings } from '@/types/api';
 import { getSettings, updateSettings } from '@/lib/api';
 
@@ -34,13 +34,15 @@ export default function DistractionSettingsTab({ onSettingsChanged }: Distractio
   }
 
   return (
-    <div className={styles.tabBody}>
-      <p>
+    <div className={styles.body}>
+      <div className={styles.hint}>
         Во что утекает время: YouTube, шортсы, Reels, TikTok — назови как удобно. Название появится на панели, в
         графиках и в недельной сводке в Telegram.
-      </p>
-      <div className={styles.addRow}>
+      </div>
+      <div className={styles.row}>
+        <span className={styles.label}>Название</span>
         <input
+          className={styles.input}
           value={label}
           maxLength={LABEL_MAX}
           placeholder="Например, Шортсы"
@@ -51,9 +53,10 @@ export default function DistractionSettingsTab({ onSettingsChanged }: Distractio
           }}
         />
       </div>
-      <div className={styles.addRow}>
-        <span>Бюджет в день, мин</span>
+      <div className={styles.row}>
+        <span className={styles.label}>Бюджет в день, мин</span>
         <input
+          className={styles.input}
           type="number"
           min={0}
           value={budget}
