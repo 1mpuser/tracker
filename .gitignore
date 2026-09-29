@@ -5,3 +5,4 @@ caddy/certs/
 .claude/settings.local.json
 .worktrees/
 graphify-out/
+.herdr
