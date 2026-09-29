@@ -38,7 +38,17 @@ func userAgent(r *http.Request) *string {
 }
 
 // POST /auth/login — публичный вход, ставит cookie sid.
+// Rate-limit: не более loginLimitMax попыток с одного IP за окно (паритет с
+// @Throttle({ ttl: 60_000, limit: 5 }) в Node). Превышение — 429.
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if !s.loginLimiter.allow(clientIP(r)) {
+		writeJSON(w, http.StatusTooManyRequests, errorBody{
+			StatusCode: http.StatusTooManyRequests,
+			Message:    "Слишком много попыток входа, попробуйте позже",
+			Error:      http.StatusText(http.StatusTooManyRequests),
+		})
+		return
+	}
 	var req loginRequest
 	if !decodeJSON(w, r, &req) {
 		return

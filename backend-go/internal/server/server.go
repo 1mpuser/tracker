@@ -40,6 +40,7 @@ type Server struct {
 	telegram     *telegram.ConfigService
 	integrations *integrations.Service
 	icloud       *icloud.Service
+	loginLimiter *loginLimiter
 }
 
 func NewServer(
@@ -75,6 +76,7 @@ func NewServer(
 		telegram:     telegramConfig,
 		integrations: integrationsSvc,
 		icloud:       icloudSvc,
+		loginLimiter: newLoginLimiter(loginLimitMax, loginLimitWindow),
 	}
 }
 
