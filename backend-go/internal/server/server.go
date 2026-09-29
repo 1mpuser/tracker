@@ -19,7 +19,6 @@ import (
 	"github.com/1mpuser/tracker/backend-go/internal/tasktemplates"
 	"github.com/1mpuser/tracker/backend-go/internal/telegram"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 )
 
@@ -84,7 +83,6 @@ func NewServer(
 func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
 
-	r.Use(middleware.RealIP)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   s.cfg.CORSOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},

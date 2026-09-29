@@ -3,6 +3,7 @@ package server
 import (
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -44,7 +45,8 @@ func newLoginLimiter(max int, window time.Duration) *loginLimiter {
 }
 
 // allow регистрирует попытку логина с данного IP. Ключ — реальный IP клиента
-// (после middleware.RealIP это r.RemoteAddr). Возвращает false, если IP уже
+// (см. clientIP: правый элемент X-Forwarded-For, добавленный доверенным
+// прокси, либо картинка из TCP-соединения). Возвращает false, если IP уже
 // исчерпал лимит попыток в текущем окне.
 func (l *loginLimiter) allow(ip string) bool {
 	l.mu.Lock()
@@ -80,12 +82,29 @@ func (l *loginLimiter) sweepIfNeeded() {
 	l.lastSweep = now
 }
 
-// clientIP достаёт IP клиента из запроса. После chi middleware.RealIP в
-// r.RemoteAddr уже стоит реальный IP клиента (за Caddy это не адрес прокси).
+// clientIP возвращает IP клиента, по которому ключуется лимитер.
+//
+// Доверенный источник — только последний hop. Прямой прокси один — Caddy
+// (сервис backend не публикует порт наружу), и он не подменяет
+// X-Forwarded-For, а ДОБАВЛЯЕТ свой IP справа. Поэтому берём ПРАВЫЙ элемент
+// цепочки, а не левый: левый контролируется внешним клиентом и уязвим к
+// спуфингу (см. Deprecated middleware.RealIP). Повторные заголовки по
+// RFC 2616 объединяются запятой в порядке получения, поэтому сшиваем их и
+// берём самый правый элемент.
+//
+// Если заголовка нет (прямое соединение, локальный curl без прокси) или
+// правый элемент не парсится — деградируем до r.RemoteAddr (целиком).
 func clientIP(r *http.Request) string {
-	ip := r.RemoteAddr
-	if host, _, err := net.SplitHostPort(ip); err == nil {
+	if xffs := r.Header.Values("X-Forwarded-For"); len(xffs) > 0 {
+		joined := strings.Join(xffs, ",")
+		parts := strings.Split(joined, ",")
+		last := strings.TrimSpace(parts[len(parts)-1])
+		if net.ParseIP(last) != nil {
+			return last
+		}
+	}
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 		return host
 	}
-	return ip
+	return r.RemoteAddr
 }
