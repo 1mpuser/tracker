@@ -128,13 +128,124 @@ UptimeRobot (или аналог) на `https://домен/api/health`.
 больше нет; при ошибке миграции контейнер падает, что ловит health-чек ниже.
 
 **База, уже накатанная Prisma** (есть таблица `_prisma_migrations`): первый запуск
-Go-образа упадёт на «table already exists», т.к. golang-migrate не знает о схеме.
-Перед первым запуском нужно забазлайнить её — создать `schema_migrations` с
-текущей версией (последняя миграция в `backend-go/migrations/`), либо выполнить
-`golang-migrate` в режиме `force`. Для чистой БД этого не требуется.
+Go-образа упадёт на «relation ... already exists», т.к. golang-migrate не знает о
+схеме и попытается заново выполнить все `.sql` из `backend-go/migrations/`.
+Перед первым запуском нужно **забазлайнить** базу — см. раздел
+«Переход на Go-бэкенд (baseline)» ниже. Для чистой БД этого не требуется.
 
 **Откат:** `git checkout <коммит>` → `up -d --build`; если нужен и откат данных —
 `deploy/restore.sh <последний дамп>`. Миграции БД назад не катятся.
+
+---
+
+## Переход на Go-бэкенд (baseline)
+
+Когда прод-БД создана Prisma-бэкендом (`_prisma_migrations` есть, а
+`schema_migrations` нет), golang-migrate не знает текущей версии схемы. Если
+просто поднять Go-образ, его entrypoint выполнит `/out/migrate`, тот решит, что
+база пустая, и начнёт накатывать `*.up.sql` с нуля — первая же миграция
+`20260714233127_init.up.sql` упадёт на `relation "Category" already exists`, и
+контейнер не поднимется.
+
+Baseline решает это: мы говорим golang-migrate «схема уже накатана до версии X»,
+создавая `schema_migrations` и проставляя один ряд. Ни один `.sql` при этом не
+выполняется, данные не трогаются. Prisma-бэкенд (`_prisma_migrations`) на
+добавленную таблицу не смотрит, поэтому baseline безопасно накатить заранее, ещё
+до остановки Node-бэкенда.
+
+> **Почему номер берём из `_prisma_migrations`, а не «на глаз».** Файлы
+> `backend-go/migrations/*.up.sql` скопированы из
+> `backend/prisma/migrations/<имя>/migration.sql` без переименования, поэтому
+> числовой префикс (числа до `_`) в имени Prisma-миграции — это в точности версия
+> golang-migrate. Baseline-версия = максимум этих префиксов среди применённых
+> миграций. Она обязана существовать в `backend-go/migrations/` — это проверяется.
+
+### Шаг 0. Дамп живой прод-БД «на всякий случай»
+
+Даже если baseline не трогает данные, перед любым вмешательством в БД снимаем
+резервную копию (прод — источник правды):
+
+```bash
+cd /opt/tracker
+STAMP=$(date +%F-%H%M)
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  pg_dump -U tracker -Fc tracker > /opt/tracker/backup-safety-$STAMP.dump
+ls -la /opt/tracker/backup-safety-$STAMP.dump
+```
+
+### Шаг 1. Baseline-версия из `_prisma_migrations`
+
+```bash
+cd /opt/tracker
+BASELINE=$(docker compose -f docker-compose.prod.yml exec -T postgres \
+  psql -U tracker -d tracker -tAc \
+  "SELECT max(CAST(substring(migration_name from '^\d+') AS bigint)) FROM _prisma_migrations;")
+echo "baseline=$BASELINE"
+# проверяем, что версия есть среди файлов golang-migrate:
+ls backend-go/migrations/${BASELINE}_*.up.sql
+```
+
+Ожидается `baseline=20260911232214` и найдена
+`backend-go/migrations/20260911232214_add_user_admin_and_blocked.up.sql`.
+
+### Шаг 2. Создать `schema_migrations` и проставить версию
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  psql -U tracker -d tracker <<SQL
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version bigint NOT NULL PRIMARY KEY,
+  dirty   boolean NOT NULL
+);
+INSERT INTO schema_migrations (version, dirty)
+SELECT ${BASELINE}, false
+WHERE NOT EXISTS (SELECT 1 FROM schema_migrations);
+SQL
+```
+
+Проверить:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  psql -U tracker -d tracker -tAc "SELECT version, dirty FROM schema_migrations;"
+# 20260911232214 | f
+```
+
+### Шаг 3. Проверить `/out/migrate` → «изменений нет»
+
+Запускаем migrate в one-off-контейнере (не трогает работающий бэкенд):
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm --no-deps \
+  --entrypoint /out/migrate backend
+```
+
+Ожидается лог `База уже актуальна, изменений нет` (вывод `migrate.ErrNoChange`).
+Это и есть подтверждение, что у Go-ветки нет миграций сверх накатанных Prisma.
+
+### Шаг 4. Переключить compose на Go-образ
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build backend
+sleep 30
+docker compose -f docker-compose.prod.yml ps backend
+curl -fsS https://домен/api/health
+```
+
+Health-чек вернёт `{"status":"ok"}`, а при ошибке миграции контейнер падает и
+health-чек ловит это. Ручной smoke: войти реальным пользователем на
+`https://домен`, пролистать сферы / дни / GTD / рутины / настройки — данные должны
+читаться без 500/404.
+
+### Автоматизация
+
+То же самое одной командой — `deploy/baseline-go.sh` (см. комментарии в файле):
+считает baseline из `_prisma_migrations`, сверяет с `backend-go/migrations`,
+накатывает `schema_migrations` и прогоняет `/out/migrate`.
+
+```bash
+./deploy/baseline-go.sh
+```
 
 ## 9. Учётки выдаёт администратор
 
