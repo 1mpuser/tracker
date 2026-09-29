@@ -20,7 +20,7 @@ services:
     logging: *logging
 
   backend:
-    build: ./backend
+    build: ./backend-go
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -33,6 +33,12 @@ services:
       TZ: UTC
     depends_on:
       postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     logging: *logging
 
   frontend:

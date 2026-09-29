@@ -17,14 +17,21 @@ export APP_ENCRYPTION_KEY="${APP_ENCRYPTION_KEY:-}"
 git pull --ff-only
 
 # Бэкап перед каждым деплоем, но не на совершенно пустой БД (первый запуск).
+# Книговые таблицы миграций (_prisma_migrations у Prisma / schema_migrations у
+# golang-migrate) не считаем признаком данных.
 if docker compose -f docker-compose.prod.yml exec -T postgres psql -U tracker -tAc \
-     "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name<>'_prisma_migrations';" | grep -q '^0$'; then
+     "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name NOT IN ('_prisma_migrations','schema_migrations');" | grep -q '^0$'; then
   echo "БД пуста — бэкап не нужен (первый запуск)."
 else
   ./deploy/backup.sh
 fi
 
 docker compose -f docker-compose.prod.yml up -d --build
+
+# Миграции отдельным шагом НЕ накатываем: Go-образ сам применяет их при старте —
+# entrypoint выполняет /out/migrate и только потом /out/server (см.
+# backend-go/docker-entrypoint.sh). При ошибке миграции контейнер падает, а не
+# молча стартует на старой схеме, поэтому health-чек ниже это поймает.
 
 # Ждём зелёного health до 90 секунд.
 for i in $(seq 1 45); do

@@ -82,11 +82,19 @@ echo "APP_ENCRYPTION_KEY: $(openssl rand -base64 32)"   # СОХРАНИТЬ В 
 
 Проверить: `https://домен` (страница входа), `https://домен/api/health` → `{"status":"ok"}`.
 
-На чистой базе создать первого админа (пароль спросит интерактивно):
+На чистой базе создать первого админа. Go-образ не содержит bootstrap-утилиту —
+`createuser` (вне compose, см. `backend-go/README.md`), поэтому её запускают один
+раз из репозитория с `DATABASE_URL` на БД внутри сети compose:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec backend bun run create-admin --email you@example.com --timezone Europe/Moscow
+cd backend-go
+printf '%s' 'ваш-пароль' | DATABASE_URL='postgresql://tracker:POSTGRES_PASSWORD@postgres:5432/tracker' \
+  go run ./cmd/createuser --email you@example.com --timezone Europe/Moscow --admin --password-stdin
 ```
+
+`POSTGRES_PASSWORD` — из `.env.prod`. Хост `postgres` (имя сервиса compose)
+резолвится только внутри сети compose, поэтому команду выполняют там, где эта
+сеть доступна (контейнер/хост с доступом в `tracker_default`).
 
 Дальше учётки выдаются в `/admin`.
 
@@ -113,6 +121,17 @@ UptimeRobot (или аналог) на `https://домен/api/health`.
 ```
 
 Автоматически: `git pull --ff-only` → бэкап → `up -d --build` → ожидание health.
+
+Миграции БД накатывает сам Go-образ при старте: его entrypoint выполняет
+`/out/migrate`, и только при успехе запускает `/out/server` (см.
+`backend-go/docker-entrypoint.sh`). Отдельного шага с `prisma migrate deploy`
+больше нет; при ошибке миграции контейнер падает, что ловит health-чек ниже.
+
+**База, уже накатанная Prisma** (есть таблица `_prisma_migrations`): первый запуск
+Go-образа упадёт на «table already exists», т.к. golang-migrate не знает о схеме.
+Перед первым запуском нужно забазлайнить её — создать `schema_migrations` с
+текущей версией (последняя миграция в `backend-go/migrations/`), либо выполнить
+`golang-migrate` в режиме `force`. Для чистой БД этого не требуется.
 
 **Откат:** `git checkout <коммит>` → `up -d --build`; если нужен и откат данных —
 `deploy/restore.sh <последний дамп>`. Миграции БД назад не катятся.

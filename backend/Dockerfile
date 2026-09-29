@@ -1,3 +1,5 @@
+# УСТАРЕЛ: docker compose теперь собирает backend-go/ (см. docker-compose*.yml).
+# Этот Node-образ сохранён как откат и в compose больше не участвует.
 FROM oven/bun:1-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache openssl

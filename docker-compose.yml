@@ -17,18 +17,16 @@ services:
       retries: 10
 
   backend:
-    build: ./backend
+    build: ./backend-go
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://tracker:tracker@postgres:5432/tracker
-      DISTRACTION_BUDGET_DEFAULT: "60"
       PORT: "3001"
+      CORS_ORIGINS: http://localhost:4887,https://tracker.performance:4888
+      COOKIE_SECURE: "false"
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-}
+      DISTRACTION_BUDGET_DEFAULT: "60"
       OBSIDIAN_EXPORT_DIR: /vault
-      ICLOUD_APPLE_ID: ${ICLOUD_APPLE_ID:-}
-      ICLOUD_APP_PASSWORD: ${ICLOUD_APP_PASSWORD:-}
-      ICLOUD_REMINDERS_LIST_NAME: ${ICLOUD_REMINDERS_LIST_NAME:-GTD}
-      SESSION_CALENDAR_NAME: ${SESSION_CALENDAR_NAME:-}
-      SESSION_MIN_MINUTES: ${SESSION_MIN_MINUTES:-20}
       TZ: ${TZ:-UTC}
     ports:
       - "3001:3001"
@@ -37,6 +35,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   frontend:
     build:
