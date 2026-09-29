@@ -10,11 +10,14 @@ import (
 	"github.com/1mpuser/tracker/backend-go/internal/config"
 	"github.com/1mpuser/tracker/backend-go/internal/days"
 	"github.com/1mpuser/tracker/backend-go/internal/gtd"
+	"github.com/1mpuser/tracker/backend-go/internal/icloud"
+	"github.com/1mpuser/tracker/backend-go/internal/integrations"
 	"github.com/1mpuser/tracker/backend-go/internal/model"
 	"github.com/1mpuser/tracker/backend-go/internal/routines"
 	"github.com/1mpuser/tracker/backend-go/internal/settings"
 	"github.com/1mpuser/tracker/backend-go/internal/stats"
 	"github.com/1mpuser/tracker/backend-go/internal/tasktemplates"
+	"github.com/1mpuser/tracker/backend-go/internal/telegram"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -34,6 +37,9 @@ type Server struct {
 	settings     *settings.Service
 	sessionSync  SessionSyncer
 	weekDeliver  WeekDeliverer
+	telegram     *telegram.ConfigService
+	integrations *integrations.Service
+	icloud       *icloud.Service
 }
 
 func NewServer(
@@ -49,6 +55,9 @@ func NewServer(
 	settingsSvc *settings.Service,
 	sessionSync SessionSyncer,
 	weekDeliver WeekDeliverer,
+	telegramConfig *telegram.ConfigService,
+	integrationsSvc *integrations.Service,
+	icloudSvc *icloud.Service,
 ) *Server {
 	return &Server{
 		cfg:          cfg,
@@ -63,6 +72,9 @@ func NewServer(
 		settings:     settingsSvc,
 		sessionSync:  sessionSync,
 		weekDeliver:  weekDeliver,
+		telegram:     telegramConfig,
+		integrations: integrationsSvc,
+		icloud:       icloudSvc,
 	}
 }
 
@@ -133,6 +145,26 @@ func (s *Server) Handler() http.Handler {
 
 		r.Get("/settings", s.handleSettingsGet)
 		r.Patch("/settings", s.handleSettingsUpdate)
+
+		// Telegram-бот и чаты.
+		r.Get("/telegram/bot", s.handleTelegramBotGet)
+		r.Put("/telegram/bot", s.handleTelegramBotSet)
+		r.Delete("/telegram/bot", s.handleTelegramBotClear)
+		r.Get("/telegram/chats", s.handleTelegramChatsList)
+		r.Post("/telegram/chats", s.handleTelegramChatsCreate)
+		r.Patch("/telegram/chats/{id}", s.handleTelegramChatsUpdate)
+		r.Delete("/telegram/chats/{id}", s.handleTelegramChatsDelete)
+		r.Post("/telegram/chats/{id}/test", s.handleTelegramChatsTest)
+		r.Get("/telegram/discover", s.handleTelegramDiscover)
+
+		// Интеграции (iCloud / Session).
+		r.Get("/integrations/icloud", s.handleIntegrationsICloudGet)
+		r.Put("/integrations/icloud", s.handleIntegrationsICloudSet)
+		r.Delete("/integrations/icloud", s.handleIntegrationsICloudClear)
+		r.Post("/integrations/icloud/resync", s.handleIntegrationsICloudResync)
+		r.Get("/integrations/session", s.handleIntegrationsSessionGet)
+		r.Put("/integrations/session", s.handleIntegrationsSessionSet)
+		r.Delete("/integrations/session", s.handleIntegrationsSessionClear)
 	})
 
 	// Требуют сессию + права администратора (не-админ → 404).

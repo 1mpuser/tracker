@@ -119,6 +119,82 @@ func TestStoreTaskTemplatesRoundTrip(t *testing.T) {
 	}
 }
 
+func TestStoreTelegramChatRoundTrip(t *testing.T) {
+	pool := setupPool(t)
+	st := store.NewPGStore(pool)
+	ctx := context.Background()
+	u := newUser(t, st)
+
+	chat, err := st.CreateTelegramChat(ctx, u.ID, "Канал", "-1001", true, true)
+	if err != nil {
+		t.Fatalf("create chat: %v", err)
+	}
+	// занятый chatId для этого пользователя → unique violation
+	if _, err := st.CreateTelegramChat(ctx, u.ID, "Дубль", "-1001", true, true); !store.IsUniqueViolation(err) {
+		t.Fatalf("ожидался unique violation, got %v", err)
+	}
+	list, err := st.ListTelegramChats(ctx, u.ID)
+	if err != nil {
+		t.Fatalf("list chats: %v", err)
+	}
+	if len(list) != 1 || list[0].ChatID != "-1001" || !list[0].Daily {
+		t.Fatalf("list=%+v", list)
+	}
+	weekly := false
+	if _, err := st.UpdateTelegramChat(ctx, u.ID, chat.ID, store.TelegramChatUpdate{Weekly: &weekly}); err != nil {
+		t.Fatalf("update chat: %v", err)
+	}
+	found, err := st.FindTelegramChatByID(ctx, u.ID, chat.ID)
+	if err != nil {
+		t.Fatalf("find chat: %v", err)
+	}
+	if found.Weekly {
+		t.Fatalf("weekly должен быть false")
+	}
+	if err := st.DeleteTelegramChat(ctx, u.ID, chat.ID); err != nil {
+		t.Fatalf("delete chat: %v", err)
+	}
+}
+
+func TestStoreTelegramPostRoundTrip(t *testing.T) {
+	pool := setupPool(t)
+	st := store.NewPGStore(pool)
+	ctx := context.Background()
+	u := newUser(t, st)
+
+	chat, err := st.CreateTelegramChat(ctx, u.ID, "Канал", "-1001", true, true)
+	if err != nil {
+		t.Fatalf("create chat: %v", err)
+	}
+	day := time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC)
+	row, err := st.CreateDay(ctx, u.ID, day)
+	if err != nil {
+		t.Fatalf("create day: %v", err)
+	}
+
+	post, err := st.CreateTelegramPost(ctx, row.ID, chat.ChatID, "day", 0)
+	if err != nil {
+		t.Fatalf("create post: %v", err)
+	}
+	// уникальность [dayId, chatId, kind]
+	if _, err := st.CreateTelegramPost(ctx, row.ID, chat.ChatID, "day", 0); !store.IsUniqueViolation(err) {
+		t.Fatalf("ожидался unique violation, got %v", err)
+	}
+	if err := st.UpdateTelegramPostMessageID(ctx, post.ID, 42); err != nil {
+		t.Fatalf("update post msgid: %v", err)
+	}
+	found, err := st.FindTelegramPost(ctx, row.ID, chat.ChatID, "day")
+	if err != nil {
+		t.Fatalf("find post: %v", err)
+	}
+	if found.MessageID != 42 {
+		t.Fatalf("found=%+v", found)
+	}
+	if err := st.DeleteTelegramPost(ctx, post.ID); err != nil {
+		t.Fatalf("delete post: %v", err)
+	}
+}
+
 func TestStoreDayUpdateFields(t *testing.T) {
 	pool := setupPool(t)
 	st := store.NewPGStore(pool)

@@ -75,6 +75,8 @@ func apperrStatus(kind apperr.Kind) int {
 		return http.StatusBadRequest
 	case apperr.KindConflict:
 		return http.StatusConflict
+	case apperr.KindBadGateway:
+		return http.StatusBadGateway
 	default:
 		return http.StatusInternalServerError
 	}

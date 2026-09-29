@@ -109,3 +109,26 @@ type RoutineWithLogs struct {
 	Routine
 	Logs []RoutineLog
 }
+
+// TelegramChat соответствует строке таблицы "TelegramChat" (чат рассылки). Поля
+// совпадают с JSON-контрактом backend/src/telegram (create/update/delete).
+type TelegramChat struct {
+	ID        int64     `json:"id"`
+	Title     string    `json:"title"`
+	ChatID    string    `json:"chatId"`
+	Daily     bool      `json:"daily"`
+	Weekly    bool      `json:"weekly"`
+	UserID    int64     `json:"userId"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// TelegramPost — факт публикации сводки в чат (идемпотентность рассылки).
+// Kind — 'day' | 'week', messageId=0 означает «занято», но ещё не доставлено.
+type TelegramPost struct {
+	ID        int64
+	DayID     int64
+	ChatID    string
+	Kind      string
+	MessageID int
+	CreatedAt time.Time
+}

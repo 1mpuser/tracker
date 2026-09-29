@@ -26,11 +26,26 @@ type DayUpdate struct {
 	Comment       *string
 }
 
-// SettingsUpdate — частичное обновление настроек пользователя.
+// SettingsUpdate — частичное обновление настроек пользователя. nil-указатель
+// = поле не трогаем; чтобы очистить строковое поле (например, токен) —
+// передать указатель на "" (Пустую строку). Секреты хранятся зашифрованными.
 type SettingsUpdate struct {
 	DistractionBudget    *int
 	DistractionLabel     *string
 	NotificationsEnabled *bool
+	TelegramBotToken     *string
+	IcloudAppleID        *string
+	IcloudAppPasswordEnc *string
+	IcloudRemindersList  *string
+	SessionCalendarName  *string
+	SessionMinMinutes    *int
+}
+
+// TelegramChatUpdate — частичное обновление чата рассылки.
+type TelegramChatUpdate struct {
+	Title  *string
+	Daily  *bool
+	Weekly *bool
 }
 
 // TaskTemplateUpdate — частичное обновление шаблона задачи.
@@ -124,6 +139,22 @@ type Store interface {
 	FindSettings(ctx context.Context, userID int64) (*model.Settings, error)
 	CreateSettings(ctx context.Context, userID int64) (*model.Settings, error)
 	UpdateSettings(ctx context.Context, userID int64, u SettingsUpdate) (*model.Settings, error)
+
+	// ---- telegram chats ----
+	ListTelegramChats(ctx context.Context, userID int64) ([]model.TelegramChat, error)
+	FindTelegramChatByID(ctx context.Context, userID int64, id int64) (*model.TelegramChat, error)
+	CreateTelegramChat(ctx context.Context, userID int64, title, chatID string, daily, weekly bool) (*model.TelegramChat, error)
+	UpdateTelegramChat(ctx context.Context, userID int64, id int64, u TelegramChatUpdate) (*model.TelegramChat, error)
+	DeleteTelegramChat(ctx context.Context, userID int64, id int64) error
+
+	// ---- telegram posts (идемпотентность рассылки) ----
+	FindTelegramPost(ctx context.Context, dayID int64, chatID, kind string) (*model.TelegramPost, error)
+	CreateTelegramPost(ctx context.Context, dayID int64, chatID, kind string, messageID int) (*model.TelegramPost, error)
+	UpdateTelegramPostMessageID(ctx context.Context, id int64, messageID int) error
+	DeleteTelegramPost(ctx context.Context, id int64) error
+
+	// ---- day по id (нужен рассылке Telegram) ----
+	FindDayByID(ctx context.Context, id int64) (*model.Day, error)
 
 	// ---- task-templates ----
 	ListTaskTemplates(ctx context.Context, userID int64) ([]model.TaskTemplate, error)

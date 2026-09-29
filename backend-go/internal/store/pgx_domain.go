@@ -322,6 +322,24 @@ func (s *PGStore) UpdateSettings(ctx context.Context, userID int64, u SettingsUp
 	if u.NotificationsEnabled != nil {
 		sb.add("notificationsEnabled", *u.NotificationsEnabled)
 	}
+	if u.TelegramBotToken != nil {
+		sb.add("telegramBotToken", *u.TelegramBotToken)
+	}
+	if u.IcloudAppleID != nil {
+		sb.add("icloudAppleId", *u.IcloudAppleID)
+	}
+	if u.IcloudAppPasswordEnc != nil {
+		sb.add("icloudAppPasswordEnc", *u.IcloudAppPasswordEnc)
+	}
+	if u.IcloudRemindersList != nil {
+		sb.add("icloudRemindersList", *u.IcloudRemindersList)
+	}
+	if u.SessionCalendarName != nil {
+		sb.add("sessionCalendarName", *u.SessionCalendarName)
+	}
+	if u.SessionMinMinutes != nil {
+		sb.add("sessionMinMinutes", *u.SessionMinMinutes)
+	}
 	if len(sb.cols) == 0 {
 		return s.FindSettings(ctx, userID)
 	}
@@ -639,4 +657,110 @@ func queryMaxOrder(ctx context.Context, row pgx.Row) (*int, error) {
 		return nil, err
 	}
 	return v, nil
+}
+
+// ===== telegram chats =====
+
+const telegramChatCols = `"id", "title", "chatId", "daily", "weekly", "userId", "createdAt"`
+
+func scanTelegramChat(row pgx.Row) (*model.TelegramChat, error) {
+	var c model.TelegramChat
+	if err := row.Scan(&c.ID, &c.Title, &c.ChatID, &c.Daily, &c.Weekly, &c.UserID, &c.CreatedAt); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+func (s *PGStore) ListTelegramChats(ctx context.Context, userID int64) ([]model.TelegramChat, error) {
+	rows, err := s.pool.Query(ctx, `SELECT `+telegramChatCols+` FROM "TelegramChat" WHERE "userId" = $1 ORDER BY "id" ASC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []model.TelegramChat
+	for rows.Next() {
+		var c model.TelegramChat
+		if err := rows.Scan(&c.ID, &c.Title, &c.ChatID, &c.Daily, &c.Weekly, &c.UserID, &c.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+func (s *PGStore) FindTelegramChatByID(ctx context.Context, userID int64, id int64) (*model.TelegramChat, error) {
+	return scanTelegramChat(s.pool.QueryRow(ctx,
+		`SELECT `+telegramChatCols+` FROM "TelegramChat" WHERE "id" = $1 AND "userId" = $2`, id, userID))
+}
+
+func (s *PGStore) CreateTelegramChat(ctx context.Context, userID int64, title, chatID string, daily, weekly bool) (*model.TelegramChat, error) {
+	return scanTelegramChat(s.pool.QueryRow(ctx,
+		`INSERT INTO "TelegramChat" ("userId", "title", "chatId", "daily", "weekly") VALUES ($1, $2, $3, $4, $5) RETURNING `+telegramChatCols,
+		userID, title, chatID, daily, weekly))
+}
+
+func (s *PGStore) UpdateTelegramChat(ctx context.Context, userID int64, id int64, u TelegramChatUpdate) (*model.TelegramChat, error) {
+	var sb setBuilder
+	if u.Title != nil {
+		sb.add("title", *u.Title)
+	}
+	if u.Daily != nil {
+		sb.add("daily", *u.Daily)
+	}
+	if u.Weekly != nil {
+		sb.add("weekly", *u.Weekly)
+	}
+	if len(sb.cols) == 0 {
+		return s.FindTelegramChatByID(ctx, userID, id)
+	}
+	set, args := sb.build()
+	args = append(args, id, userID)
+	return scanTelegramChat(s.pool.QueryRow(ctx,
+		`UPDATE "TelegramChat" SET `+set+` WHERE "id" = $`+fmt.Sprint(len(args)-1)+` AND "userId" = $`+fmt.Sprint(len(args))+` RETURNING `+telegramChatCols,
+		args...))
+}
+
+func (s *PGStore) DeleteTelegramChat(ctx context.Context, userID int64, id int64) error {
+	_, err := s.pool.Exec(ctx, `DELETE FROM "TelegramChat" WHERE "id" = $1 AND "userId" = $2`, id, userID)
+	return err
+}
+
+// ===== telegram posts =====
+
+const telegramPostCols = `"id", "dayId", "chatId", "kind", "messageId", "createdAt"`
+
+func scanTelegramPost(row pgx.Row) (*model.TelegramPost, error) {
+	var p model.TelegramPost
+	if err := row.Scan(&p.ID, &p.DayID, &p.ChatID, &p.Kind, &p.MessageID, &p.CreatedAt); err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (s *PGStore) FindTelegramPost(ctx context.Context, dayID int64, chatID, kind string) (*model.TelegramPost, error) {
+	return scanTelegramPost(s.pool.QueryRow(ctx,
+		`SELECT `+telegramPostCols+` FROM "TelegramPost" WHERE "dayId" = $1 AND "chatId" = $2 AND "kind" = $3`,
+		dayID, chatID, kind))
+}
+
+func (s *PGStore) CreateTelegramPost(ctx context.Context, dayID int64, chatID, kind string, messageID int) (*model.TelegramPost, error) {
+	return scanTelegramPost(s.pool.QueryRow(ctx,
+		`INSERT INTO "TelegramPost" ("dayId", "chatId", "kind", "messageId") VALUES ($1, $2, $3, $4) RETURNING `+telegramPostCols,
+		dayID, chatID, kind, messageID))
+}
+
+func (s *PGStore) UpdateTelegramPostMessageID(ctx context.Context, id int64, messageID int) error {
+	_, err := s.pool.Exec(ctx, `UPDATE "TelegramPost" SET "messageId" = $1 WHERE "id" = $2`, messageID, id)
+	return err
+}
+
+func (s *PGStore) DeleteTelegramPost(ctx context.Context, id int64) error {
+	_, err := s.pool.Exec(ctx, `DELETE FROM "TelegramPost" WHERE "id" = $1`, id)
+	return err
+}
+
+// ===== day по id =====
+
+func (s *PGStore) FindDayByID(ctx context.Context, id int64) (*model.Day, error) {
+	return scanDay(s.pool.QueryRow(ctx, `SELECT `+dayCols+` FROM "Day" WHERE "id" = $1`, id))
 }

@@ -58,6 +58,22 @@ type Fake struct {
 	CreateSettingsFn func(ctx context.Context, userID int64) (*model.Settings, error)
 	UpdateSettingsFn func(ctx context.Context, userID int64, u store.SettingsUpdate) (*model.Settings, error)
 
+	// telegram chats
+	ListTelegramChatsFn    func(ctx context.Context, userID int64) ([]model.TelegramChat, error)
+	FindTelegramChatByIDFn func(ctx context.Context, userID int64, id int64) (*model.TelegramChat, error)
+	CreateTelegramChatFn   func(ctx context.Context, userID int64, title, chatID string, daily, weekly bool) (*model.TelegramChat, error)
+	UpdateTelegramChatFn   func(ctx context.Context, userID int64, id int64, u store.TelegramChatUpdate) (*model.TelegramChat, error)
+	DeleteTelegramChatFn   func(ctx context.Context, userID int64, id int64) error
+
+	// telegram posts
+	FindTelegramPostFn        func(ctx context.Context, dayID int64, chatID, kind string) (*model.TelegramPost, error)
+	CreateTelegramPostFn      func(ctx context.Context, dayID int64, chatID, kind string, messageID int) (*model.TelegramPost, error)
+	UpdateTelegramPostMsgIDFn func(ctx context.Context, id int64, messageID int) error
+	DeleteTelegramPostFn      func(ctx context.Context, id int64) error
+
+	// day по id
+	FindDayByIDFn func(ctx context.Context, id int64) (*model.Day, error)
+
 	// task-templates
 	ListTaskTemplatesFn    func(ctx context.Context, userID int64) ([]model.TaskTemplate, error)
 	FindTaskTemplateByIDFn func(ctx context.Context, userID int64, id int64) (*model.TaskTemplate, error)
@@ -331,6 +347,76 @@ func (f *Fake) UpdateSettings(ctx context.Context, userID int64, u store.Setting
 		return f.UpdateSettingsFn(ctx, userID, u)
 	}
 	return nil, nil
+}
+
+func (f *Fake) ListTelegramChats(ctx context.Context, userID int64) ([]model.TelegramChat, error) {
+	if f.ListTelegramChatsFn != nil {
+		return f.ListTelegramChatsFn(ctx, userID)
+	}
+	return nil, nil
+}
+
+func (f *Fake) FindTelegramChatByID(ctx context.Context, userID int64, id int64) (*model.TelegramChat, error) {
+	if f.FindTelegramChatByIDFn != nil {
+		return f.FindTelegramChatByIDFn(ctx, userID, id)
+	}
+	return nil, pgx.ErrNoRows
+}
+
+func (f *Fake) CreateTelegramChat(ctx context.Context, userID int64, title, chatID string, daily, weekly bool) (*model.TelegramChat, error) {
+	if f.CreateTelegramChatFn != nil {
+		return f.CreateTelegramChatFn(ctx, userID, title, chatID, daily, weekly)
+	}
+	return nil, nil
+}
+
+func (f *Fake) UpdateTelegramChat(ctx context.Context, userID int64, id int64, u store.TelegramChatUpdate) (*model.TelegramChat, error) {
+	if f.UpdateTelegramChatFn != nil {
+		return f.UpdateTelegramChatFn(ctx, userID, id, u)
+	}
+	return nil, nil
+}
+
+func (f *Fake) DeleteTelegramChat(ctx context.Context, userID int64, id int64) error {
+	if f.DeleteTelegramChatFn != nil {
+		return f.DeleteTelegramChatFn(ctx, userID, id)
+	}
+	return nil
+}
+
+func (f *Fake) FindTelegramPost(ctx context.Context, dayID int64, chatID, kind string) (*model.TelegramPost, error) {
+	if f.FindTelegramPostFn != nil {
+		return f.FindTelegramPostFn(ctx, dayID, chatID, kind)
+	}
+	return nil, pgx.ErrNoRows
+}
+
+func (f *Fake) CreateTelegramPost(ctx context.Context, dayID int64, chatID, kind string, messageID int) (*model.TelegramPost, error) {
+	if f.CreateTelegramPostFn != nil {
+		return f.CreateTelegramPostFn(ctx, dayID, chatID, kind, messageID)
+	}
+	return nil, nil
+}
+
+func (f *Fake) UpdateTelegramPostMessageID(ctx context.Context, id int64, messageID int) error {
+	if f.UpdateTelegramPostMsgIDFn != nil {
+		return f.UpdateTelegramPostMsgIDFn(ctx, id, messageID)
+	}
+	return nil
+}
+
+func (f *Fake) DeleteTelegramPost(ctx context.Context, id int64) error {
+	if f.DeleteTelegramPostFn != nil {
+		return f.DeleteTelegramPostFn(ctx, id)
+	}
+	return nil
+}
+
+func (f *Fake) FindDayByID(ctx context.Context, id int64) (*model.Day, error) {
+	if f.FindDayByIDFn != nil {
+		return f.FindDayByIDFn(ctx, id)
+	}
+	return nil, pgx.ErrNoRows
 }
 
 func (f *Fake) ListTaskTemplates(ctx context.Context, userID int64) ([]model.TaskTemplate, error) {

@@ -84,12 +84,19 @@ func Load() (Config, error) {
 		origins = []string{"http://localhost:4887", "https://tracker.performance:4888"}
 	}
 
+	encKey := os.Getenv("APP_ENCRYPTION_KEY")
+	// Dev-ключ только для локальной разработки — ровно как loadEncryptionKey в
+	// backend/src/common/crypto.util.ts. В production ключ обязателен (см. выше).
+	if encKey == "" && !isProd {
+		encKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+	}
+
 	return Config{
 		DatabaseURL:              os.Getenv("DATABASE_URL"),
 		Addr:                     addr,
 		CORSOrigins:              origins,
 		DistractionBudgetDefault: budget,
-		EncryptionKey:            os.Getenv("APP_ENCRYPTION_KEY"),
+		EncryptionKey:            encKey,
 		ObsidianExportDir:        os.Getenv("OBSIDIAN_EXPORT_DIR"),
 		IsProduction:             isProd,
 		Auth: AuthConfig{

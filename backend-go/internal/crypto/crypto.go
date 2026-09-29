@@ -44,11 +44,15 @@ func EncryptSecret(plain, keyB64 string) (string, error) {
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		return "", err
 	}
+	// aead.Seal возвращает ciphertext||tag, а формат enc:v1: — iv||tag||ciphertext
+	// (как Buffer.concat([iv, tag, encrypted]) в crypto.util.ts).
 	sealed := aead.Seal(nil, iv, []byte(plain), nil)
-	raw := make([]byte, 0, ivLen+tagLen+len(sealed))
+	ct := sealed[:len(sealed)-tagLen]
+	tag := sealed[len(sealed)-tagLen:]
+	raw := make([]byte, 0, ivLen+tagLen+len(ct))
 	raw = append(raw, iv...)
-	raw = append(raw, sealed[:tagLen]...)
-	raw = append(raw, sealed[tagLen:]...)
+	raw = append(raw, tag...)
+	raw = append(raw, ct...)
 	return prefix + base64.StdEncoding.EncodeToString(raw), nil
 }
 
@@ -78,11 +82,12 @@ func DecryptSecret(stored, keyB64 string) (string, error) {
 		return "", err
 	}
 	iv := raw[:ivLen]
-	ct := raw[ivLen:]
-	if len(ct) < tagLen {
-		return "", errors.New("недостаточная длина ciphertext")
-	}
-	open, err := aead.Open(nil, iv, ct, nil)
+	tag := raw[ivLen : ivLen+tagLen]
+	ct := raw[ivLen+tagLen:]
+	full := make([]byte, 0, len(ct)+tagLen)
+	full = append(full, ct...)
+	full = append(full, tag...)
+	open, err := aead.Open(nil, iv, full, nil)
 	if err != nil {
 		return "", fmt.Errorf("расшифровка не удалась: %w", err)
 	}
