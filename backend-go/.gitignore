@@ -1,0 +1,4 @@
+# Локальные артефакты backend-go.
+/backend-go
+.env
+*.test

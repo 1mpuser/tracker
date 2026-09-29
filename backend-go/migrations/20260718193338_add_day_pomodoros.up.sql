@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Day" ADD COLUMN     "pomodoros" INTEGER NOT NULL DEFAULT 0;
