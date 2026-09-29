@@ -30,6 +30,10 @@ type Config struct {
 	CORSOrigins []string
 	// DISTRACTION_BUDGET_DEFAULT — бюджет по умолчанию для новых учёток
 	DistractionBudgetDefault int
+	// APP_ENCRYPTION_KEY — base64 32 байта для секретов интеграций (AES-256-GCM)
+	EncryptionKey string
+	// OBSIDIAN_EXPORT_DIR — включён Obsidian-экспорт (флаг в GET /settings)
+	ObsidianExportDir string
 	// NODE_ENV — 'production' включает обязательность APP_ENCRYPTION_KEY
 	IsProduction bool
 
@@ -85,6 +89,8 @@ func Load() (Config, error) {
 		Addr:                     addr,
 		CORSOrigins:              origins,
 		DistractionBudgetDefault: budget,
+		EncryptionKey:            os.Getenv("APP_ENCRYPTION_KEY"),
+		ObsidianExportDir:        os.Getenv("OBSIDIAN_EXPORT_DIR"),
 		IsProduction:             isProd,
 		Auth: AuthConfig{
 			CookieSecure: cookieSecure,

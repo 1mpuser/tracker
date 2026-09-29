@@ -6,8 +6,15 @@ import (
 	"github.com/1mpuser/tracker/backend-go/internal/admin"
 	"github.com/1mpuser/tracker/backend-go/internal/apperr"
 	"github.com/1mpuser/tracker/backend-go/internal/auth"
+	"github.com/1mpuser/tracker/backend-go/internal/categories"
 	"github.com/1mpuser/tracker/backend-go/internal/config"
+	"github.com/1mpuser/tracker/backend-go/internal/days"
+	"github.com/1mpuser/tracker/backend-go/internal/gtd"
 	"github.com/1mpuser/tracker/backend-go/internal/model"
+	"github.com/1mpuser/tracker/backend-go/internal/routines"
+	"github.com/1mpuser/tracker/backend-go/internal/settings"
+	"github.com/1mpuser/tracker/backend-go/internal/stats"
+	"github.com/1mpuser/tracker/backend-go/internal/tasktemplates"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -15,13 +22,48 @@ import (
 
 // Server собирает HTTP-роутер поверх chi.
 type Server struct {
-	cfg   config.Config
-	auth  *auth.Service
-	admin *admin.Service
+	cfg          config.Config
+	auth         *auth.Service
+	admin        *admin.Service
+	categories   *categories.Service
+	days         *days.Service
+	routines     *routines.Service
+	taskTemplate *tasktemplates.Service
+	gtd          *gtd.Service
+	stats        *stats.Service
+	settings     *settings.Service
+	sessionSync  SessionSyncer
+	weekDeliver  WeekDeliverer
 }
 
-func NewServer(cfg config.Config, authSvc *auth.Service, adminSvc *admin.Service) *Server {
-	return &Server{cfg: cfg, auth: authSvc, admin: adminSvc}
+func NewServer(
+	cfg config.Config,
+	authSvc *auth.Service,
+	adminSvc *admin.Service,
+	cats *categories.Service,
+	daysSvc *days.Service,
+	routinesSvc *routines.Service,
+	ttSvc *tasktemplates.Service,
+	gtdSvc *gtd.Service,
+	statsSvc *stats.Service,
+	settingsSvc *settings.Service,
+	sessionSync SessionSyncer,
+	weekDeliver WeekDeliverer,
+) *Server {
+	return &Server{
+		cfg:          cfg,
+		auth:         authSvc,
+		admin:        adminSvc,
+		categories:   cats,
+		days:         daysSvc,
+		routines:     routinesSvc,
+		taskTemplate: ttSvc,
+		gtd:          gtdSvc,
+		stats:        statsSvc,
+		settings:     settingsSvc,
+		sessionSync:  sessionSync,
+		weekDeliver:  weekDeliver,
+	}
 }
 
 // Handler возвращает готовый http.Handler.
@@ -51,6 +93,46 @@ func (s *Server) Handler() http.Handler {
 		r.Patch("/auth/me", s.handleUpdateMe)
 		r.Post("/auth/password", s.handleChangePassword)
 		r.Post("/auth/logout-all", s.handleLogoutAll)
+
+		r.Get("/categories", s.handleCategoriesList)
+		r.Post("/categories", s.handleCategoriesCreate)
+		r.Patch("/categories/{key}", s.handleCategoriesUpdate)
+
+		r.Get("/days/{date}", s.handleDaysGet)
+		r.Patch("/days/{date}/categories/{key}", s.handleDaysSetCategoryStatus)
+		r.Patch("/days/{date}/distraction", s.handleDaysUpdateDistraction)
+		r.Patch("/days/{date}/pomodoros", s.handleDaysUpdatePomodoros)
+		r.Post("/days/{date}/pomodoros/sync-session", s.handleDaysSyncSession)
+		r.Post("/days/{date}/weekly-summary", s.handleDaysWeeklySummary)
+		r.Patch("/days/{date}", s.handleDaysUpdate)
+		r.Get("/history", s.handleHistory)
+
+		r.Get("/routines/history", s.handleRoutinesHistory)
+		r.Get("/routines", s.handleRoutinesWeek)
+		r.Post("/routines", s.handleRoutinesCreate)
+		r.Patch("/routines/{id}", s.handleRoutinesUpdate)
+		r.Delete("/routines/{id}", s.handleRoutinesArchive)
+		r.Post("/routines/{id}/log", s.handleRoutinesSetLog)
+		r.Delete("/routines/{id}/log/{date}", s.handleRoutinesRemoveLog)
+
+		r.Get("/task-templates", s.handleTaskTemplatesList)
+		r.Post("/task-templates", s.handleTaskTemplatesCreate)
+		r.Patch("/task-templates/{id}", s.handleTaskTemplatesUpdate)
+		r.Delete("/task-templates/{id}", s.handleTaskTemplatesRemove)
+
+		r.Get("/gtd/items", s.handleGtdItems)
+		r.Post("/gtd/items", s.handleGtdCreate)
+		r.Post("/gtd/items/today", s.handleGtdCreateForDate)
+		r.Patch("/gtd/items/{id}", s.handleGtdUpdate)
+		r.Delete("/gtd/items/{id}", s.handleGtdRemove)
+
+		r.Get("/stats/categories", s.handleStatsCategories)
+		r.Get("/stats/distraction", s.handleStatsDistraction)
+		r.Get("/stats/distraction-daily", s.handleStatsDistractionDaily)
+		r.Get("/stats/week", s.handleStatsWeek)
+
+		r.Get("/settings", s.handleSettingsGet)
+		r.Patch("/settings", s.handleSettingsUpdate)
 	})
 
 	// Требуют сессию + права администратора (не-админ → 404).

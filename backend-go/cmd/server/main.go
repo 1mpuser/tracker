@@ -13,9 +13,18 @@ import (
 	"github.com/1mpuser/tracker/backend-go/internal/admin"
 	"github.com/1mpuser/tracker/backend-go/internal/auth"
 	"github.com/1mpuser/tracker/backend-go/internal/bootstrap"
+	"github.com/1mpuser/tracker/backend-go/internal/categories"
 	"github.com/1mpuser/tracker/backend-go/internal/config"
+	"github.com/1mpuser/tracker/backend-go/internal/crypto"
+	"github.com/1mpuser/tracker/backend-go/internal/days"
+	"github.com/1mpuser/tracker/backend-go/internal/gtd"
+	"github.com/1mpuser/tracker/backend-go/internal/model"
+	"github.com/1mpuser/tracker/backend-go/internal/routines"
 	"github.com/1mpuser/tracker/backend-go/internal/server"
+	"github.com/1mpuser/tracker/backend-go/internal/settings"
+	"github.com/1mpuser/tracker/backend-go/internal/stats"
 	"github.com/1mpuser/tracker/backend-go/internal/store"
+	"github.com/1mpuser/tracker/backend-go/internal/tasktemplates"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -43,13 +52,27 @@ func main() {
 	bootstrapSvc := bootstrap.NewService(st, cfg.DistractionBudgetDefault)
 	adminSvc := admin.NewService(st, bootstrapSvc)
 
+	categoriesSvc := categories.NewService(st)
+	settingsFlags := settings.NewResolver(st, cfg.EncryptionKey, crypto.DecryptSecret)
+	settingsSvc := settings.NewService(st, settingsFlags, cfg.ObsidianExportDir != "")
+	statsSvc := stats.NewService(st)
+	gtdSvc := gtd.NewService(st, noopObsidian{}, noopICloud{})
+	daysSvc := days.NewService(st, categoriesSvc, gtdSvc, statsSvc, noopDeliverer{})
+	routinesSvc := routines.NewService(st, daysSvc)
+	taskTemplateSvc := tasktemplates.NewService(st)
+
 	// Чистка просроченных сессий на старте и раз в сутки (см. onModuleInit в
 	// auth.service.ts).
 	go cleanupLoop(ctx, authSvc)
 
 	srv := &http.Server{
-		Addr:    cfg.Addr,
-		Handler: server.NewServer(cfg, authSvc, adminSvc).Handler(),
+		Addr: cfg.Addr,
+		Handler: server.NewServer(
+			cfg, authSvc, adminSvc,
+			categoriesSvc, daysSvc, routinesSvc, taskTemplateSvc, gtdSvc, statsSvc, settingsSvc,
+			server.NotConfiguredSession{},
+			server.NotConfiguredTelegram{},
+		).Handler(),
 	}
 
 	go func() {
@@ -79,4 +102,31 @@ func cleanupLoop(ctx context.Context, authSvc *auth.Service) {
 		case <-time.After(24 * time.Hour):
 		}
 	}
+}
+
+// noopObsidian/noopICloud — Obsidian/ iCloud-интеграции в следующих промптах;
+// пока side-эффекты GTD-задач выключены, контракт API сохраняется.
+type noopObsidian struct{}
+
+func (noopObsidian) SyncNote(context.Context, model.AuthUser, gtd.ItemView) error { return nil }
+func (noopObsidian) RemoveNote(context.Context, model.AuthUser, int64) error      { return nil }
+
+type noopICloud struct{}
+
+func (noopICloud) SyncReminder(context.Context, model.AuthUser, gtd.ItemView, gtd.EffectiveDue) error {
+	return nil
+}
+func (noopICloud) CompleteReminder(context.Context, model.AuthUser, int64, gtd.ItemView, gtd.EffectiveDue) error {
+	return nil
+}
+func (noopICloud) RemoveReminder(context.Context, model.AuthUser, int64) error { return nil }
+
+// noopDeliverer — Telegram-рассылка сводок в следующем промпте.
+type noopDeliverer struct{}
+
+func (noopDeliverer) DeliverDay(context.Context, int64, int64, days.DayView) error {
+	return nil
+}
+func (noopDeliverer) DeliverWeek(context.Context, int64, int64, string, *string) (days.TelegramReport, error) {
+	return days.TelegramReport{Sent: 0, Failed: 0, Skipped: 0}, nil
 }
