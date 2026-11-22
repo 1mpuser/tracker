@@ -193,7 +193,11 @@ func (s *ConfigService) ClearBotToken(ctx context.Context, userID int64) (BotVie
 
 // ListChats — все чаты пользователя.
 func (s *ConfigService) ListChats(ctx context.Context, userID int64) ([]model.TelegramChat, error) {
-	return s.store.ListTelegramChats(ctx, userID)
+	chats, err := s.store.ListTelegramChats(ctx, userID)
+	if err == nil && chats == nil {
+		chats = []model.TelegramChat{}
+	}
+	return chats, err
 }
 
 // CreateChat — добавляет чат (daily/weekly по умолчанию true).
@@ -289,7 +293,7 @@ func (s *ConfigService) Discover(ctx context.Context, userID int64) ([]ChatInfo,
 		seen[c.ChatID] = true
 	}
 	found := s.client.GetUpdatesChats(ctx, *token)
-	var out []ChatInfo
+	out := make([]ChatInfo, 0)
 	for _, c := range found {
 		if !seen[c.ChatID] {
 			out = append(out, c)
