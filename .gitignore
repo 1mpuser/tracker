@@ -6,3 +6,5 @@ caddy/certs/
 .worktrees/
 graphify-out/
 .herdr
+
+/server/
